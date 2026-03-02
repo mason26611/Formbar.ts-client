@@ -60,6 +60,14 @@ export default function ClassesPage() {
 			});
 	}, [userData]);
 
+    function deleteClass() {
+        if (selectedClass === null) {
+            Log({ message: "No class selected", level: "error" });
+            return;
+        }
+        Log({ message: "Selected class for deletion", data: { selectedClass } });
+    }
+
 	function enterClass() {
 		if (selectedClass === null) {
 			Log({ message: "No class selected", level: "error" });
@@ -236,6 +244,40 @@ export default function ClassesPage() {
 			});
 	}
 
+    if(location.href.includes("joinClass")) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const classCode = urlParams.get("code");
+        if (classCode) {
+            Log({ message: "Joining class from URL code", data: { classCode } });
+            joinClassWithCode(classCode);
+        }
+    }
+
+    function joinClassWithCode(code: string) {
+        fetch(`${formbarUrl}/api/v1/room/${code}/join`, {
+            method: "POST",
+            headers: {
+                Authorization: `${accessToken}`,
+                "Content-Type": "application/json",
+            },
+        })
+        .then((res) => res.json())
+        .then((response) => {
+            const { data } = response;
+            Log({ message: "Joined class with code (URL)", data });
+            if (response.success) {
+                enterClassWithId(data.classId);
+            }
+        })
+        .catch((err) => {
+            Log({
+                message: "Error joining class with code (URL)",
+                data: err,
+                level: "error",
+            });
+        });
+    }
+
 	return (
 		<>
 			<FormbarHeader />
@@ -324,14 +366,18 @@ export default function ClassesPage() {
 								>
 									Enter{isMobileView ? "" : " Class"}
 								</Button>
-								<Button
-									type="default"
-									color="danger"
-									variant="solid"
-                                    style={{cursor:'not-allowed', opacity: 0.5}}
-								>
-									Delete{isMobileView ? "" : " Class"}
-								</Button>
+                                {
+                                    userData && userData.permissions >= 4 && (
+                                        <Button
+                                            type="default"
+                                            color="danger"
+                                            variant="solid"
+                                            onClick={() => deleteClass()}
+                                        >
+                                            Delete{isMobileView ? "" : " Class"}
+                                        </Button>
+                                    )
+                                }
 							</Flex>
 						</Flex>
 					</Card>

@@ -162,6 +162,8 @@ export default function SettingsMenu() {
 
 	const {isDark} = useTheme();
 
+
+
 	return (
 		<>{contextHolder}
 			<Flex
@@ -248,7 +250,7 @@ export default function SettingsMenu() {
 							<Switch
 								checkedChildren={<CheckOutlined />}
 								unCheckedChildren={<CloseOutlined />}
-								defaultChecked
+								defaultChecked={!classData?.settings.isExcluded.guests}
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Guest
@@ -260,7 +262,7 @@ export default function SettingsMenu() {
 							<Switch
 								checkedChildren={<CheckOutlined />}
 								unCheckedChildren={<CloseOutlined />}
-								defaultChecked
+								defaultChecked={!classData?.settings.isExcluded.mods}
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Mods
@@ -272,7 +274,7 @@ export default function SettingsMenu() {
 							<Switch
 								checkedChildren={<CheckOutlined />}
 								unCheckedChildren={<CloseOutlined />}
-								defaultChecked
+								defaultChecked={!classData?.settings.isExcluded.teachers}
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Teachers

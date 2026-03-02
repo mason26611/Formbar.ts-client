@@ -1,4 +1,4 @@
-import { Button, Flex, Tooltip, Popconfirm } from "antd";
+import { Button, Flex, Tooltip, Popconfirm, Badge } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
@@ -116,6 +116,7 @@ export default function FormbarHeader() {
 					</Tooltip>
 				</Flex>
 			) : (
+                <>
 				<h1
 					style={{
 						...styles.formbarHeader.text,
@@ -126,6 +127,14 @@ export default function FormbarHeader() {
 				>
 					Formbar
 				</h1>
+                {/* <Badge count={1} size="small">
+                    <Button style={{marginLeft: 10}} type="primary" shape="square" variant="solid" color="default" size="large"
+                        onClick={() => navigate("/profile")}
+                    >
+                        <IonIcon icon={IonIcons.notifications} size="large" />
+                    </Button>
+                </Badge> */}
+                </>
 			)}
 			<Flex align="center" justify="center" gap={10}>
 				{userData &&

@@ -233,7 +233,7 @@ export default function LoginPage() {
 				navigate("/");
 			}
 		}
-	}, [location.pathname, navigate, redirectURL, userData]);
+	}, [location.pathname, navigate, redirectURL, userData, socket]);
 
 	return (
 		<>

@@ -15,7 +15,7 @@ export default function PollEditorResponse({
 }) {
     return (
         <Flex align="center" justify="center" style={{ height: "40px" }} gap={10}>
-            <ColorPicker value={answer.color} styles={{
+            <ColorPicker disabledAlpha value={answer.color} styles={{
                 root: {
                     height: '100%',  
                     minWidth: 'unset',

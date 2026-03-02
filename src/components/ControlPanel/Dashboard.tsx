@@ -15,12 +15,13 @@ const { Title } = Typography;
 import StudentObject from "../StudentObject";
 
 import { useClassData, useUserData } from "../../main";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ClassroomPage from "../ControlPanel/ClassroomPage";
 import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 
 import { useTheme, isMobile } from "../../main";
+import { socket } from "../../socket";
 
 export default function Dashboard({
 	openModalId,
@@ -58,6 +59,13 @@ export default function Dashboard({
 
 	const { classData } = useClassData();
 	const { userData } = useUserData();
+
+    const [excludedRespondents, setExcludedRespondents] = useState<string[]>([]);
+
+    useEffect(() => {
+        if(!classData?.poll) return;
+        setExcludedRespondents(classData.poll.excludedRespondents || []);
+    }, [classData])
 
 	const students =
 		classData && classData.students
@@ -173,6 +181,20 @@ export default function Dashboard({
         student.displayName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    function handleExcludeRespondent(studentId: string, exclude: boolean) {
+        let newExcluded = [...excludedRespondents];
+        if(exclude) {
+            newExcluded.push(studentId);
+        } else {
+            newExcluded = newExcluded.filter(id => id !== studentId);
+        }
+        setExcludedRespondents(newExcluded);
+
+        console.log("Emitting updateExcludedRespondents with: ", newExcluded);
+
+        // socket.emit('updateExcludedRespondents', excludedRespondents);
+    }
+
 	return (
 		<>
 			<Segmented
@@ -266,6 +288,9 @@ export default function Dashboard({
                                                                     right: 20,
                                                                 }}
                                                                 size="small"
+                                                                onChange={(e) => {
+                                                                    handleExcludeRespondent(student.id, e);
+                                                                }}
                                                             />
                                                         </Tooltip>
 														<span style={{ color: matchingResponse?.color }}>

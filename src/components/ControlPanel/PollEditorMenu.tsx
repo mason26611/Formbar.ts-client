@@ -150,22 +150,22 @@ export default function PollsEditorMenu() {
 
                         <Flex align="center" justify="space-between">
                             Allow Vote Changes
-                            <Switch onChange={(e) => setPollProperties({...pollProperties, allowVoteChanges: e})} />
+                            <Switch defaultChecked={pollProperties.allowVoteChanges} onChange={(e) => setPollProperties({...pollProperties, allowVoteChanges: e})} />
                         </Flex>
 
                         <Flex align="center" justify="space-between">
                             Allow Text Responses
-                            <Switch onChange={(e) => setPollProperties({...pollProperties, allowTextResponses: e})} />
+                            <Switch defaultChecked={pollProperties.allowTextResponses} onChange={(e) => setPollProperties({...pollProperties, allowTextResponses: e})} />
                         </Flex>
 
                         <Flex align="center" justify="space-between">
                             Blind Poll
-                            <Switch onChange={(e) => setPollProperties({...pollProperties, blind: e})} />
+                            <Switch defaultChecked={pollProperties.blind} onChange={(e) => setPollProperties({...pollProperties, blind: e})} />
                         </Flex>
 
                         <Flex align="center" justify="space-between" style={{cursor:'not-allowed', opacity: 0.5}}>
                             Multiple Answer Poll
-                            <Switch onChange={(e) => setPollProperties({...pollProperties, allowMultipleResponses: e})} />
+                            <Switch defaultChecked={pollProperties.allowMultipleResponses} onChange={(e) => setPollProperties({...pollProperties, allowMultipleResponses: e})} />
                         </Flex>
 
                         <Flex align="center" justify="space-between" gap={10} style={{marginTop: '10px'}}>

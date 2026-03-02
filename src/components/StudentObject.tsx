@@ -1,5 +1,6 @@
 import { Badge, Button, Checkbox, Flex, Modal, Switch, Typography } from "antd";
 import { StudentAccordion } from "./AccordionCollapse";
+import { useClassData } from "../main";
 const { Text } = Typography;
 
 export default function StudentObject({
@@ -22,6 +23,8 @@ export default function StudentObject({
 	};
 
 	const statusText = getStatusText();
+
+    const { classData } = useClassData();
 
 	return (
 		<div key={student.id}>
@@ -55,7 +58,7 @@ export default function StudentObject({
 							<Text strong>
 								{student.displayName}
 								{student.pollRes.buttonRes !== ""
-									? ` - ${student.pollRes.buttonRes}`
+									? (<> <span>-</span> <span style={{color: classData?.poll.responses.find((r: any) => r.answer === student.pollRes.buttonRes)?.color}}>{student.pollRes.buttonRes}</span></>)
 									: ""}
 							</Text>
 						</Button>
@@ -70,7 +73,7 @@ export default function StudentObject({
 							{student.displayName}
 							<span>
 								{student.pollRes.buttonRes !== ""
-									? ` - ${student.pollRes.buttonRes}`
+									? (<> <span>-</span> <span style={{color: classData?.poll.responses.find((r: any) => r.answer === student.pollRes.buttonRes)?.color}}>{student.pollRes.buttonRes}</span></>)
 									: ""}
 							</span>
 						</Text>

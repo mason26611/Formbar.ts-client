@@ -1,5 +1,6 @@
 import { Progress } from "antd";
 import type { Poll, PollAnswer } from "../types";
+import { useTheme } from "../main";
 
 type CircularPollProperties = {
 	percentage: number;
@@ -17,7 +18,8 @@ export default function FullCircularPoll({
 	poll,
 	size = 400,
 }: PollObjectProperties) {
-
+    const { isDark } = useTheme();
+    
 	return (
 		<div
 			style={{
@@ -41,6 +43,8 @@ export default function FullCircularPoll({
                     '0%': 'rgb(94, 158, 230)',
                     '100%': 'rgba(41, 96, 167, 0.9)',
                 }}
+                strokeWidth={15}
+                gapDegree={50}
                 size={size / 2}
             /> */}
 			<Progress
@@ -53,9 +57,12 @@ export default function FullCircularPoll({
 				}}
 				type="circle"
 				percent={100}
-				strokeColor={{
+				strokeColor={isDark ? {
 					"0%": "rgba(255, 255, 255, 0.38)",
 					"100%": "rgba(255, 255, 255, 0.1)",
+				} : {
+					"0%": "#e6e6e6",
+					"100%": "#bfbfbf",
 				}}
 				size={size}
 				strokeWidth={23}

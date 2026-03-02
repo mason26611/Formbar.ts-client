@@ -1,6 +1,7 @@
 import {
     Flex, Button, Tooltip, Typography, Card, Row, Col, Progress
 } from 'antd';
+import { useClassData } from '../../main';
 
 const { Text, Title } = Typography;
 
@@ -23,6 +24,9 @@ const defaultTimers = [
 ]
 
 export default function TimerPage() {
+    const { classData } = useClassData();
+
+
     // Create a 5x2 grid using defaultTimers
     const grid = [];
     for (let rowIdx = 0; rowIdx < 5; rowIdx++) {

@@ -100,6 +100,11 @@ const pages: Page[] = [
         pageName: "Testing",
         routePath: "/testing",
         page: Testing
+    },
+    {
+        pageName: "Classes",
+        routePath: "/joinClass",
+        page: ClassesPage,
     }
 ];
 
