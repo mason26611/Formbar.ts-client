@@ -463,7 +463,13 @@ export default function Profile() {
 
 						{!error &&
 							Object.entries(profileProps).map(([key, value]) =>
-								key == "Pog Meter" || value == "N/A" ? null : (
+								key == "Pog Meter" || value == "N/A" ? 
+                                key == "Digipogs" ? (
+                                    <p key={key} style={infoStyle}>
+										<strong>{key}:</strong>
+										<strong>{<CountUp end={Number(value)} duration={1} />}</strong>
+									</p>
+                                ) : null : (
 									<p key={key} style={infoStyle}>
 										<strong>{key}:</strong>
 										{value}
