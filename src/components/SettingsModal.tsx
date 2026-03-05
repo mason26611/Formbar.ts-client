@@ -73,7 +73,7 @@ export default function SettingsModal() {
                     padding: "0 10px",
                     paddingTop: "15px",
                 }}
-                className="animMenu"
+                className={settings.disableAnimations ? "" : "animMenu"}
                 styles={{
                     itemIcon: {
                         marginRight: "18px",

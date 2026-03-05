@@ -6,7 +6,7 @@ import {
 import FormbarHeader from "../components/FormbarHeader";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useClassData, useTheme, useUserData } from "../main";
+import { useClassData, useSettings, useTheme, useUserData } from "../main";
 import { Activity, useEffect, useState } from "react";
 
 import Dashboard from "../components/ControlPanel/Dashboard";
@@ -79,6 +79,8 @@ const items = [
 export default function ControlPanel() {
 	const { classData, setClassData } = useClassData();
 	const isMobileDevice = isMobile();
+
+    const { settings } = useSettings();
 
 	useEffect(() => {
 		if (!socket) return; // Don't set up listener if socket isn't ready
@@ -189,7 +191,7 @@ export default function ControlPanel() {
 						padding: "0 10px",
 						paddingTop: "15px",
 					}}
-                    className="animMenu"
+                    className={settings.disableAnimations ? "" : "animMenu"}
 					styles={{
 						itemIcon: {
 							marginRight: "18px",
