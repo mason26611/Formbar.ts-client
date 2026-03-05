@@ -153,6 +153,7 @@ export default function PogPools() {
 								isOwner
 									? [
 											<Tooltip
+                                                mouseEnterDelay={0.5}
 												title="Payout Funds"
 												key="payout"
 												placement="top"
@@ -164,6 +165,7 @@ export default function PogPools() {
 												/>
 											</Tooltip>,
 											<Tooltip
+                                                mouseEnterDelay={0.5}
 												title="Add or Remove Members"
 												key="addmember"
 												placement="top"
@@ -177,6 +179,7 @@ export default function PogPools() {
 												/>
 											</Tooltip>,
 											<Tooltip
+                                                mouseEnterDelay={0.5}
 												title="Delete Pool"
 												key="delete"
 												placement="top"
@@ -231,6 +234,7 @@ export default function PogPools() {
 										? `User ${memberList.join(", User ")}`
 										: "No members"
 								}
+                                mouseEnterDelay={0.5}
 								placement="top"
 								style={{
 									width: "100%",

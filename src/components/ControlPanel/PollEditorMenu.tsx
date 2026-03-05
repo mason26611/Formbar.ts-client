@@ -1,6 +1,6 @@
 import { Button, Card, Flex, Input, Switch, Tooltip, Typography, notification } from "antd";
 const { Title, Text } = Typography;
-import { useClassData, useTheme } from "../../main";
+import { useClassData } from "../../main";
 import PollEditorResponse from "../PollEditorResponse";
 import { useState } from "react";
 
@@ -23,7 +23,7 @@ type PollProperties = {
     allowMultipleResponses: boolean;
 };
 
-import { accessToken, formbarUrl, socket } from "../../socket";
+import { socket } from "../../socket";
 
 function randomColor() {
     const letters = '0123456789ABCDEF';
@@ -77,7 +77,6 @@ function generateColors(amount: number) {
 }
 
 export default function PollsEditorMenu() {
-    const { isDark } = useTheme();
     const { classData } = useClassData();
 
 	const [api, contextHolder] = notification.useNotification();
@@ -169,7 +168,7 @@ export default function PollsEditorMenu() {
                         </Flex>
 
                         <Flex align="center" justify="space-between" gap={10} style={{marginTop: '10px'}}>
-                            <Tooltip title="Reset answers to 'Answer X'.">
+                            <Tooltip title="Reset answers to 'Answer X'." mouseEnterDelay={0.5}>
                                 <Button type="primary"
                                     onClick={() => {
                                         // Change all answers to "Answer {index}"
@@ -185,7 +184,7 @@ export default function PollsEditorMenu() {
                                     Reset Answers
                                 </Button>
                             </Tooltip>
-                            <Tooltip title="Assign each answer a unique color.">
+                            <Tooltip title="Assign each answer a unique color." mouseEnterDelay={0.5}>
                                 <Button type="primary"
                                     onClick={() => {
                                         let colors = generateColors(pollProperties.answers.length);

@@ -1,7 +1,7 @@
 import { Card, Flex, Typography } from "antd";
 const { Title } = Typography;
 import FormbarHeader from "../components/FormbarHeader";
-import { useMobileDetect } from "../main";
+import { useMobileDetect, useSettings, getAppearAnimation } from "../main";
 import { Link } from "react-router";
 import { useUserData } from "../main";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ export default function NewsPage() {
 	const isMobileView = useMobileDetect();
     const { userData } = useUserData();
     const navigate = useNavigate();
+    const { settings } = useSettings();
 
     useEffect(() => {
         if(!userData) {
@@ -43,6 +44,7 @@ export default function NewsPage() {
 							Version 3.0.0
 						</Title>
 					}
+                    style={getAppearAnimation(settings.disableAnimations, 0)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>
@@ -72,6 +74,7 @@ export default function NewsPage() {
 							Version 2.0.0
 						</Title>
 					}
+                    style={getAppearAnimation(settings.disableAnimations, 1)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>
@@ -101,6 +104,7 @@ export default function NewsPage() {
 							Version 1.1.0
 						</Title>
 					}
+                    style={getAppearAnimation(settings.disableAnimations, 2)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>

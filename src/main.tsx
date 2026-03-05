@@ -55,6 +55,19 @@ type ClassDataContextType = {
 	setClassData: (data: ClassData | null) => void;
 };
 
+export type AppSettings = {
+	disableAnimations: boolean;
+};
+
+type SettingsContextType = {
+	settings: AppSettings;
+	updateSettings: (newSettings: Partial<AppSettings>) => void;
+};
+
+const defaultSettings: AppSettings = {
+	disableAnimations: false,
+};
+
 type ServerConfig = {
 	emailEnabled: boolean;
 	googleOauthEnabled: boolean;
@@ -111,6 +124,9 @@ const UserDataContext = createContext<UserDataContextType | undefined>(
 const ClassDataContext = createContext<ClassDataContextType | undefined>(
 	undefined,
 );
+const SettingsContext = createContext<SettingsContextType | undefined>(
+	undefined,
+);
 
 export const useUserData = () => {
 	const context = useContext(UserDataContext);
@@ -124,6 +140,28 @@ export const useClassData = () => {
 	if (!context)
 		throw new Error("useClassData must be used within ClassDataProvider");
 	return context;
+};
+
+export const useSettings = () => {
+	const context = useContext(SettingsContext);
+	if (!context)
+		throw new Error("useSettings must be used within SettingsProvider");
+	return context;
+};
+
+// Helper function to get appear animation styles based on settings
+export const getAppearAnimation = (
+	disableAnimations: boolean,
+	delayIndex?: number,
+): React.CSSProperties => {
+	if (disableAnimations) {
+		return {};
+	}
+	return {
+		opacity: 0,
+		animation: "appear 0.3s ease-in-out forwards",
+		animationDelay: delayIndex !== undefined ? `${delayIndex * 0.05}s` : undefined,
+	};
 };
 
 const ThemeProvider = ({ children }: { children: ReactNode }) => {
@@ -177,6 +215,31 @@ const ClassDataProvider = ({ children }: { children: ReactNode }) => {
 		<ClassDataContext.Provider value={{ classData, setClassData }}>
 			{children}
 		</ClassDataContext.Provider>
+	);
+};
+
+const SettingsProvider = ({ children }: { children: ReactNode }) => {
+	const [settings, setSettings] = useState<AppSettings>(() => {
+		try {
+			const saved = localStorage.getItem("formbar-settings");
+			return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+		} catch {
+			return defaultSettings;
+		}
+	});
+
+	const updateSettings = (newSettings: Partial<AppSettings>) => {
+		setSettings((prev) => {
+			const updated = { ...prev, ...newSettings };
+			localStorage.setItem("formbar-settings", JSON.stringify(updated));
+			return updated;
+		});
+	};
+
+	return (
+		<SettingsContext.Provider value={{ settings, updateSettings }}>
+			{children}
+		</SettingsContext.Provider>
 	);
 };
 
@@ -556,13 +619,15 @@ function App() {
 	return (
 		<StrictMode>
 			<BrowserRouter>
-				<ThemeProvider>
-					<UserDataProvider>
-						<ClassDataProvider>
-							<AppContent />
-						</ClassDataProvider>
-					</UserDataProvider>
-				</ThemeProvider>
+				<SettingsProvider>
+					<ThemeProvider>
+						<UserDataProvider>
+							<ClassDataProvider>
+								<AppContent />
+							</ClassDataProvider>
+						</UserDataProvider>
+					</ThemeProvider>
+				</SettingsProvider>
 			</BrowserRouter>
 		</StrictMode>
 	);

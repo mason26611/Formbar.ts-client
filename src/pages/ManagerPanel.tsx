@@ -14,12 +14,14 @@ import {
 	Skeleton,
 	Pagination,
 } from "antd";
+import { type UserData } from "../types";
 const { Title, Text } = Typography;
 
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { Activity, useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../socket";
+import { useSettings, getAppearAnimation } from "../main";
 
 type ManagerPanelUser = {
 	id: number | string;
@@ -41,6 +43,7 @@ export default function ManagerPanel() {
 	>("Users");
 	const [users, setUsers] = useState<ManagerPanelUser[]>([]);
 	const [pendingUsers, setPendingUsers] = useState<ManagerPanelUser[]>([]);
+	const { settings } = useSettings();
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [isLoading, setIsLoading] = useState(true);
 	const [sortBy, setSortBy] = useState<"name" | "permission">("name");
