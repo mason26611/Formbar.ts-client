@@ -41,6 +41,7 @@ export default function ControlPanelPoll({
 				{data &&
 					data?.poll.responses.map((resp: any, index: number) => (
 						<Tooltip
+                            mouseEnterDelay={0.5}
 							color={resp.color}
 							key={index}
 							title={`${resp.answer}: ${resp.responses} vote${resp.responses !== 1 ? "s" : ""}`}
@@ -82,6 +83,7 @@ export default function ControlPanelPoll({
 					data?.poll.totalResponses < data?.poll.totalResponders &&
 					data.poll.responses.length > 0 ? (
 						<Tooltip
+                            mouseEnterDelay={0.5}
 							title={`Unanswered: ${data.poll.totalResponders - data.poll.totalResponses} student${data.poll.totalResponders - data.poll.totalResponses !== 1 ? "s" : ""}`}
 							placement="bottom"
 						>

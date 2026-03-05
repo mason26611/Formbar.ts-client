@@ -216,7 +216,7 @@ export default function SettingsMenu() {
 						
 						<Flex vertical gap={10} align="center" justify="center" style={{borderLeft: `2px solid ${isDark ? '#fff2' : '#0002'}`,paddingLeft: 20}}>
 
-							<Tooltip title="Click to enlarge">
+							<Tooltip title="Click to enlarge" mouseEnterDelay={0.5}>
 								<QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={150} style={{cursor:'pointer'}} type="svg" icon="/img/FormbarLogo2-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
 							</Tooltip>
 

@@ -94,6 +94,7 @@ export default function Statistics() {
                         </Card>
 
                         <Tooltip
+                            mouseEnterDelay={0.5}
                             title={
                                 "Average Response Time: " +
                                 responseTime.toFixed(2) +

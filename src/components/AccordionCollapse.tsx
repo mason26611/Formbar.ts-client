@@ -157,6 +157,7 @@ export default function AccordionCollapse({
 					{categories &&
 						categories.map((category, index) => (
 							<Tooltip
+                                mouseEnterDelay={0.5}
 								key={index}
 								title={category.name}
 								color={colorIndex(index)}

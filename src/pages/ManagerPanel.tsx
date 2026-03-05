@@ -22,12 +22,14 @@ import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { Activity, useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../socket";
+import { useSettings, getAppearAnimation } from "../main";
 
 export default function ManagerPanel() {
 	const [listCategory, setListCategory] = useState<
 		"Users" | "IP Addresses" | "Banned Users"
 	>("Users");
 	const [users, setUsers] = useState<Record<string, UserData>>({});
+	const { settings } = useSettings();
 	const [classrooms, setClassrooms] = useState<any[]>([]);
 	const [initialLoad, setInitialLoad] = useState(true);
 
@@ -180,7 +182,7 @@ export default function ManagerPanel() {
 					<Row gutter={[8, 8]} style={{ margin: "10px" }}>
 						{Object.keys(users).length > 0 ? (
 							filteredUsers.map((user, k) => (
-								<Col span={4} key={user.id} style={initialLoad ? {opacity: 0, animation: 'appear 0.3s ease-in-out forwards', animationDelay: `${k * 0.05}s`} : {}}>
+								<Col span={4} key={user.id} style={initialLoad ? getAppearAnimation(settings.disableAnimations, k) : {}}>
 									<Card
 										title={
 											user.displayName ||
@@ -256,6 +258,7 @@ export default function ManagerPanel() {
 										>
 											{user.verified === 0 ? (
 												<Tooltip
+                                                    mouseEnterDelay={0.5}
 													title={"Verify User"}
 													color="green"
 												>
@@ -282,6 +285,7 @@ export default function ManagerPanel() {
 												</Tooltip>
 											) : null}
 											<Tooltip
+                                                mouseEnterDelay={0.5}
 												title={"Ban User"}
 												color="red"
 											>
@@ -300,6 +304,7 @@ export default function ManagerPanel() {
 												</Button>
 											</Tooltip>
 											<Tooltip
+                                                mouseEnterDelay={0.5}
 												title={"Delete User"}
 												color="red"
 											>

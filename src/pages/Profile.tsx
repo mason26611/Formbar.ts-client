@@ -18,11 +18,12 @@ import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useUserData, isMobile } from "../main";
+import { useUserData, isMobile, useSettings } from "../main";
 import { accessToken, formbarUrl } from "../socket";
 import CountUp from 'react-countup';
 
 export default function Profile() {
+    const { settings } = useSettings();
 	const { userData } = useUserData();
 	const [messageApi, contextHolder] = message.useMessage();
 	const navigate = useNavigate();
@@ -363,6 +364,7 @@ export default function Profile() {
 								<strong>Pog Meter:</strong>
 								<div style={infoStyle}>
 									<Tooltip
+                                        mouseEnterDelay={0.5}
 										title={`${profileProps["Pog Meter"]}%`}
 										placement="top"
 										color="#aa68d0"
@@ -470,7 +472,7 @@ export default function Profile() {
 						{!error &&
 							Object.entries(profileProps).map(([key, value]) =>
 								key == "Pog Meter" || value == "N/A" ? 
-                                null : key == "Digipogs" ? (
+                                null : key == "Digipogs" && settings.disableAnimations === false ? (
                                     <p key={key} style={infoStyle}>
 										<strong>{key}:</strong>
 										{<CountUp end={Number(value)} separator={''} duration={1} />}

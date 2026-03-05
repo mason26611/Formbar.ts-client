@@ -1,8 +1,9 @@
 import { Checkbox, Flex, Tooltip, Input, InputNumber, Button, ColorPicker } from "antd";
 
-import { useTheme } from "../main";
+import { getAppearAnimation, useSettings } from "../main";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
+import { useEffect } from "react";
 
 export default function PollEditorResponse({
     answer,
@@ -13,8 +14,12 @@ export default function PollEditorResponse({
     setAnswer: (newAnswer: { color: string; answer: string; isCorrect: boolean; weight: number }) => void;
     removeAnswer: () => void;
 }) {
+
+    const { settings } = useSettings();
+
+
     return (
-        <Flex align="center" justify="center" style={{ height: "40px" }} gap={10}>
+        <Flex align="center" justify="center" style={{ height: "40px", ...getAppearAnimation(settings.disableAnimations) }} gap={10}>
             <ColorPicker disabledAlpha value={answer.color} styles={{
                 root: {
                     height: '100%',  
@@ -25,7 +30,7 @@ export default function PollEditorResponse({
                 
             }} onChange={(e) => setAnswer({...answer, color: "#" + e.toHex()})}/>
 
-            <Tooltip title="Mark as Correct Answer">
+            <Tooltip title="Mark as Correct Answer" mouseEnterDelay={0.5}>
                 <Checkbox className="correctAnswer" styles={{
                     root: {
                         height: '100%',
@@ -42,7 +47,7 @@ export default function PollEditorResponse({
                 height: '100%'
             }} value={answer.answer} onChange={(e) => setAnswer({ ...answer, answer: e.target.value })} />
 
-            <Tooltip title="Answer Weight">
+            <Tooltip title="Answer Weight" mouseEnterDelay={0.5}>
                 <InputNumber styles={{
                     root: {
                         height: '100%',

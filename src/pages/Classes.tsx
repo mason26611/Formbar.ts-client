@@ -2,7 +2,7 @@ import { Button, Card, Flex, Input, Select, Typography } from "antd";
 const { Title, Text } = Typography;
 import FormbarHeader from "../components/FormbarHeader";
 import Log from "../debugLogger";
-import { useUserData } from "../main";
+import { useUserData, useSettings, getAppearAnimation } from "../main";
 import type { CardStylesType } from "antd/es/card/Card";
 import { useMobileDetect } from "../main";
 import { accessToken, formbarUrl, socket } from "../socket";
@@ -13,6 +13,7 @@ export default function ClassesPage() {
 	const navigate = useNavigate();
 	const { userData, setUserData } = useUserData();
 	const isMobileView = useMobileDetect();
+	const { settings } = useSettings();
 
 	const [joinClassCode, setJoinClassCode] = useState<string>("");
 
@@ -31,6 +32,17 @@ export default function ClassesPage() {
 	if (isMobileView) {
 		cardStyle = { width: "300px", height: "200px" };
 	}
+
+	const cardStyles = {
+		root: getAppearAnimation(settings.disableAnimations),
+		title: {
+			width: "100%",
+			textAlign: "center",
+		},
+		body: {
+			height: "calc(100% - 64px)",
+		},
+	} as CardStylesType;
 
 	useEffect(() => {
 		if (!userData) return;
@@ -459,17 +471,3 @@ export default function ClassesPage() {
 		</>
 	);
 }
-
-const cardStyles = {
-    root: {
-        opacity: 0,
-        animation: 'appear 0.3s ease-in-out forwards',
-    },
-	title: {
-		width: "100%",
-		textAlign: "center",
-	},
-	body: {
-		height: "calc(100% - 64px)",
-	},
-} as CardStylesType;

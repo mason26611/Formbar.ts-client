@@ -14,7 +14,7 @@ const { Title } = Typography;
 
 import StudentObject from "../StudentObject";
 
-import { useClassData, useUserData } from "../../main";
+import { useClassData, useUserData, useSettings, getAppearAnimation } from "../../main";
 import { useEffect, useState } from "react";
 import ClassroomPage from "../ControlPanel/ClassroomPage";
 import * as IonIcons from "ionicons/icons";
@@ -59,6 +59,7 @@ export default function Dashboard({
 
 	const { classData } = useClassData();
 	const { userData } = useUserData();
+	const { settings } = useSettings();
 
     const [excludedRespondents, setExcludedRespondents] = useState<string[]>([]);
 
@@ -197,7 +198,7 @@ export default function Dashboard({
 
 	return (
 		<>
-			<Segmented
+			{/* <Segmented
 				options={[
 					"Dashboard",
 					'Classroom View',
@@ -211,7 +212,7 @@ export default function Dashboard({
 					bottom: "20px",
 					opacity: 0.85,
 				}}
-			/>
+			/> */}
 			{currentView === "class" && <ClassroomPage />}
 			{currentView === "dash" && (
 				<Flex
@@ -229,7 +230,7 @@ export default function Dashboard({
 							}}
 						>
 							<Title style={{ margin: "0" }}>Dashboard</Title>
-							<Tooltip title="All Responses">
+							<Tooltip title="All Responses" mouseEnterDelay={0.5}>
 								<Button
 									type="primary"
 									style={{ height: "60%" }}
@@ -280,7 +281,7 @@ export default function Dashboard({
 														<strong style={{paddingRight: 40}}>
 															{student.displayName}
 														</strong>
-                                                        <Tooltip title="Allow Vote">
+                                                        <Tooltip title="Allow Vote" mouseEnterDelay={0.5}>
                                                             <Switch 
                                                                 style={{
                                                                     position: 'absolute',
@@ -311,7 +312,7 @@ export default function Dashboard({
 									<p>No active poll.</p>
 								)}
 							</Modal>
-							<Tooltip title="Sort & Filter">
+							<Tooltip title="Sort & Filter" mouseEnterDelay={0.5}>
 								<Popover
 									placement="bottomLeft"
 									trigger={"click"}
@@ -477,9 +478,10 @@ export default function Dashboard({
 										.toLowerCase()
 										.includes(searchQuery.toLowerCase()),
 								)
-								.map((student: any) =>
+								.map((student: any, index: number) =>
 									student.id !== userData?.id ? (
 										<StudentObject
+                                            style={getAppearAnimation(settings.disableAnimations, index)}
 											key={student.id}
 											student={student}
 											openModalId={openModalId}

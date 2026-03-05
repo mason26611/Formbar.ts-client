@@ -146,3 +146,19 @@ label.correctAnswer .ant-checkbox-inner::after {
         transform: translateY(0);
     }
 }
+
+.animMenu .ant-menu-item {
+    --delay: 0.05s;
+}
+.animMenu .ant-menu-item:nth-child(n) {
+    opacity: 0;
+    animation: appear 0.3s ease-in-out forwards calc((var(--n, 0)) * var(--delay));
+}
+
+.animMenu .ant-menu-item:nth-child(1) { --n: 0; }
+.animMenu .ant-menu-item:nth-child(2) { --n: 1; }
+.animMenu .ant-menu-item:nth-child(3) { --n: 2; }
+.animMenu .ant-menu-item:nth-child(4) { --n: 3; }
+.animMenu .ant-menu-item:nth-child(5) { --n: 4; }
+.animMenu .ant-menu-item:nth-child(6) { --n: 5; }
+.animMenu .ant-menu-item:nth-child(7) { --n: 6; }

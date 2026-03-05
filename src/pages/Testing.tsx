@@ -2,6 +2,7 @@ import { Button, Masonry, Flex, Input, Badge, Tooltip } from "antd";
 import { accessToken, formbarUrl } from "../socket";
 import { useState } from "react";
 import FormbarHeader from "../components/FormbarHeader";
+import { useSettings, getAppearAnimation } from "../main";
 
 const getFetchOptions = (method = "GET", body?: any) => {
     const opts: RequestInit = {
@@ -120,6 +121,7 @@ function getButtonStyle(method?: string) {
 export function Testing() {
     const [inputValue, setInputValue] = useState("");
     const [bodyValue, setBodyValue] = useState("");
+    const { settings } = useSettings();
 
     return (
         <div style={{ padding: '0 20px' }}>
@@ -139,17 +141,20 @@ export function Testing() {
                         if (!acc[key]) acc[key] = [];
                         acc[key].push(t);
                         return acc;
-                    }, {})).map(([category, tests]) => (
-                        <div key={category} style={{ marginBottom: 12 }}>
+                    }, {})).map(([category, tests], index) => (
+                        <div key={category} style={{ marginBottom: 12, 
+                                                    ...getAppearAnimation(settings.disableAnimations, index) }}>
                             <h3 style={{ margin: '6px 0' }}>{category}</h3>
                             <Flex vertical align="start" style={{ background: '#000a', padding: 8, borderRadius: 10 }} wrap gap={8}>
-                                {tests.map((test: any) => (
-                                    <Tooltip title={typeof test.testedWorks === 'string' ? test.testedWorks : test.testedWorks === true ? 'Works' : "Not working"} color={test.testedWorks === true ? 'green' : !test.testedWorks ? 'red' : 'orange'}>
+                                {tests.map((test: any, index: number) => (
+                                    <Tooltip title={typeof test.testedWorks === 'string' ? test.testedWorks : test.testedWorks === true ? 'Works' : "Not working"} color={test.testedWorks === true ? 'green' : !test.testedWorks ? 'red' : 'orange'} mouseEnterDelay={0.5}>
                                         <Badge dot color={test.testedWorks === true ? 'green' : !test.testedWorks ? 'red' : 'orange'}>
                                             <Button
                                                 key={test.name}
                                                 onClick={() => test.hasArgs ? test.func(inputValue, bodyValue) : test.func()}
-                                                style={{ margin: 4 }}
+                                                style={{ margin: 4,
+                                                    ...getAppearAnimation(settings.disableAnimations, index)
+                                                 }}
                                                 type='default'
                                                 variant="solid"
                                                 color={getButtonStyle(test.method) as any}

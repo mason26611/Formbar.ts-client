@@ -7,10 +7,12 @@ export default function StudentObject({
 	student,
 	openModalId,
 	setOpenModalId,
+    style,
 }: {
 	student: any;
 	openModalId: number | null;
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
+    style?: React.CSSProperties;
 }) {
 	const getStatusText = () => {
 		if (student.tags?.includes("Offline")) return "Offline";
@@ -27,7 +29,7 @@ export default function StudentObject({
     const { classData } = useClassData();
 
 	return (
-		<div key={student.id}>
+		<div key={student.id} style={style}>
 			<div>
 				{statusText ? (
 					<Badge.Ribbon

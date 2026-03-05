@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# <img src="https://github.com/csmith1188/Formbar.ts-client/blob/main/public/img/FormbarLogo2-Circle.png?raw=true" height=36> Formbar.ts-Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Formbar.js is a classroom polling and management system built with Node.js.
 
-Currently, two official plugins are available:
+This repository houses the official app used to interface with Formbar.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Quick Start
+### Prerequisites
+-   Node.js 20.19+
+-   npm or yarn
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-	globalIgnores(["dist"]),
-	{
-		files: ["**/*.{ts,tsx}"],
-		extends: [
-			// Other configs...
-
-			// Remove tseslint.configs.recommended and replace with this
-			tseslint.configs.recommendedTypeChecked,
-			// Alternatively, use this for stricter rules
-			tseslint.configs.strictTypeChecked,
-			// Optionally, add this for stylistic rules
-			tseslint.configs.stylisticTypeChecked,
-
-			// Other configs...
-		],
-		languageOptions: {
-			parserOptions: {
-				project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-				tsconfigRootDir: import.meta.dirname,
-			},
-			// other options...
-		},
-	},
-]);
+### Installation
+```bash
+git clone https://github.com/csmith1188/Formbar.ts-client.git
+cd Formbar.ts-client
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Setup
+- Copy or rename the `.env-template` file to `.env`
+- Input your Formbar API URL as `VITE_FORMBAR_API_URL`
+  - *<sub>[Need the server for your API?](https://github.com/csmith1188/Formbar.js)</sub>*
 
-```js
-// eslint.config.js
-import reactX from "eslint-plugin-react-x";
-import reactDom from "eslint-plugin-react-dom";
+### Testing
+```bash
+# Development - Local Testing
+npm run dev
 
-export default defineConfig([
-	globalIgnores(["dist"]),
-	{
-		files: ["**/*.{ts,tsx}"],
-		extends: [
-			// Other configs...
-			// Enable lint rules for React
-			reactX.configs["recommended-typescript"],
-			// Enable lint rules for React DOM
-			reactDom.configs.recommended,
-		],
-		languageOptions: {
-			parserOptions: {
-				project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-				tsconfigRootDir: import.meta.dirname,
-			},
-			// other options...
-		},
-	},
-]);
+# Development - Network Testing
+npx run dev -- --host
 ```
+
+---
+
+## Building
+
+### Generating a Build
+
+```bash
+# Strict Build (will crash on warnings, such as unused imports)
+npm run build
+
+# Development Build (ignores warnings)
+npx vite build
+```
+
+This will produce a full build into the `dist/` folder.
+
+## Using `nginx` to serve your build
+
+### Prerequisites
+- nginx 1.18.0+
+- rsync (or alternative)
+
+Below is a base config file used to serve your newly-built Formbar client.
+
+
+```nginx
+server {
+    # Your server name - ex. formbar.com
+    server_name [SERVER_NAME];
+
+    # Built files directory
+    # Can be changed, but this is recommended
+    root /var/www/formbar;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+This config assumes you are both on a version of **Linux** and already have **nginx** installed.
+
+If you are on Windows, you will need to change the directory you are reading from in the **nginx** config, along with another way of syncing files to the read directory.
+
+In the project root, there is `updater.sh`, an interactive script for updating, building, and deploying the client.
+
+### Usage
+```bash
+./updater.sh [options]
+```
+
+### Options
+| Argument | Description |
+|----------|-------------|
+| `--no-fetch` | Skip fetching/pulling from GitHub |
+| `--no-install` | Skip `npm install` |
+| `--no-build` | Skip the build step entirely |
+| `--full` | Fully automated: fetch, install, strict build, and sync |
+| `--full-dev` | Fully automated: fetch, install, development build, and sync |
+
+### Interactive Mode
+When run without `--full` or `--full-dev`, the script presents a menu:
+1. **Build** - Strict production build (`npm run build`)
+2. **Build (Development)** - Development build (`npx vite build`)
+3. **Test Locally** - Run dev server (`npm run dev`)
+4. **Test Over LAN** - Run dev server with network access (`npm run dev -- --host`)
+
+After building, you'll be prompted to sync `dist/` to `/var/www/formbar`.
+
+### Manual Build & Sync
+To manually build and sync folders:
+```bash 
+git fetch && git pull
+npm run build      # Strict Build
+# or
+npx vite build     # Development Build
+
+rsync -av dist/ /var/www/formbar  # Or your custom directory
+``` 
+
+This is built to work in conjunction with [**Formbar.js**](https://github.com/csmith1188/Formbar.js).

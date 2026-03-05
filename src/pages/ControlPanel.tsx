@@ -198,6 +198,7 @@ export default function ControlPanel() {
 						padding: "0 10px",
 						paddingTop: "15px",
 					}}
+                    className="animMenu"
 					styles={{
 						itemIcon: {
 							marginRight: "18px",

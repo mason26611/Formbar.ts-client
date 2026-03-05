@@ -1,20 +1,25 @@
-import { Button, Flex, Tooltip, Popconfirm, Badge } from "antd";
+import { Button, Flex, Tooltip, Popconfirm, Badge, Modal } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
 import Log from "../debugLogger";
 
-import { isDev, useMobileDetect, useTheme, useUserData } from "../main";
+import { isDev, useMobileDetect, useTheme, useUserData, useSettings, getAppearAnimation } from "../main";
 import { themeColors, version } from "../../themes/ThemeConfig";
 
 import pages from "../pages";
 import { accessToken, formbarUrl, socket } from "../socket";
+import { useState } from "react";
+import SettingsModal from "./SettingsModal";
 
 export default function FormbarHeader() {
 	const { isDark, toggleTheme } = useTheme();
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
 	const { userData, setUserData } = useUserData();
+	const { settings } = useSettings();
+
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const headerStyles = {
 		...styles.formbarHeader,
@@ -77,6 +82,8 @@ export default function FormbarHeader() {
 			});
 	}
 
+
+    
 	return (
 		<Flex
 			style={headerStyles}
@@ -88,6 +95,7 @@ export default function FormbarHeader() {
 			{isMobileView ? (
 				<Flex align="center" justify="center">
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						title={
 							<span>
 								Formbar{" "}
@@ -137,11 +145,41 @@ export default function FormbarHeader() {
                 </>
 			)}
 			<Flex align="center" justify="center" gap={10}>
+                { isDev && (<>
+                    <Tooltip
+                        mouseEnterDelay={0.5}
+                        placement="bottomRight"
+                        title="Testing"
+                        arrow={{ pointAtCenter: true }}
+                        color="geekblue"
+                    >
+                        <Button
+                            type="primary"
+                            variant="solid"
+                            color="geekblue"
+                            size="large"
+                            style={styles.headerButton}
+                            onClick={() => navigate("/testing")}
+                        >
+                            <IonIcon icon={IonIcons.bug} size="large" />
+                        </Button>
+                    </Tooltip>
+                    <div
+					style={{
+						borderRight: `2px solid ${isDark ? "#fff3" : "#0003"}`,
+						borderRadius: "999px",
+						height: "30px",
+					}}
+                    />
+                    </>
+                )}
+
 				{userData &&
 				userData.activeClass &&
 				userData.classPermissions &&
 				userData.classPermissions < 4 ? (
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						placement="bottomRight"
 						title={"Back to Class"}
 						arrow={{ pointAtCenter: true }}
@@ -163,6 +201,7 @@ export default function FormbarHeader() {
 				  userData.classPermissions &&
 				  userData.classPermissions >= 4 ? (
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						placement="bottomRight"
 						title={"Teacher Panel"}
 						arrow={{ pointAtCenter: true }}
@@ -185,6 +224,7 @@ export default function FormbarHeader() {
 					userData.permissions &&
 					userData.permissions >= 4 && (
 						<Tooltip
+                            mouseEnterDelay={0.5}
 							placement="bottomRight"
 							title={"Manager Panel"}
 							arrow={{ pointAtCenter: true }}
@@ -208,6 +248,7 @@ export default function FormbarHeader() {
 
 				{userData && (
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						placement="bottomRight"
 						title={"Classes"}
 						arrow={{ pointAtCenter: true }}
@@ -237,6 +278,7 @@ export default function FormbarHeader() {
 				/>)}
 
 				<Tooltip
+                    mouseEnterDelay={0.5}
 					placement="bottomRight"
 					title={isDark ? "Light Mode" : "Dark Mode"}
 					arrow={{ pointAtCenter: true }}
@@ -261,6 +303,7 @@ export default function FormbarHeader() {
 
 				{userData && (
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						placement="bottomRight"
 						title="Profile"
 						arrow={{ pointAtCenter: true }}
@@ -279,28 +322,28 @@ export default function FormbarHeader() {
 					</Tooltip>
 				)}
 
-                { isDev && (
-                    <Tooltip
-                        placement="bottomRight"
-                        title="Testing"
-                        arrow={{ pointAtCenter: true }}
-                        color="geekblue"
+                <Tooltip
+                    mouseEnterDelay={0.5}
+                    placement="bottomRight"
+                    title="Settings"
+                    arrow={{ pointAtCenter: true }}
+                    color="volcano"
+                >
+                    <Button
+                        type="primary"
+                        variant="solid"
+                        color="volcano"
+                        size="large"
+                        style={styles.headerButton}
+                        onClick={() => setSettingsOpen(true)}
                     >
-                        <Button
-                            type="primary"
-                            variant="solid"
-                            color="geekblue"
-                            size="large"
-                            style={styles.headerButton}
-                            onClick={() => navigate("/testing")}
-                        >
-                            <IonIcon icon={IonIcons.bug} size="large" />
-                        </Button>
-                    </Tooltip>
-                )}
+                        <IonIcon icon={IonIcons.settings} size="large" />
+                    </Button>
+                </Tooltip>
 
 				{userData && (
 					<Tooltip
+                        mouseEnterDelay={0.5}
 						placement="bottomRight"
 						title="Log Out"
 						arrow={{ pointAtCenter: true }}
@@ -337,6 +380,28 @@ export default function FormbarHeader() {
 					</Tooltip>
 				)}
 			</Flex>
+
+            <Modal
+                children={<SettingsModal />}
+                open={settingsOpen}
+                centered
+                closable={false}
+                onCancel={() => {setSettingsOpen(false)}}
+                footer={null}
+                height={700}
+                width={window.innerWidth / 1.5}
+                styles={{
+                    container: {
+                        padding: 0,
+                        overflow: "hidden",
+                        height: "700px",
+                    },
+                    body: {
+                        padding: 0,
+                        height: "100%",
+                    }
+                }}
+            />
 		</Flex>
 	);
 }
@@ -374,8 +439,10 @@ const styles = {
 
 	headerButton: {
 		border: "none",
-		padding: "0 20px",
+		padding: "0 0",
+        aspectRatio: 1,
 		boxShadow: "0 2px 0px rgba(0,0,0,0.2)",
+        borderRadius: "12px",
 	},
 
 	headerButtonHover: {

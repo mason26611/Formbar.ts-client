@@ -169,7 +169,7 @@ export default function PollsEditorMenu() {
                         </Flex>
 
                         <Flex align="center" justify="space-between" gap={10} style={{marginTop: '10px'}}>
-                            <Tooltip title="Reset answers to 'Answer X'.">
+                            <Tooltip title="Reset answers to 'Answer X'." mouseEnterDelay={0.5}>
                                 <Button type="primary"
                                     onClick={() => {
                                         // Change all answers to "Answer {index}"
@@ -185,7 +185,7 @@ export default function PollsEditorMenu() {
                                     Reset Answers
                                 </Button>
                             </Tooltip>
-                            <Tooltip title="Assign each answer a unique color.">
+                            <Tooltip title="Assign each answer a unique color." mouseEnterDelay={0.5}>
                                 <Button type="primary"
                                     onClick={() => {
                                         let colors = generateColors(pollProperties.answers.length);
