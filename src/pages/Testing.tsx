@@ -1,875 +1,806 @@
-import { Button, Flex, Input, Badge, Tooltip } from "antd";
-import { accessToken, formbarUrl } from "../socket";
-import { useState } from "react";
+import { Alert, Button, Card, Flex, Space, Table, Tag, Typography } from "antd";
+import { useEffect, useRef, useState } from "react";
 import FormbarHeader from "../components/FormbarHeader";
-import { useSettings, getAppearAnimation } from "../main";
+import { getAppearAnimation, useSettings, useUserData } from "../main";
+import { accessToken, formbarUrl } from "../socket";
+import { Permissions, type CurrentUserData } from "../types";
 
-const getFetchOptions = (method = "GET", body?: any) => {
-    const opts: RequestInit = {
-        method,
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
-        },
-    };
-    if (body !== undefined) opts.body = JSON.stringify(body);
-    return opts;
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+type TestStatus = "pending" | "running" | "passed" | "failed" | "skipped";
+
+type ApiResponse = {
+	ok: boolean;
+	status: number;
+	body: unknown;
+	rawText: string;
+};
+
+type TestResult = {
+	key: string;
+	category: string;
+	label: string;
+	method: HttpMethod;
+	path: string;
+	status: TestStatus;
+	statusCode?: number;
+	details: string;
+	durationMs?: number;
+};
+
+type StaticIssue = {
+	key: string;
+	category: string;
+	method: HttpMethod;
+	path: string;
+	reason: string;
+};
+
+type NotificationRecord = {
+	id: number | string;
+	is_read?: boolean;
+	[key: string]: unknown;
+};
+
+type LogListRecord = {
+	logs?: string[];
+};
+
+type CurrentLoginData = CurrentUserData & {
+	classId?: number | null;
+	digipogs?: number;
+};
+
+type TestingContext = {
+	me: CurrentLoginData;
+	activeClassId: string | null;
+	classPermissionLevel: number;
+	isManager: boolean;
+	notifications: NotificationRecord[];
+	logs: string[];
+};
+
+type AutoTestSpec = {
+	key: string;
+	category: string;
+	label: string;
+	method: HttpMethod;
+	path: string | ((context: TestingContext) => string);
+	skip?: (context: TestingContext) => string | null;
+	onSuccess?: (context: TestingContext, response: ApiResponse) => void;
+};
+
+const AUTO_TEST_SPECS: AutoTestSpec[] = [
+	{
+		key: "config",
+		category: "System",
+		label: "Server config",
+		method: "GET",
+		path: "/config",
+	},
+	{
+		key: "certs",
+		category: "System",
+		label: "Public certs",
+		method: "GET",
+		path: "/certs",
+	},
+	{
+		key: "self-profile",
+		category: "User",
+		label: "Self profile",
+		method: "GET",
+		path: (context) => `/user/${context.me.id}`,
+	},
+	{
+		key: "self-classes",
+		category: "User",
+		label: "Self classes",
+		method: "GET",
+		path: (context) => `/user/${context.me.id}/classes`,
+	},
+	{
+		key: "self-active-class",
+		category: "User",
+		label: "Self active class",
+		method: "GET",
+		path: (context) => `/user/${context.me.id}/class`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "self-transactions",
+		category: "User",
+		label: "Self transactions",
+		method: "GET",
+		path: (context) => `/user/${context.me.id}/transactions?limit=5&offset=0`,
+	},
+	{
+		key: "self-pools",
+		category: "Pools",
+		label: "Self pools",
+		method: "GET",
+		path: (context) => `/user/${context.me.id}/pools?limit=5&offset=0`,
+	},
+	{
+		key: "notifications",
+		category: "Notifications",
+		label: "Notifications inbox",
+		method: "GET",
+		path: "/notifications",
+		onSuccess: (context, response) => {
+			const data = getResponseData<{ notifications?: NotificationRecord[] }>(
+				response.body,
+			);
+			context.notifications = Array.isArray(data?.notifications)
+				? data.notifications
+				: [];
+		},
+	},
+	{
+		key: "notification-detail",
+		category: "Notifications",
+		label: "Single notification",
+		method: "GET",
+		path: (context) => `/notifications/${encodeURIComponent(String(context.notifications[0].id))}`,
+		skip: (context) =>
+			context.notifications.length > 0
+				? null
+				: "Current login has no notifications to inspect.",
+	},
+	{
+		key: "manager",
+		category: "Manager",
+		label: "Manager dashboard",
+		method: "GET",
+		path: "/manager?limit=10&offset=0",
+		skip: (context) =>
+			context.isManager ? null : "Current login is not a manager.",
+	},
+	{
+		key: "logs",
+		category: "Logs",
+		label: "Log index",
+		method: "GET",
+		path: "/logs",
+		skip: (context) =>
+			context.isManager ? null : "Current login is not a manager.",
+		onSuccess: (context, response) => {
+			const data = getResponseData<LogListRecord>(response.body);
+			context.logs = Array.isArray(data?.logs) ? data.logs : [];
+		},
+	},
+	{
+		key: "log-detail",
+		category: "Logs",
+		label: "Single log file",
+		method: "GET",
+		path: (context) => `/logs/${encodeURIComponent(context.logs[0])}`,
+		skip: (context) => {
+			if (!context.isManager) {
+				return "Current login is not a manager.";
+			}
+			return context.logs.length > 0
+				? null
+				: "No log file name was available from /logs.";
+		},
+	},
+	{
+		key: "ip-whitelist",
+		category: "IP",
+		label: "Whitelist IPs",
+		method: "GET",
+		path: "/ip/whitelist",
+		skip: (context) =>
+			context.isManager ? null : "Current login is not a manager.",
+	},
+	{
+		key: "ip-blacklist",
+		category: "IP",
+		label: "Blacklist IPs",
+		method: "GET",
+		path: "/ip/blacklist",
+		skip: (context) =>
+			context.isManager ? null : "Current login is not a manager.",
+	},
+	{
+		key: "class-overview",
+		category: "Class",
+		label: "Current class overview",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "class-permissions",
+		category: "Class",
+		label: "Current class permissions",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/permissions`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "class-polls-current",
+		category: "Class - Polls",
+		label: "Current poll",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/polls/current`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "class-polls-history",
+		category: "Class - Polls",
+		label: "Poll history",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/polls?limit=5&index=0`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "room-tags",
+		category: "Room",
+		label: "Room tags",
+		method: "GET",
+		path: "/room/tags",
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "room-links",
+		category: "Room - Links",
+		label: "Room links",
+		method: "GET",
+		path: (context) => `/room/${context.activeClassId}/links`,
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "student-page",
+		category: "Student",
+		label: "Student page payload",
+		method: "GET",
+		path: "/student",
+		skip: (context) =>
+			context.activeClassId ? null : "Current login is not in an active class.",
+	},
+	{
+		key: "class-active",
+		category: "Class",
+		label: "Class active flag",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/active`,
+		skip: (context) => {
+			if (!context.activeClassId) {
+				return "Current login is not in an active class.";
+			}
+			return context.classPermissionLevel >= Permissions.TEACHER
+				? null
+				: "Current login does not have manage-class permissions.";
+		},
+	},
+	{
+		key: "class-students",
+		category: "Class",
+		label: "Class students",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/students`,
+		skip: (context) => {
+			if (!context.activeClassId) {
+				return "Current login is not in an active class.";
+			}
+			return context.classPermissionLevel >= Permissions.TEACHER
+				? null
+				: "Current login does not have manage-class permissions.";
+		},
+	},
+	{
+		key: "class-banned",
+		category: "Class",
+		label: "Class banned users",
+		method: "GET",
+		path: (context) => `/class/${context.activeClassId}/banned`,
+		skip: (context) => {
+			if (!context.activeClassId) {
+				return "Current login is not in an active class.";
+			}
+			return context.classPermissionLevel >= Permissions.TEACHER
+				? null
+				: "Current login does not have teacher-level class permissions.";
+		},
+	},
+];
+
+const UNSUPPORTED_ENDPOINTS: StaticIssue[] = [
+	{ key: "api-permission-check", category: "System", method: "GET", path: "/apiPermissionCheck", reason: "Needs a raw API key, which the current login flow does not expose to the client." },
+	{ key: "auth-login", category: "Auth", method: "POST", path: "/auth/login", reason: "Login flow is outside a current-session endpoint sweep." },
+	{ key: "auth-refresh", category: "Auth", method: "POST", path: "/auth/refresh", reason: "Refresh mutates session tokens and is already exercised by the app bootstrap." },
+	{ key: "auth-register", category: "Auth", method: "POST", path: "/auth/register", reason: "Requires creating a brand new account." },
+	{ key: "auth-google", category: "Auth", method: "GET", path: "/auth/google", reason: "Requires an external OAuth redirect flow." },
+	{ key: "auth-google-callback", category: "Auth", method: "GET", path: "/auth/google/callback", reason: "Requires an external OAuth callback payload." },
+	{ key: "oauth-authorize", category: "OAuth", method: "GET", path: "/oauth/authorize", reason: "Requires third-party app query parameters and redirect handling." },
+	{ key: "oauth-token", category: "OAuth", method: "POST", path: "/oauth/token", reason: "Needs an authorization code or refresh token from an external OAuth flow." },
+	{ key: "oauth-revoke", category: "OAuth", method: "POST", path: "/oauth/revoke", reason: "Needs a token issued for an external OAuth client." },
+	{ key: "verify-email-page", category: "User", method: "GET", path: "/user/verify/email", reason: "Requires a live email verification token from outside the current session." },
+	{ key: "verify-request", category: "User", method: "POST", path: "/user/:id/verify/request", reason: "Sends a real verification email." },
+	{ key: "verify-user", category: "User", method: "PATCH", path: "/user/:id/verify", reason: "Mutates another user's verification state." },
+	{ key: "verify-user-legacy", category: "User", method: "POST", path: "/user/:id/verify", reason: "Legacy mutating alias of the verify endpoint." },
+	{ key: "delete-user", category: "User", method: "DELETE", path: "/user/:id", reason: "Destructive user deletion should not auto-run from the client." },
+	{ key: "delete-user-legacy", category: "User", method: "GET", path: "/user/:id/delete", reason: "Legacy destructive alias should not auto-run from the client." },
+	{ key: "change-perm", category: "User", method: "PATCH", path: "/user/:email/perm", reason: "Mutates global permissions for a target user." },
+	{ key: "change-perm-legacy", category: "User", method: "POST", path: "/user/:email/perm", reason: "Legacy mutating alias of the permission endpoint." },
+	{ key: "ban-user", category: "User", method: "PATCH", path: "/user/:id/ban", reason: "Mutates another user's access state." },
+	{ key: "ban-user-legacy", category: "User", method: "GET", path: "/user/:id/ban", reason: "Legacy mutating alias of the ban endpoint." },
+	{ key: "unban-user", category: "User", method: "PATCH", path: "/user/:id/unban", reason: "Mutates another user's access state." },
+	{ key: "unban-user-legacy", category: "User", method: "GET", path: "/user/:id/unban", reason: "Legacy mutating alias of the unban endpoint." },
+	{ key: "regen-api-key", category: "User", method: "POST", path: "/user/:id/api/regenerate", reason: "Regenerates a real API key and invalidates the prior key." },
+	{ key: "pin-update", category: "User", method: "PATCH", path: "/user/:id/pin", reason: "Mutates the active user's PIN." },
+	{ key: "pin-verify", category: "User", method: "POST", path: "/user/:id/pin/verify", reason: "Needs a real PIN value from the user." },
+	{ key: "pin-reset-request", category: "User", method: "POST", path: "/user/:id/pin/reset", reason: "Sends a real PIN reset email." },
+	{ key: "pin-reset-token", category: "User", method: "PATCH", path: "/user/pin/reset", reason: "Requires a live PIN reset token from email." },
+	{ key: "password-update", category: "User", method: "PATCH", path: "/user/me/password", reason: "Mutates the active user's password." },
+	{ key: "password-reset", category: "User", method: "POST", path: "/user/me/password/reset", reason: "Sends a real password reset email." },
+	{ key: "notifications-mark-read", category: "Notifications", method: "POST", path: "/notifications/:id/mark-read", reason: "Mutates notification state." },
+	{ key: "notifications-delete-one", category: "Notifications", method: "DELETE", path: "/notifications/:id", reason: "Deletes real user data." },
+	{ key: "notifications-delete-all", category: "Notifications", method: "DELETE", path: "/notifications/", reason: "Deletes the entire inbox." },
+	{ key: "class-create", category: "Class", method: "POST", path: "/class/create", reason: "Creates a persistent class record." },
+	{ key: "class-start", category: "Class", method: "POST", path: "/class/:id/start", reason: "Mutates live classroom state for real users." },
+	{ key: "class-end", category: "Class", method: "POST", path: "/class/:id/end", reason: "Mutates live classroom state for real users." },
+	{ key: "class-join", category: "Class", method: "POST", path: "/class/:id/join", reason: "Changes the active class for the current session." },
+	{ key: "class-leave", category: "Class", method: "POST", path: "/class/:id/leave", reason: "Changes the active class for the current session." },
+	{ key: "break-request", category: "Class - Breaks", method: "POST", path: "/class/:id/break/request", reason: "Mutates live classroom break state." },
+	{ key: "break-end", category: "Class - Breaks", method: "POST", path: "/class/:id/break/end", reason: "Mutates live classroom break state." },
+	{ key: "break-approve", category: "Class - Breaks", method: "POST", path: "/class/:id/students/:userId/break/approve", reason: "Mutates another user's live classroom state." },
+	{ key: "break-approve-legacy", category: "Class - Breaks", method: "GET", path: "/class/:id/students/:userId/break/approve", reason: "Legacy mutating alias of the break approval endpoint." },
+	{ key: "break-deny", category: "Class - Breaks", method: "POST", path: "/class/:id/students/:userId/break/deny", reason: "Mutates another user's live classroom state." },
+	{ key: "help-request", category: "Class - Help", method: "POST", path: "/class/:id/help/request", reason: "Mutates live classroom help state." },
+	{ key: "help-request-legacy", category: "Class - Help", method: "GET", path: "/class/:id/help/request", reason: "Legacy mutating alias of the help endpoint." },
+	{ key: "help-delete", category: "Class - Help", method: "DELETE", path: "/class/:id/students/:userId/help", reason: "Mutates another user's live classroom state." },
+	{ key: "help-delete-legacy", category: "Class - Help", method: "GET", path: "/class/:id/students/:userId/help/delete", reason: "Legacy mutating alias of the help deletion endpoint." },
+	{ key: "poll-clear", category: "Class - Polls", method: "POST", path: "/class/:id/polls/clear", reason: "Clears live poll state." },
+	{ key: "poll-create", category: "Class - Polls", method: "POST", path: "/class/:id/polls/create", reason: "Creates a live poll for a real classroom." },
+	{ key: "poll-end", category: "Class - Polls", method: "POST", path: "/class/:id/polls/end", reason: "Mutates live poll state." },
+	{ key: "poll-response", category: "Class - Polls", method: "POST", path: "/class/:id/polls/response", reason: "Submits a real poll response for the current user." },
+	{ key: "room-join", category: "Room", method: "POST", path: "/room/:code/join", reason: "Changes the current room/class session." },
+	{ key: "room-leave", category: "Room", method: "DELETE", path: "/room/:id/leave", reason: "Changes the current room/class session." },
+	{ key: "room-leave-legacy", category: "Room", method: "POST", path: "/room/:id/leave", reason: "Legacy mutating alias of the room leave endpoint." },
+	{ key: "room-tags-put", category: "Room", method: "PUT", path: "/room/tags", reason: "Mutates the current room tags." },
+	{ key: "room-tags-post", category: "Room", method: "POST", path: "/room/tags", reason: "Legacy mutating alias of the room tags endpoint." },
+	{ key: "room-link-add", category: "Room - Links", method: "POST", path: "/room/:id/links/add", reason: "Mutates shared room links." },
+	{ key: "room-link-change", category: "Room - Links", method: "PUT", path: "/room/:id/links", reason: "Mutates shared room links." },
+	{ key: "room-link-change-legacy", category: "Room - Links", method: "POST", path: "/room/:id/links/change", reason: "Legacy mutating alias of the room links update endpoint." },
+	{ key: "room-link-remove", category: "Room - Links", method: "DELETE", path: "/room/:id/links", reason: "Mutates shared room links." },
+	{ key: "room-link-remove-legacy", category: "Room - Links", method: "POST", path: "/room/:id/links/remove", reason: "Legacy mutating alias of the room links removal endpoint." },
+	{ key: "student-post", category: "Student", method: "POST", path: "/student", reason: "Submits a real student poll response." },
+	{ key: "digipogs-award", category: "Digipogs", method: "POST", path: "/digipogs/award", reason: "Mutates digipog balances for a live classroom." },
+	{ key: "digipogs-transfer", category: "Digipogs", method: "POST", path: "/digipogs/transfer", reason: "Mutates digipog balances for real users." },
+	{ key: "ip-add", category: "IP", method: "POST", path: "/ip/:type", reason: "Mutates server IP access configuration." },
+	{ key: "ip-update", category: "IP", method: "PUT", path: "/ip/:type/:id", reason: "Mutates server IP access configuration." },
+	{ key: "ip-delete", category: "IP", method: "DELETE", path: "/ip/:type/:id", reason: "Mutates server IP access configuration." },
+	{ key: "ip-toggle", category: "IP", method: "POST", path: "/ip/:type/toggle", reason: "Mutates server IP access configuration and writes .env." },
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
 }
 
-const testFuncs = [
-    { name: 'Clear Console', func: () => console.clear(), hasArgs: false, category: 'System', method: 'DELETE', testedWorks: true },
-    { name: 'Certs', func: certs, hasArgs: false, category: 'System', method: 'GET', testedWorks: true },
+function getResponseData<T>(payload: unknown): T | undefined {
+	if (!isRecord(payload) || !("data" in payload)) {
+		return undefined;
+	}
+	return payload.data as T;
+}
 
-    { name: 'Get Me', func: getMe, hasArgs: false, category: 'User', method: 'GET', testedWorks: true },
-    { name: 'Get User', func: getUser, hasArgs: true, category: 'User', method: 'GET', testedWorks: true },
-    { name: 'Get User Class', func: getUserClass, hasArgs: true, category: 'User', method: 'GET' },
-    { name: 'Get User Classes', func: getUserClasses, hasArgs: true, category: 'User', method: 'GET', testedWorks: true },
-    { name: 'Delete User', func: deleteUser, hasArgs: true, category: 'User', method: 'DELETE', testedWorks: true },
-    { name: 'Change Perm (email|perm)', func: changePerm, hasArgs: true, category: 'User', method: 'PATCH', testedWorks: true },
-    { name: 'Ban User', func: banUser, hasArgs: true, category: 'User', method: 'PATCH', testedWorks: true },
-    { name: 'Unban User', func: unbanUser, hasArgs: true, category: 'User', method: 'PATCH', testedWorks: true },
-    { name: 'Verify User', func: verifyUser, hasArgs: true, category: 'User', method: 'PATCH' },
-    { name: 'Regenerate API Key', func: regenerateApiKey, hasArgs: true, category: 'User', method: 'PATCH' },
-    { name: 'Update PIN', func: updatePin, hasArgs: true, category: 'User', method: 'PATCH' },
-    { name: 'Request PIN Reset', func: requestPinReset, hasArgs: true, category: 'User', method: 'POST' },
-    { name: 'Reset PIN (Token)', func: resetPinWithToken, hasArgs: true, category: 'User', method: 'PATCH' },
+function summarizePayload(payload: unknown): string {
+	if (typeof payload === "string") {
+		return truncate(payload);
+	}
 
-    // Class endpoints (from attachments)
-    { name: 'Get Class', func: getClass, hasArgs: true, category: 'Class', method: 'GET', testedWorks: 'Only if class started' },
-    { name: 'Get Class Active', func: getClassActive, hasArgs: true, category: 'Class', method: 'GET' },
-    { name: 'Get Class Banned', func: getClassBanned, hasArgs: true, category: 'Class', method: 'GET' },
-    { name: 'Get Class Links', func: getClassLinks, hasArgs: true, category: 'Class', method: 'GET' },
-    { name: 'Get Class Permissions', func: getClassPermissions, hasArgs: true, category: 'Class', method: 'GET' },
-    { name: 'Get Class Students', func: getClassStudents, hasArgs: true, category: 'Class', method: 'GET' },
-    { name: 'Create Class', func: createClass, hasArgs: true, category: 'Class', method: 'POST', testedWorks: true },
-    { name: 'End Class', func: endClass, hasArgs: true, category: 'Class', method: 'POST', testedWorks: true },
-    { name: 'Join Class', func: joinClass, hasArgs: true, category: 'Class', method: 'POST', testedWorks: true },
-    { name: 'Leave Class', func: leaveClass, hasArgs: true, category: 'Class', method: 'POST', testedWorks: true },
-    { name: 'Start Class', func: startClass, hasArgs: true, category: 'Class', method: 'POST', testedWorks: true },
+	if (isRecord(payload)) {
+		if ("error" in payload) {
+			const errorValue = payload.error;
+			if (typeof errorValue === "string") {
+				return truncate(errorValue);
+			}
+			if (isRecord(errorValue) && typeof errorValue.message === "string") {
+				return truncate(errorValue.message);
+			}
+		}
 
-    // Class - Polls
-    { name: 'Get Class Polls', func: getClassPolls, hasArgs: true, category: 'Class - Polls', method: 'GET' },
-    { name: 'Get Class Current Poll', func: getClassPollCurrent, hasArgs: true, category: 'Class - Polls', method: 'GET', testedWorks: true },
-    { name: 'Clear Class Poll', func: clearClassPolls, hasArgs: true, category: 'Class - Polls', method: 'POST', testedWorks: true },
-    { name: 'Create Class Poll', func: createClassPoll, hasArgs: true, category: 'Class - Polls', method: 'POST' },
-    { name: 'End Class Poll', func: endClassPoll, hasArgs: true, category: 'Class - Polls', method: 'POST', testedWorks: true },
-    { name: 'Response to Poll', func: respondClassPoll, hasArgs: true, category: 'Class - Polls', method: 'POST' },
+		if ("message" in payload && typeof payload.message === "string") {
+			return truncate(payload.message);
+		}
+	}
 
-    // Class - Breaks
-    { name: 'End Own Break', func: endOwnBreak, hasArgs: true, category: 'Class - Breaks', method: 'POST' },
-    { name: 'Request Break', func: requestBreak, hasArgs: true, category: 'Class - Breaks', method: 'POST', testedWorks: true },
-    { name: 'Approve Break', func: approveBreak, hasArgs: true, category: 'Class - Breaks', method: 'POST', testedWorks: true },
-    { name: 'Deny Break', func: denyBreak, hasArgs: true, category: 'Class - Breaks', method: 'POST' },
+	try {
+		return truncate(JSON.stringify(payload));
+	} catch {
+		return "Response received.";
+	}
+}
 
-    // Class - Help
-    { name: 'Delete Help Request', func: deleteHelpRequest, hasArgs: true, category: 'Class - Help', method: 'DELETE', testedWorks: true },
-    { name: 'Request Help', func: requestClassHelp, hasArgs: true, category: 'Class - Help', method: 'POST' },
+function truncate(value: string, limit = 160): string {
+	return value.length > limit ? `${value.slice(0, limit - 3)}...` : value;
+}
 
-    // Room
-    { name: 'Leave Room', func: leaveRoom, hasArgs: true, category: 'Room', method: 'DELETE', testedWorks: true },
-    { name: 'Get Room Tags', func: getRoomTags, hasArgs: false, category: 'Room', method: 'GET' },
-    { name: 'Join Room By Code', func: joinRoomByCode, hasArgs: true, category: 'Room', method: 'POST' },
-    { name: 'Set Room Tags', func: setRoomTags, hasArgs: true, category: 'Room', method: 'PUT' },
+function getStatusTag(status: TestStatus) {
+	switch (status) {
+		case "passed":
+			return <Tag color="green">Passed</Tag>;
+		case "failed":
+			return <Tag color="red">Failed</Tag>;
+		case "running":
+			return <Tag color="blue">Running</Tag>;
+		case "skipped":
+			return <Tag color="orange">Skipped</Tag>;
+		default:
+			return <Tag>Pending</Tag>;
+	}
+}
 
-    // Room - Links
-    { name: 'Remove Room Link', func: removeRoomLink, hasArgs: true, category: 'Room - Links', method: 'DELETE' },
-    { name: 'Get Room Links', func: getRoomLinks, hasArgs: true, category: 'Room - Links', method: 'GET' },
-    { name: 'Add Room Link', func: addRoomLink, hasArgs: true, category: 'Room - Links', method: 'POST' },
-    { name: 'Update Room Link', func: updateRoomLink, hasArgs: true, category: 'Room - Links', method: 'PUT' },
+async function callApi(path: string, method: HttpMethod): Promise<ApiResponse> {
+	const response = await fetch(`${formbarUrl}/api/v1${path}`, {
+		method,
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+		},
+	});
+	const rawText = await response.text();
+	let body: unknown = rawText;
+	if (rawText) {
+		try {
+			body = JSON.parse(rawText);
+		} catch {
+			body = rawText;
+		}
+	}
 
-    // Digipogs
-    { name: 'Award Digipogs', func: awardDigipogs, hasArgs: true, category: 'Digipogs', method: 'POST' },
-    { name: 'Transfer Digipogs', func: transferDigipogs, hasArgs: true, category: 'Digipogs', method: 'POST' },
+	const bodySuccess =
+		isRecord(body) && typeof body.success === "boolean" ? body.success : undefined;
+	const hasStructuredError = isRecord(body) && "error" in body;
 
-    // IP Management
-    { name: 'Remove IP', func: removeIP, hasArgs: true, category: 'IP', method: 'DELETE' },
-    { name: 'Get IP List', func: getIPList, hasArgs: true, category: 'IP', method: 'GET', testedWorks: true },
-    { name: 'Toggle IP', func: toggleIP, hasArgs: true, category: 'IP', method: 'POST' },
-    { name: 'Update IP', func: updateIP, hasArgs: true, category: 'IP', method: 'PUT' },
+	return {
+		ok: response.ok && bodySuccess !== false && !hasStructuredError,
+		status: response.status,
+		body,
+		rawText,
+	};
+}
 
-    // Manager
-    { name: 'Get Manager', func: getManager, hasArgs: false, category: 'Manager', method: 'GET', testedWorks: true },
+async function loadContext(): Promise<{
+	context: TestingContext;
+	meResult: ApiResponse;
+}> {
+	const meResult = await callApi("/user/me", "GET");
+	const me = getResponseData<CurrentLoginData>(meResult.body);
+	if (!meResult.ok || !me?.id) {
+		throw new Error(summarizePayload(meResult.body) || "Failed to load /user/me.");
+	}
 
-    // Logs
-    { name: 'Get Logs', func: getLogs, hasArgs: false, category: 'Logs', method: 'GET' },
-    { name: 'Get Log File', func: getLogFile, hasArgs: true, category: 'Logs', method: 'GET' },
-
-    // OAuth
-    { name: 'OAuth Authorize', func: oauthAuthorize, hasArgs: false, category: 'OAuth', method: 'GET' },
-    { name: 'OAuth Revoke', func: oauthRevoke, hasArgs: true, category: 'OAuth', method: 'POST' },
-    { name: 'OAuth Token', func: oauthToken, hasArgs: true, category: 'OAuth', method: 'POST' },
-
-    // User
-    { name: 'Get User Transactions', func: getUserTransactions, hasArgs: true, category: 'User', method: 'GET' },
-
-    // Pools
-    { name: 'Get User Pools', func: getUserPools, hasArgs: false, category: 'Pools', method: 'GET' },
-]
-
-function getButtonStyle(method?: string) {
-    const map: Record<string, string> = {
-        GET: 'blue',      // blue
-        DELETE: 'red',   // red
-        POST: 'green',     // green
-        PATCH: 'cyan',    // teal
-        PUT: 'orange',      // orange
-    };
-    const color = method ? map[method.toUpperCase()] || 'default' : 'default';
-    return color;
+	return {
+		meResult,
+		context: {
+			me,
+			activeClassId:
+				me.activeClass != null
+					? String(me.activeClass)
+					: me.classId != null
+						? String(me.classId)
+						: null,
+			classPermissionLevel:
+				typeof me.classPermissions === "number" ? me.classPermissions : 0,
+			isManager: me.permissions >= Permissions.MANAGER,
+			notifications: [],
+			logs: [],
+		},
+	};
 }
 
 export function Testing() {
-    const [inputValue, setInputValue] = useState("");
-    const [bodyValue, setBodyValue] = useState("");
-    const { settings } = useSettings();
+	const { settings } = useSettings();
+	const { userData } = useUserData();
+	const autoRunKeyRef = useRef<string | null>(null);
+	const runSuiteRef = useRef<() => Promise<void>>(async () => {});
+	const [results, setResults] = useState<TestResult[]>([]);
+	const [isRunning, setIsRunning] = useState(false);
+	const [fatalError, setFatalError] = useState<string | null>(null);
+	const [runStartedAt, setRunStartedAt] = useState<string | null>(null);
 
-    return (
-        <div style={{ padding: '0 20px' }}>
-            <FormbarHeader />
-            <Flex style={{ height: 'calc(100vh - 60px)', overflow: 'auto' }} wrap gap={16} align="start">
-                <Flex justify="center" align="center" gap={20} style={{marginTop:16}}>
-                    <h1>Testing Page</h1>
-                    <p>This page is for testing new features and components.</p>
-                    <p>Working: {testFuncs.filter(t => t.testedWorks === true).length-1}/{testFuncs.length-1}</p>
-                </Flex>
-                <Input value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Argument (id, email, or 'email|perm')"/>
-                <Input value={bodyValue} onChange={(e) => setBodyValue(e.target.value)} placeholder="Body (for POST/PUT requests)"/>
-                {
-                    // group tests by category
-                    Object.entries(testFuncs.reduce<Record<string, any[]>>((acc, t) => {
-                        const key = (t as any).category || 'Uncategorized';
-                        if (!acc[key]) acc[key] = [];
-                        acc[key].push(t);
-                        return acc;
-                    }, {})).map(([category, tests], index) => (
-                        <div key={category} style={{ marginBottom: 12, 
-                                                    ...getAppearAnimation(settings.disableAnimations, index) }}>
-                            <h3 style={{ margin: '6px 0' }}>{category}</h3>
-                            <Flex vertical align="start" style={{ background: '#000a', padding: 8, borderRadius: 10 }} wrap gap={8}>
-                                {tests.map((test: any, index: number) => (
-                                    <Tooltip title={typeof test.testedWorks === 'string' ? test.testedWorks : test.testedWorks === true ? 'Works' : "Not working"} color={test.testedWorks === true ? 'green' : !test.testedWorks ? 'red' : 'orange'} mouseEnterDelay={0.5}>
-                                        <Badge dot color={test.testedWorks === true ? 'green' : !test.testedWorks ? 'red' : 'orange'}>
-                                            <Button
-                                                key={test.name}
-                                                onClick={() => test.hasArgs ? test.func(inputValue, bodyValue) : test.func()}
-                                                style={{ margin: 4,
-                                                    ...getAppearAnimation(settings.disableAnimations, index)
-                                                 }}
-                                                type='default'
-                                                variant="solid"
-                                                color={getButtonStyle(test.method) as any}
-                                            >{test.name}</Button>
-                                        </Badge>
-                                    </Tooltip>
-                                ))}
-                            </Flex>
-                        </div>
-                    ))
-                }
-            </Flex>
-        </div>
-    );
-}
+	const updateResult = (key: string, updater: (result: TestResult) => TestResult) => {
+		setResults((current) =>
+			current.map((result) => (result.key === key ? updater(result) : result)),
+		);
+	};
 
-async function certs() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/certs`, getFetchOptions());
-        const data = await res.json();
-        console.log("Certs:", data);
-    } catch (err) {
-        console.error("Error fetching certs:", err);
-    }
-}
+	runSuiteRef.current = async () => {
+		if (!accessToken) {
+			setFatalError(
+				"No access token is available yet. Open this page after the current login finishes bootstrapping.",
+			);
+			return;
+		}
 
-async function getMe() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/me`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Me:", data);
-    } catch (err) {
-        console.error("Error getting /me:", err);
-    }
-}
+		setIsRunning(true);
+		setFatalError(null);
+		setRunStartedAt(new Date().toLocaleTimeString());
 
-async function getUser(inputValue: string) {
-    if (!inputValue) return console.warn('getUser requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get User:", data);
-    } catch (err) {
-        console.error("Error getting user:", err);
-    }
-}
+		const initialResults: TestResult[] = [
+			{
+				key: "me",
+				category: "User",
+				label: "Current login",
+				method: "GET",
+				path: "/user/me",
+				status: "pending",
+				details: "",
+			},
+			...AUTO_TEST_SPECS.map((spec) => ({
+				key: spec.key,
+				category: spec.category,
+				label: spec.label,
+				method: spec.method,
+				path: typeof spec.path === "string" ? spec.path : "",
+				status: "pending" as TestStatus,
+				details: "",
+			})),
+		];
+		setResults(initialResults);
 
-async function getUserClass(inputValue: string) {
-    if (!inputValue) return console.warn('getUserClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/class`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get User Class:", data);
-    } catch (err) {
-        console.error("Error getting user class:", err);
-    }
-}
+		try {
+			updateResult("me", (result) => ({ ...result, status: "running" }));
+			const startedAt = performance.now();
+			const { context, meResult } = await loadContext();
+			updateResult("me", (result) => ({
+				...result,
+				status: meResult.ok ? "passed" : "failed",
+				statusCode: meResult.status,
+				durationMs: Math.round(performance.now() - startedAt),
+				details: summarizePayload(meResult.body),
+			}));
 
-async function getUserClasses(inputValue: string) {
-    if (!inputValue) return console.warn('getUserClasses requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/classes`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get User Classes:", data);
-    } catch (err) {
-        console.error("Error getting user classes:", err);
-    }
-}
+			for (const spec of AUTO_TEST_SPECS) {
+				const skipReason = spec.skip?.(context);
+				const resolvedPath =
+					typeof spec.path === "string" ? spec.path : spec.path(context);
 
-async function deleteUser(inputValue: string) {
-    if (!inputValue) return console.warn('deleteUser requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}`, getFetchOptions('DELETE'));
-        const data = await res.json();
-        console.log("Delete User:", data);
-    } catch (err) {
-        console.error("Error deleting user:", err);
-    }
-}
+				if (skipReason) {
+					updateResult(spec.key, (result) => ({
+						...result,
+						path: resolvedPath,
+						status: "skipped",
+						details: skipReason,
+					}));
+					continue;
+				}
 
-// changePerm expects input like "email|permValue" or a JSON string like {"perm":...}
-async function changePerm(inputValue: string) {
-    if (!inputValue) return console.warn('changePerm requires input like "email|perm"');
-    let email = inputValue;
-    let body: any = {};
-    if (inputValue.includes('|')) {
-        const [e, p] = inputValue.split('|');
-        email = e.trim();
-        body = { perm: p.trim() };
-    } else {
-        try { body = JSON.parse(inputValue); }
-        catch { body = { perm: inputValue }; }
-    }
+				updateResult(spec.key, (result) => ({
+					...result,
+					path: resolvedPath,
+					status: "running",
+					details: "",
+				}));
 
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(email)}/perm`, getFetchOptions('PATCH', body));
-        const data = await res.json();
-        console.log("Change Perm:", data);
-    } catch (err) {
-        console.error("Error changing perm:", err);
-    }
-}
+				const requestStartedAt = performance.now();
+				try {
+					const response = await callApi(resolvedPath, spec.method);
+					spec.onSuccess?.(context, response);
+					updateResult(spec.key, (result) => ({
+						...result,
+						status: response.ok ? "passed" : "failed",
+						statusCode: response.status,
+						durationMs: Math.round(performance.now() - requestStartedAt),
+						details: summarizePayload(response.body),
+					}));
+				} catch (error) {
+					const message =
+						error instanceof Error ? error.message : "Request failed.";
+					updateResult(spec.key, (result) => ({
+						...result,
+						status: "failed",
+						durationMs: Math.round(performance.now() - requestStartedAt),
+						details: message,
+					}));
+				}
+			}
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Unable to bootstrap test context.";
+			setFatalError(message);
+			updateResult("me", (result) => ({
+				...result,
+				status: "failed",
+				details: message,
+			}));
+		} finally {
+			setIsRunning(false);
+		}
+	};
 
-async function banUser(inputValue: string) {
-    if (!inputValue) return console.warn('banUser requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/ban`, getFetchOptions('PATCH'));
-        const data = await res.json();
-        console.log("Ban User:", data);
-    } catch (err) {
-        console.error("Error banning user:", err);
-    }
-}
+	const handleRunSuite = () => {
+		void runSuiteRef.current();
+	};
 
-async function unbanUser(inputValue: string) {
-    if (!inputValue) return console.warn('unbanUser requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/unban`, getFetchOptions('PATCH'));
-        const data = await res.json();
-        console.log("Unban User:", data);
-    } catch (err) {
-        console.error("Error unbanning user:", err);
-    }
-}
+	useEffect(() => {
+		if (!userData?.id) {
+			return;
+		}
 
-async function verifyUser(inputValue: string) {
-    if (!inputValue) return console.warn('verifyUser requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/verify`, getFetchOptions('PATCH'));
-        const data = await res.json();
-        console.log("Verify User:", data);
-    } catch (err) {
-        console.error("Error verifying user:", err);
-    }
-}
+		const nextKey = String(userData.id);
+		if (autoRunKeyRef.current === nextKey) {
+			return;
+		}
 
-async function regenerateApiKey(inputValue: string) {
-    if (!inputValue) return console.warn('regenerateApiKey requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/api/regenerate`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("Regenerate API Key:", data);
-    } catch (err) {
-        console.error("Error regenerating API key:", err);
-    }
-}
+		autoRunKeyRef.current = nextKey;
+		void runSuiteRef.current();
+	}, [userData?.id]);
 
-// updatePin expects "id|newPin|oldPin(optional)" or JSON body with id,pin,oldPin
-async function updatePin(inputValue: string) {
-    if (!inputValue) return console.warn('updatePin requires "id|newPin|oldPin(optional)"');
-    let id = "";
-    let body: any = {};
-    if (inputValue.includes('|')) {
-        const [userId, newPin, oldPin] = inputValue.split('|').map(s => s.trim());
-        id = userId;
-        body = { pin: newPin, ...(oldPin ? { oldPin } : {}) };
-    } else {
-        try {
-            const parsed = JSON.parse(inputValue);
-            id = String(parsed.id || "");
-            body = { pin: parsed.pin, ...(parsed.oldPin ? { oldPin: parsed.oldPin } : {}) };
-        } catch {
-            return console.warn('updatePin requires "id|newPin|oldPin(optional)" or JSON');
-        }
-    }
-    if (!id || !body.pin) return console.warn('updatePin requires both id and pin');
+	const passedCount = results.filter((result) => result.status === "passed").length;
+	const failedCount = results.filter((result) => result.status === "failed").length;
+	const skippedCount = results.filter((result) => result.status === "skipped").length;
 
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(id)}/pin`, getFetchOptions('PATCH', body));
-        const data = await res.json();
-        console.log("Update PIN:", data);
-    } catch (err) {
-        console.error("Error updating PIN:", err);
-    }
-}
+	return (
+		<div style={{ padding: "0 20px" }}>
+			<FormbarHeader />
+			<Flex
+				vertical
+				gap={16}
+				style={{
+					padding: "16px 0 32px",
+					minHeight: "calc(100vh - 60px)",
+					overflow: "auto",
+				}}
+			>
+				<Card
+					style={{
+						background: "#000a",
+						...getAppearAnimation(settings.disableAnimations, 0),
+					}}
+				>
+					<Flex justify="space-between" align="center" wrap gap={16}>
+						<div>
+							<Typography.Title level={2} style={{ margin: 0 }}>
+								Endpoint Testing
+							</Typography.Title>
+							<Typography.Paragraph style={{ margin: "8px 0 0" }}>
+								This page auto-runs the safe endpoint suite using the current login
+								context and records anything that cannot be tested safely from the
+								client.
+							</Typography.Paragraph>
+							<Typography.Text type="secondary">
+								Last run: {runStartedAt || "Not run yet"}
+							</Typography.Text>
+						</div>
+						<Button type="primary" onClick={handleRunSuite} loading={isRunning}>
+							Run Suite Again
+						</Button>
+					</Flex>
+				</Card>
 
-async function requestPinReset(inputValue: string) {
-    if (!inputValue) return console.warn('requestPinReset requires a user id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/pin/reset`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("Request PIN Reset:", data);
-    } catch (err) {
-        console.error("Error requesting PIN reset:", err);
-    }
-}
+				<Space wrap size={[12, 12]} style={getAppearAnimation(settings.disableAnimations, 1)}>
+					<Tag color="green">Passed: {passedCount}</Tag>
+					<Tag color="red">Failed: {failedCount}</Tag>
+					<Tag color="orange">Skipped: {skippedCount}</Tag>
+					<Tag color="blue">Not auto-run: {UNSUPPORTED_ENDPOINTS.length}</Tag>
+				</Space>
 
-// resetPinWithToken expects JSON: {"pin":"1234","token":"..."}
-async function resetPinWithToken(inputValue: string) {
-    if (!inputValue) return console.warn('resetPinWithToken requires JSON body');
-    let body: any;
-    try {
-        body = JSON.parse(inputValue);
-    } catch {
-        return console.warn('resetPinWithToken requires JSON body like {"pin":"1234","token":"..."}');
-    }
+				{fatalError ? (
+					<Alert
+						type="error"
+						showIcon
+						message="Suite bootstrap failed"
+						description={fatalError}
+						style={getAppearAnimation(settings.disableAnimations, 2)}
+					/>
+				) : null}
 
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/pin/reset`, getFetchOptions('PATCH', body));
-        const data = await res.json();
-        console.log("Reset PIN (Token):", data);
-    } catch (err) {
-        console.error("Error resetting PIN:", err);
-    }
-}
+				<Alert
+					type="info"
+					showIcon
+					message="Auto-run scope"
+					description="Read-only endpoints run automatically. Endpoints that mutate user, class, notification, digipog, IP, auth, or OAuth state are listed below as intentionally not auto-run."
+					style={getAppearAnimation(settings.disableAnimations, 3)}
+				/>
 
-// --- Class endpoints ---
-async function getClass(inputValue: string) {
-    if (!inputValue) return console.warn('getClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class:", data);
-    } catch (err) {
-        console.error("Error getting class:", err);
-    }
-}
+				<Card
+					title="Auto-Run Results"
+					style={{
+						background: "#000a",
+						...getAppearAnimation(settings.disableAnimations, 4),
+					}}
+				>
+					<Table<TestResult>
+						rowKey="key"
+						size="small"
+						pagination={false}
+						dataSource={results}
+						columns={[
+							{
+								title: "Category",
+								dataIndex: "category",
+								key: "category",
+								width: 140,
+							},
+							{
+								title: "Method",
+								dataIndex: "method",
+								key: "method",
+								width: 90,
+								render: (value: HttpMethod) => <Tag>{value}</Tag>,
+							},
+							{
+								title: "Endpoint",
+								key: "endpoint",
+								render: (_, record) => (
+									<div>
+										<div>{record.label}</div>
+										<Typography.Text type="secondary">{record.path}</Typography.Text>
+									</div>
+								),
+							},
+							{
+								title: "Status",
+								dataIndex: "status",
+								key: "status",
+								width: 110,
+								render: (value: TestStatus) => getStatusTag(value),
+							},
+							{
+								title: "Details",
+								dataIndex: "details",
+								key: "details",
+							},
+							{
+								title: "Time",
+								key: "durationMs",
+								width: 90,
+								render: (_, record) =>
+									record.durationMs != null ? `${record.durationMs} ms` : "--",
+							},
+						]}
+					/>
+				</Card>
 
-async function getClassActive(inputValue: string) {
-    if (!inputValue) return console.warn('getClassActive requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/active`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class Active:", data);
-    } catch (err) {
-        console.error("Error getting class active:", err);
-    }
-}
-
-async function getClassBanned(inputValue: string) {
-    if (!inputValue) return console.warn('getClassBanned requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/banned`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class Banned:", data);
-    } catch (err) {
-        console.error("Error getting class banned:", err);
-    }
-}
-
-async function getClassLinks(inputValue: string) {
-    if (!inputValue) return console.warn('getClassLinks requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/links`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class Links:", data);
-    } catch (err) {
-        console.error("Error getting class links:", err);
-    }
-}
-
-async function getClassPermissions(inputValue: string) {
-    if (!inputValue) return console.warn('getClassPermissions requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/permissions`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class Permissions:", data);
-    } catch (err) {
-        console.error("Error getting class permissions:", err);
-    }
-}
-
-async function getClassStudents(inputValue: string) {
-    if (!inputValue) return console.warn('getClassStudents requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/students`, getFetchOptions());
-        const data = await res.json();
-        console.log("Get Class Students:", data);
-    } catch (err) {
-        console.error("Error getting class students:", err);
-    }
-}
-
-async function createClass(inputValue: string) {
-    if (!inputValue) return console.warn('createClass requires a body (JSON or class name)');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch { body = { name: inputValue }; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/create`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log("Create Class:", data);
-    } catch (err) {
-        console.error("Error creating class:", err);
-    }
-}
-
-async function endClass(inputValue: string) {
-    if (!inputValue) return console.warn('endClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/end`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("End Class:", data);
-    } catch (err) {
-        console.error("Error ending class:", err);
-    }
-}
-
-async function joinClass(inputValue: string) {
-    if (!inputValue) return console.warn('joinClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/join`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("Join Class:", data);
-    } catch (err) {
-        console.error("Error joining class:", err);
-    }
-}
-
-async function leaveClass(inputValue: string) {
-    if (!inputValue) return console.warn('leaveClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/leave`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("Leave Class:", data);
-    } catch (err) {
-        console.error("Error leaving class:", err);
-    }
-}
-
-async function startClass(inputValue: string) {
-    if (!inputValue) return console.warn('startClass requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/start`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log("Start Class:", data);
-    } catch (err) {
-        console.error("Error starting class:", err);
-    }
-}
-
-// --- Class - Polls ---
-async function getClassPolls(inputValue: string) {
-    if (!inputValue) return console.warn('getClassPolls requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Class Polls:', data);
-    } catch (err) { console.error('Error getting class polls:', err); }
-}
-
-async function getClassPollCurrent(inputValue: string) {
-    if (!inputValue) return console.warn('getClassPollCurrent requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls/current`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Class Current Poll:', data);
-    } catch (err) { console.error('Error getting current poll:', err); }
-}
-
-async function clearClassPolls(inputValue: string) {
-    if (!inputValue) return console.warn('clearClassPolls requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls/clear`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('Clear Class Polls:', data);
-    } catch (err) { console.error('Error clearing polls:', err); }
-}
-
-async function createClassPoll(inputValue: string, bodyValue: string) {
-    if (!inputValue) return console.warn('createClassPoll requires body or name');
-    let body: any;
-    try { body = JSON.parse(bodyValue); } catch (err) { body = bodyValue; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls/create`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Create Class Poll:', data);
-    } catch (err) { console.error('Error creating poll:', err); }
-}
-
-async function endClassPoll(inputValue: string) {
-    if (!inputValue) return console.warn('endClassPoll requires an id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls/end`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('End Class Poll:', data);
-    } catch (err) { console.error('Error ending poll:', err); }
-}
-
-async function respondClassPoll(inputValue: string, bodyValue: string) {
-    if (!inputValue) return console.warn('respondClassPoll requires body');
-    let body: any;
-    try { body = JSON.parse(bodyValue); } catch (err) { body = bodyValue; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/polls/response`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Respond Class Poll:', data);
-    } catch (err) { console.error('Error responding to poll:', err); }
-}
-
-// --- Class - Breaks ---
-async function endOwnBreak(inputValue: string, bodyValue: string) {
-    if (!inputValue) return console.warn('endOwnBreak requires an id');
-    let body: any;
-    try { body = JSON.parse(bodyValue); } catch (err) { body = bodyValue; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/break/end`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('End Own Break:', data);
-    } catch (err) { console.error('Error ending own break:', err); }
-}
-
-async function requestBreak(inputValue: string, bodyValue: string) {
-    if (!inputValue) return console.warn('requestBreak requires an id');
-    let body: any;
-    try { body = JSON.parse(bodyValue); } catch (err) { body = bodyValue; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(inputValue)}/break/request`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Request Break:', data);
-    } catch (err) { console.error('Error requesting break:', err); }
-}
-
-async function approveBreak(inputValue: string) {
-    if (!inputValue) return console.warn('approveBreak requires "classId|userId"');
-    const [classId, userId] = inputValue.split('|').map(s => s.trim());
-    if (!classId || !userId) return console.warn('approveBreak requires "classId|userId"');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(classId)}/students/${encodeURIComponent(userId)}/break/approve`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('Approve Break:', data);
-    } catch (err) { console.error('Error approving break:', err); }
-}
-
-async function denyBreak(inputValue: string) {
-    if (!inputValue) return console.warn('denyBreak requires "classId|userId"');
-    const [classId, userId] = inputValue.split('|').map(s => s.trim());
-    if (!classId || !userId) return console.warn('denyBreak requires "classId|userId"');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(classId)}/students/${encodeURIComponent(userId)}/break/deny`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('Deny Break:', data);
-    } catch (err) { console.error('Error denying break:', err); }
-}
-
-// --- Class - Help ---
-async function deleteHelpRequest(inputValue: string) {
-    if (!inputValue) return console.warn('deleteHelpRequest requires "classId|userId"');
-    const [classId, userId] = inputValue.split('|').map(s => s.trim());
-    if (!classId || !userId) return console.warn('deleteHelpRequest requires "classId|userId"');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(classId)}/students/${encodeURIComponent(userId)}/help`, getFetchOptions('DELETE'));
-        const data = await res.json();
-        console.log('Delete Help Request:', data);
-    } catch (err) { console.error('Error deleting help request:', err); }
-}
-
-async function requestClassHelp(inputValue: string) {
-    if (!inputValue) return console.warn('requestClassHelp requires an id or body');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch { body = { classId: inputValue }; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/class/${encodeURIComponent(body.classId || body.id || '')}/help/request`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Request Class Help:', data);
-    } catch (err) { console.error('Error requesting help:', err); }
-}
-
-// --- Room ---
-async function leaveRoom(inputValue: string) {
-    if (!inputValue) return console.warn('leaveRoom requires a room id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(inputValue)}/leave`, getFetchOptions('DELETE'));
-        const data = await res.json();
-        console.log('Leave Room:', data);
-    } catch (err) { console.error('Error leaving room:', err); }
-}
-
-async function getRoomTags() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/tags`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Room Tags:', data);
-    } catch (err) { console.error('Error getting room tags:', err); }
-}
-
-async function joinRoomByCode(inputValue: string) {
-    if (!inputValue) return console.warn('joinRoomByCode requires a code or JSON with {code}');
-    let code = inputValue;
-    try {
-        const parsed = JSON.parse(inputValue); if (parsed.code) code = parsed.code;
-    } catch {}
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(code)}/join`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('Join Room By Code:', data);
-    } catch (err) { console.error('Error joining room by code:', err); }
-}
-
-async function setRoomTags(inputValue: string) {
-    if (!inputValue) return console.warn('setRoomTags requires a body (JSON) or comma-separated tags');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch { body = { tags: inputValue.split(',').map(s => s.trim()) }; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/tags`, getFetchOptions('PUT', body));
-        const data = await res.json();
-        console.log('Set Room Tags:', data);
-    } catch (err) { console.error('Error setting room tags:', err); }
-}
-
-// --- Room - Links ---
-async function removeRoomLink(inputValue: string) {
-    if (!inputValue) return console.warn('removeRoomLink requires "roomId|linkId" or roomId');
-    if (inputValue.includes('|')) {
-        const [roomId, linkId] = inputValue.split('|').map(s => s.trim());
-        try {
-            const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(roomId)}/links/${encodeURIComponent(linkId)}`, getFetchOptions('DELETE'));
-            const data = await res.json();
-            console.log('Remove Room Link (by id):', data);
-        } catch (err) { console.error('Error removing room link:', err); }
-    } else {
-        try {
-            const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(inputValue)}/links`, getFetchOptions('DELETE'));
-            const data = await res.json();
-            console.log('Remove Room Link:', data);
-        } catch (err) { console.error('Error removing room link:', err); }
-    }
-}
-
-async function getRoomLinks(inputValue: string) {
-    if (!inputValue) return console.warn('getRoomLinks requires a room id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(inputValue)}/links`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Room Links:', data);
-    } catch (err) { console.error('Error getting room links:', err); }
-}
-
-async function addRoomLink(inputValue: string) {
-    if (!inputValue) return console.warn('addRoomLink requires "roomId|json" or JSON with classId');
-    let body: any = {};
-    let roomId = '';
-    if (inputValue.includes('|')) {
-        const [r, payload] = inputValue.split('|', 2);
-        roomId = r.trim();
-        try { body = JSON.parse(payload); } catch { body = { url: payload }; }
-    } else {
-        try { body = JSON.parse(inputValue); roomId = body.roomId || body.classId || ''; } catch { return console.warn('addRoomLink: provide roomId|json or valid JSON'); }
-    }
-    if (!roomId) return console.warn('addRoomLink requires roomId');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(roomId)}/links/add`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Add Room Link:', data);
-    } catch (err) { console.error('Error adding room link:', err); }
-}
-
-async function updateRoomLink(inputValue: string) {
-    if (!inputValue) return console.warn('updateRoomLink requires "roomId|json" or JSON with classId');
-    let body: any = {};
-    let roomId = '';
-    if (inputValue.includes('|')) {
-        const [r, payload] = inputValue.split('|', 2);
-        roomId = r.trim();
-        try { body = JSON.parse(payload); } catch { body = { data: payload }; }
-    } else {
-        try { body = JSON.parse(inputValue); roomId = body.roomId || body.classId || ''; } catch { return console.warn('updateRoomLink: provide roomId|json or valid JSON'); }
-    }
-    if (!roomId) return console.warn('updateRoomLink requires roomId');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/room/${encodeURIComponent(roomId)}/links`, getFetchOptions('PUT', body));
-        const data = await res.json();
-        console.log('Update Room Link:', data);
-    } catch (err) { console.error('Error updating room link:', err); }
-}
-
-// --- Digipogs ---
-async function awardDigipogs(inputValue: string) {
-    if (!inputValue) return console.warn('awardDigipogs requires body JSON or "userId|amount"');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch {
-        const [userId, amount] = inputValue.split('|').map(s => s.trim());
-        body = { userId, amount: Number(amount) || 0 };
-    }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/digipogs/award`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Award Digipogs:', data);
-    } catch (err) { console.error('Error awarding digipogs:', err); }
-}
-
-async function transferDigipogs(inputValue: string, bodyValue: string) {
-    if (!inputValue && !bodyValue) return console.warn('transferDigipogs requires body JSON or "toUserId|amount"');
-    let body: any;
-    try { body = JSON.parse(bodyValue); } catch {
-        const [toUserId, amount] = inputValue.split('|').map(s => s.trim());
-        body = { toUserId, amount: Number(amount) || 0 };
-    }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/digipogs/transfer`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('Transfer Digipogs:', data);
-    } catch (err) { console.error('Error transferring digipogs:', err); }
-}
-
-// --- IP Management ---
-async function removeIP(inputValue: string) {
-    if (!inputValue) return console.warn('removeIP requires "type|id"');
-    const [type, id] = inputValue.split('|').map(s => s.trim());
-    if (!type || !id) return console.warn('removeIP requires "type|id"');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/ip/${encodeURIComponent(type)}/${encodeURIComponent(id)}`, getFetchOptions('DELETE'));
-        const data = await res.json();
-        console.log('Remove IP:', data);
-    } catch (err) { console.error('Error removing IP:', err); }
-}
-
-async function getIPList(inputValue: string) {
-    if (!inputValue) return console.warn('getIPList requires a type');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/ip/${encodeURIComponent(inputValue)}`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get IP List:', data);
-    } catch (err) { console.error('Error getting IP list:', err); }
-}
-
-async function toggleIP(inputValue: string) {
-    if (!inputValue) return console.warn('toggleIP requires a type or JSON');
-    let type = inputValue;
-    try { const p = JSON.parse(inputValue); if (p.type) type = p.type; } catch {}
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/ip/${encodeURIComponent(type)}/toggle`, getFetchOptions('POST'));
-        const data = await res.json();
-        console.log('Toggle IP:', data);
-    } catch (err) { console.error('Error toggling IP:', err); }
-}
-
-async function updateIP(inputValue: string) {
-    if (!inputValue) return console.warn('updateIP requires "type|id|json" or JSON with type and id');
-    let type = '' as string;
-    let id = '' as string;
-    let body: any = {};
-    if (inputValue.includes('|')) {
-        const [t, i, payload] = inputValue.split('|', 3).map(s => s.trim());
-        type = t; id = i;
-        try { body = JSON.parse(payload); } catch { body = { data: payload }; }
-    } else {
-        try { const p = JSON.parse(inputValue); type = p.type; id = p.id; body = p; } catch { return console.warn('updateIP: provide type|id|json or JSON with type and id'); }
-    }
-    if (!type || !id) return console.warn('updateIP requires type and id');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/ip/${encodeURIComponent(type)}/${encodeURIComponent(id)}`, getFetchOptions('PUT', body));
-        const data = await res.json();
-        console.log('Update IP:', data);
-    } catch (err) { console.error('Error updating IP:', err); }
-}
-
-// --- Manager / Logs / Student / OAuth / User / Pools ---
-async function getManager() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/manager`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Manager:', data);
-    } catch (err) { console.error('Error getting manager:', err); }
-}
-
-async function getLogs() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/logs`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get Logs:', data);
-    } catch (err) { console.error('Error getting logs:', err); }
-}
-
-async function getLogFile(inputValue: string) {
-    if (!inputValue) return console.warn('getLogFile requires a log name');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/logs/${encodeURIComponent(inputValue)}`, getFetchOptions());
-        const data = await res.text();
-        console.log('Get Log File:', data);
-    } catch (err) { console.error('Error getting log file:', err); }
-}
-
-async function oauthAuthorize() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/oauth/authorize`, getFetchOptions());
-        const data = await res.json();
-        console.log('OAuth Authorize:', data);
-    } catch (err) { console.error('Error calling oauth authorize:', err); }
-}
-
-async function oauthRevoke(inputValue: string) {
-    if (!inputValue) return console.warn('oauthRevoke requires body (token or json)');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch { body = { token: inputValue }; }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/oauth/revoke`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('OAuth Revoke:', data);
-    } catch (err) { console.error('Error revoking oauth token:', err); }
-}
-
-async function oauthToken(inputValue: string) {
-    if (!inputValue) return console.warn('oauthToken requires body');
-    let body: any;
-    try { body = JSON.parse(inputValue); } catch { return console.warn('oauthToken requires JSON body'); }
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/oauth/token`, getFetchOptions('POST', body));
-        const data = await res.json();
-        console.log('OAuth Token:', data);
-    } catch (err) { console.error('Error requesting oauth token:', err); }
-}
-
-async function getUserTransactions(inputValue: string) {
-    if (!inputValue) return console.warn('getUserTransactions requires a userId');
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/${encodeURIComponent(inputValue)}/transactions`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get User Transactions:', data);
-    } catch (err) { console.error('Error getting user transactions:', err); }
-}
-
-async function getUserPools() {
-    try {
-        const res = await fetch(`${formbarUrl}/api/v1/user/pools`, getFetchOptions());
-        const data = await res.json();
-        console.log('Get User Pools:', data);
-    } catch (err) { console.error('Error getting user pools:', err); }
+				<Card
+					title="Not Auto-Run"
+					style={{
+						background: "#000a",
+						...getAppearAnimation(settings.disableAnimations, 5),
+					}}
+				>
+					<Table<StaticIssue>
+						rowKey="key"
+						size="small"
+						pagination={{ pageSize: 12 }}
+						dataSource={UNSUPPORTED_ENDPOINTS}
+						columns={[
+							{
+								title: "Category",
+								dataIndex: "category",
+								key: "category",
+								width: 140,
+							},
+							{
+								title: "Method",
+								dataIndex: "method",
+								key: "method",
+								width: 90,
+								render: (value: HttpMethod) => <Tag>{value}</Tag>,
+							},
+							{
+								title: "Endpoint",
+								dataIndex: "path",
+								key: "path",
+							},
+							{
+								title: "Reason",
+								dataIndex: "reason",
+								key: "reason",
+							},
+						]}
+					/>
+				</Card>
+			</Flex>
+		</div>
+	);
 }
