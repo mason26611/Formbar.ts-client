@@ -16,12 +16,13 @@ import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 const { Title, Text } = Typography;
-import { useClassData, useTheme } from "../../main";
+import { useClassData, useMobileDetect, useTheme } from "../../main";
 import { useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../../socket";
 
 export default function SettingsMenu() {
 	const { classData } = useClassData();
+    const isMobile = useMobileDetect();
 
 	const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
@@ -186,9 +187,10 @@ export default function SettingsMenu() {
 						<Flex vertical gap={20}>
 							<Flex
 								gap={10}
-								style={{ width: "500px" }}
+								style={{ width: isMobile ? "100%" :"500px" }}
 								justify="center"
 								align="center"
+                                vertical={isMobile}
 							>
 								<Input
 									placeholder="Class Name"
@@ -199,9 +201,10 @@ export default function SettingsMenu() {
 
 							<Flex
 								gap={10}
-								style={{ width: "400px" }}
+								style={{ width: isMobile ? "100%" : "400px" }}
 								justify="center"
 								align="center"
+                                vertical={isMobile}
 							>
 								<Button variant="solid" color="danger" style={{cursor:'not-allowed', opacity: 0.5}}>
 									Kick All Students
@@ -212,31 +215,35 @@ export default function SettingsMenu() {
 							</Flex>
 						</Flex>
 						
-						<Flex vertical gap={10} align="center" justify="center" style={{borderLeft: `2px solid ${isDark ? '#fff2' : '#0002'}`,paddingLeft: 20}}>
+                        {
+                            !isMobile && (
+                                <Flex vertical gap={10} align="center" justify="center" style={{borderLeft: `2px solid ${isDark ? '#fff2' : '#0002'}`,paddingLeft: 20}}>
 
-							<Tooltip title="Click to enlarge" mouseEnterDelay={0.5}>
-								<QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={150} style={{cursor:'pointer'}} type="svg" icon="/img/FormbarLogo2-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
-							</Tooltip>
+                                    <Tooltip title="Click to enlarge" mouseEnterDelay={0.5}>
+                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={150} style={{cursor:'pointer'}} type="svg" icon="/img/FormbarLogo2-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
+                                    </Tooltip>
 
-							<Text strong type="secondary" style={{fontSize:16}}>Scan to join class</Text>
-							
-							<Modal 
-								open={isQRModalOpen}
-								title="Join Class"
-								footer={null}
-								centered
-								onCancel={() => {
-									setIsQRModalOpen(false)
-								}}
-								>
-								<QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} style={{
-									width: '100%',
-									aspectRatio: 1,
-									height: 'unset'
-								}} type="svg" icon="/img/FormbarLogo2-Circle.png"/>
-								
-							</Modal>
-						</Flex>
+                                    <Text strong type="secondary" style={{fontSize:16}}>Scan to join class</Text>
+                                    
+                                    <Modal 
+                                        open={isQRModalOpen}
+                                        title="Join Class"
+                                        footer={null}
+                                        centered
+                                        onCancel={() => {
+                                            setIsQRModalOpen(false)
+                                        }}
+                                        >
+                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} style={{
+                                            width: '100%',
+                                            aspectRatio: 1,
+                                            height: 'unset'
+                                        }} type="svg" icon="/img/FormbarLogo2-Circle.png"/>
+                                        
+                                    </Modal>
+                                </Flex>
+                            )
+                        }
 					</Flex>
 
 					<Divider />
@@ -252,9 +259,13 @@ export default function SettingsMenu() {
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Guest
-							<Text type="secondary">
-								(Can vote without an account)
-							</Text>
+                            {
+                                !isMobile && (
+                                    <Text type="secondary">
+                                        (Can vote without an account)
+                                    </Text>
+                                )
+                            }
 						</Flex>
 						<Flex align="center" justify="start" gap={10}>
 							<Switch
@@ -264,9 +275,13 @@ export default function SettingsMenu() {
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Mods
-							<Text type="secondary">
-								(Mods can access student panel and vote)
-							</Text>
+                            {
+                                !isMobile && (
+                                    <Text type="secondary">
+                                        (Mods can access student panel and vote)
+                                    </Text>
+                                )
+                            }
 						</Flex>
 						<Flex align="center" justify="start" gap={10}>
 							<Switch
@@ -276,9 +291,13 @@ export default function SettingsMenu() {
                                  style={{cursor:'not-allowed', opacity: 0.5}}
 							/>
 							Teachers
-							<Text type="secondary">
-								(Teachers can access student panel and vote)
-							</Text>
+                            {
+                                !isMobile && (
+                                    <Text type="secondary">
+                                        (Teachers can access student panel and vote)
+                                    </Text>
+                                )
+                            }
 						</Flex>
 					</Flex>
 
@@ -290,14 +309,16 @@ export default function SettingsMenu() {
 						justify="end"
 						align="center"
 						style={{ width: "100%" }}
+                        vertical={isMobile}
+                        gap={isMobile ? 10 : undefined}
 					>
 						<Input
 							placeholder="Link Name"
-							style={{ width: "200px", marginRight: 10 }}
+							style={{ width: "200px", marginRight: 10, ...(isMobile && { marginRight: 0, width: '100%' }) }}
                             value={newLinkInput.name}
                             onChange={(e) => setNewLinkInput({...newLinkInput, name: e.target.value})}
 						/>
-						<Space.Compact style={{ width: "100%" }}>
+						<Space.Compact style={{ width: "100%", ...(isMobile && { marginRight: 0, width: '100%' })  }}>
 							<Space.Addon>https://</Space.Addon>
 							<Input 
 								placeholder="example.com" 
@@ -307,7 +328,7 @@ export default function SettingsMenu() {
 						</Space.Compact>
 						<Button
 							type="primary"
-							style={{ marginLeft: 10, width: "100px" }}
+							style={{ marginLeft: 10, width: "100px", ...(isMobile && { marginLeft: 0, width: '100%' })  }}
                             onClick={() => tryAddLink()}
 						>
 							Add Link

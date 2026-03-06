@@ -14,14 +14,14 @@ import {
 	Skeleton,
 	Pagination,
 } from "antd";
-import { type UserData } from "../types";
+
 const { Title, Text } = Typography;
 
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { Activity, useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../socket";
-import { useSettings, getAppearAnimation } from "../main";
+import { useSettings, getAppearAnimation, useMobileDetect } from "../main";
 
 type ManagerPanelUser = {
 	id: number | string;
@@ -61,8 +61,10 @@ export default function ManagerPanel() {
 		return () => clearTimeout(timeout);
 	}, [searchQuery]);
 
+    const isMobile = useMobileDetect();
+
 	useEffect(() => {
-		if (!accessToken || listCategory !== "Users") return;
+		if (!accessToken) return;
 
 		const offset = (currentPage - 1) * pageSize;
 		const params = new URLSearchParams({
@@ -117,6 +119,7 @@ export default function ManagerPanel() {
 
 		return () => abortController.abort();
 	}, [
+        accessToken,
 		currentPage,
 		pageSize,
 		sortBy,
@@ -277,7 +280,7 @@ export default function ManagerPanel() {
 					marginBottom: "20px",
 				}}
 			>
-				Manager Panel
+				Manager{isMobile ? "" : " Panel"}
 			</Title>
 
 			<Flex justify="center" style={{ marginTop: "20px", marginBottom: "20px" }}>
@@ -294,14 +297,16 @@ export default function ManagerPanel() {
 				/>
 			</Flex>
 
-			<Flex gap={10} justify="center" align="center" style={{ marginBottom: "20px", height: "40px" }}>
-				<Title level={3} style={{ margin: 0 }}>
-					Sort by:
-				</Title>
+			<Flex gap={10} justify="center" align="center" style={{ marginBottom: "20px", height: "40px", padding: "0 5px" }}>
+                {isMobile ? null : (
+    				<Title level={3} style={{ margin: 0 }}>
+    					Sort by:
+    				</Title>
+                )}
 				<Button
 					variant="solid"
 					color={sortBy === "name" ? "primary" : undefined}
-					style={{ padding: "0 20px", height: "100%" }}
+					style={{ padding: "0 20px", height: "100%", ...(isMobile ? { flex: '1 1 auto' } : {}) }}
 					onClick={() => {
 						setCurrentPage(1);
 						setIsLoading(true);
@@ -314,7 +319,7 @@ export default function ManagerPanel() {
 				<Button
 					variant="solid"
 					color={sortBy === "permission" ? "primary" : undefined}
-					style={{ padding: "0 20px", height: "100%" }}
+					style={{ padding: "0 20px", height: "100%", ...(isMobile ? { flex: '1 1 auto' } : {}) }}
 					onClick={() => {
 						setCurrentPage(1);
 						setIsLoading(true);
@@ -326,7 +331,7 @@ export default function ManagerPanel() {
 				</Button>
 				<Input
 					placeholder="Search users..."
-					style={{ width: "40%" }}
+					style={{ width: "40%", ...(isMobile ? { flex: '1 1 auto' } : {}) }}
 					value={searchQuery}
 					onChange={(e) => {
 						setCurrentPage(1);
@@ -338,46 +343,318 @@ export default function ManagerPanel() {
 			</Flex>
 
 			<div style={{ flex: 1, overflowY: "auto", paddingBottom: "80px" }}>
-				<Activity mode={listCategory === "Users" ? "visible" : "hidden"}>
-					<Row gutter={[8, 8]} style={{ margin: "10px" }}>
-						{isLoading ? (
-							<Flex justify="center" style={{ width: "100%" }}>
-								<Skeleton active style={{ width: "100%" }} />
-							</Flex>
-						) : (
-							<>
-								{pendingUsers.length > 0 && (
-									<Col span={24}>
-										<Text strong>Pending Users</Text>
-									</Col>
-								)}
-								{pendingUsers.map((user, index) =>
-									renderUserCard(user, index, "pending"),
-								)}
+				<Activity
+					mode={listCategory === "Users" ? "visible" : "hidden"}
+				>
 
-								{users.length > 0 && (
-									<Col span={24}>
-										<Text strong style={{ marginTop: "10px", display: "block" }}>
-											Users
-										</Text>
-									</Col>
-								)}
-								{users.map((user, index) =>
-									renderUserCard(user, index + pendingUsers.length, "user"),
-								)}
-
-								{users.length === 0 && pendingUsers.length === 0 && (
-									<Col span={24}>
-										<Text type="secondary" style={{ display: "block", textAlign: "center" }}>
-											No users found.
-										</Text>
-									</Col>
-								)}
-							</>
-						)}
-					</Row>
-
-					{totalUsers > 0 && (
+					{ isMobile ? (
+                        <Flex vertical gap={10} style={{ margin: "10px" }}>
+                            {Object.keys(users).length > 0 ? (
+                                users.map((user, k) => (
+                                    <Card
+										title={
+											user.displayName ||
+											user.email ||
+											"Pending User"
+										}
+										styles={{
+											title: {
+												textAlign: "center",
+											},
+											body: {
+												textAlign: "center",
+											},
+											root: {
+												height: "100%",
+											},
+										}}
+									>
+										<Flex
+											vertical
+											style={{ marginBottom: "10px" }}
+										>
+											<Text
+												type="secondary"
+												style={{ fontSize: "16px" }}
+											>
+												{user.email}
+											</Text>
+											{user.verified !== 0 ? (
+												<Text
+													type="secondary"
+													style={{ fontSize: "16px" }}
+												>
+													ID: {user.id}
+												</Text>
+											) : (
+												<Text
+													type="secondary"
+													style={{
+														fontSize: "16px",
+														fontStyle: "italic",
+													}}
+												>
+													Pending Verification
+												</Text>
+											)}
+										</Flex>
+										<Select
+											style={{ width: "100%" }}
+											defaultValue={user.permissions}
+										>
+											<Select.Option value={5}>
+												Manager
+											</Select.Option>
+											<Select.Option value={4}>
+												Teacher
+											</Select.Option>
+											<Select.Option value={3}>
+												Mod
+											</Select.Option>
+											<Select.Option value={2}>
+												Student
+											</Select.Option>
+											<Select.Option value={1}>
+												Guest
+											</Select.Option>
+										</Select>
+										<Flex
+											gap={10}
+											justify="space-evenly"
+											style={{ marginTop: "10px" }}
+											wrap
+										>
+											{user.verified === 0 ? (
+												<Tooltip
+                                                    mouseEnterDelay={0.5}
+													title={"Verify User"}
+													color="green"
+												>
+													<Button
+														variant="solid"
+														color="green"
+														size="large"
+														style={{
+															padding: "0 20px",
+														}}
+														onClick={() =>
+															handleVerify(
+																user.id,
+															)
+														}
+													>
+														<IonIcon
+															icon={
+																IonIcons.checkmarkCircle
+															}
+															size="large"
+														/>
+													</Button>
+												</Tooltip>
+											) : null}
+											<Tooltip
+                                                mouseEnterDelay={0.5}
+												title={"Ban User"}
+												color="red"
+											>
+												<Button
+													variant="solid"
+													color="red"
+													size="large"
+													style={{
+														padding: "0 20px",
+													}}
+												>
+													<IonIcon
+														icon={IonIcons.ban}
+														size="large"
+													/>
+												</Button>
+											</Tooltip>
+											<Tooltip
+                                                mouseEnterDelay={0.5}
+												title={"Delete User"}
+												color="red"
+											>
+												<Button
+													variant="solid"
+													color="red"
+													size="large"
+													style={{
+														padding: "0 20px",
+													}}
+												>
+													<IonIcon
+														icon={IonIcons.trash}
+														size="large"
+													/>
+												</Button>
+											</Tooltip>
+										</Flex>
+									</Card>
+                                ))
+                            ) : (
+                                <Flex justify="center" style={{ width: "100%" }}>
+                                    <Skeleton active></Skeleton>
+                                </Flex>
+                            )}
+                        </Flex>
+                    ) : (
+                        <Row gutter={[8, 8]} style={{ margin: "10px" }}>
+                            {Object.keys(users).length > 0 ? (
+                                users.map((user, k) => (
+                                    <Col span={4} key={user.id} style={initialLoad ? getAppearAnimation(settings.disableAnimations, k) : {}}>
+                                        <Card
+                                            title={
+                                                user.displayName ||
+                                                user.email ||
+                                                "Pending User"
+                                            }
+                                            styles={{
+                                                title: {
+                                                    textAlign: "center",
+                                                },
+                                                body: {
+                                                    textAlign: "center",
+                                                },
+                                                root: {
+                                                    height: "100%",
+                                                },
+                                            }}
+                                        >
+                                            <Flex
+                                                vertical
+                                                style={{ marginBottom: "10px" }}
+                                            >
+                                                <Text
+                                                    type="secondary"
+                                                    style={{ fontSize: "16px" }}
+                                                >
+                                                    {user.email}
+                                                </Text>
+                                                {user.verified !== 0 ? (
+                                                    <Text
+                                                        type="secondary"
+                                                        style={{ fontSize: "16px" }}
+                                                    >
+                                                        ID: {user.id}
+                                                    </Text>
+                                                ) : (
+                                                    <Text
+                                                        type="secondary"
+                                                        style={{
+                                                            fontSize: "16px",
+                                                            fontStyle: "italic",
+                                                        }}
+                                                    >
+                                                        Pending Verification
+                                                    </Text>
+                                                )}
+                                            </Flex>
+                                            <Select
+                                                style={{ width: "100%" }}
+                                                defaultValue={user.permissions}
+                                            >
+                                                <Select.Option value={5}>
+                                                    Manager
+                                                </Select.Option>
+                                                <Select.Option value={4}>
+                                                    Teacher
+                                                </Select.Option>
+                                                <Select.Option value={3}>
+                                                    Mod
+                                                </Select.Option>
+                                                <Select.Option value={2}>
+                                                    Student
+                                                </Select.Option>
+                                                <Select.Option value={1}>
+                                                    Guest
+                                                </Select.Option>
+                                            </Select>
+                                            <Flex
+                                                gap={10}
+                                                justify="space-evenly"
+                                                style={{ marginTop: "10px" }}
+                                                wrap
+                                            >
+                                                {user.verified === 0 ? (
+                                                    <Tooltip
+                                                        mouseEnterDelay={0.5}
+                                                        title={"Verify User"}
+                                                        color="green"
+                                                    >
+                                                        <Button
+                                                            variant="solid"
+                                                            color="green"
+                                                            size="large"
+                                                            style={{
+                                                                padding: "0 20px",
+                                                            }}
+                                                            onClick={() =>
+                                                                handleVerify(
+                                                                    user.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <IonIcon
+                                                                icon={
+                                                                    IonIcons.checkmarkCircle
+                                                                }
+                                                                size="large"
+                                                            />
+                                                        </Button>
+                                                    </Tooltip>
+                                                ) : null}
+                                                <Tooltip
+                                                    mouseEnterDelay={0.5}
+                                                    title={"Ban User"}
+                                                    color="red"
+                                                >
+                                                    <Button
+                                                        variant="solid"
+                                                        color="red"
+                                                        size="large"
+                                                        style={{
+                                                            padding: "0 20px",
+                                                        }}
+                                                    >
+                                                        <IonIcon
+                                                            icon={IonIcons.ban}
+                                                            size="large"
+                                                        />
+                                                    </Button>
+                                                </Tooltip>
+                                                <Tooltip
+                                                    mouseEnterDelay={0.5}
+                                                    title={"Delete User"}
+                                                    color="red"
+                                                >
+                                                    <Button
+                                                        variant="solid"
+                                                        color="red"
+                                                        size="large"
+                                                        style={{
+                                                            padding: "0 20px",
+                                                        }}
+                                                    >
+                                                        <IonIcon
+                                                            icon={IonIcons.trash}
+                                                            size="large"
+                                                        />
+                                                    </Button>
+                                                </Tooltip>
+                                            </Flex>
+                                        </Card>
+                                    </Col>
+                                ))
+                            ) : (
+                                <Flex justify="center" style={{ width: "100%" }}>
+                                    <Skeleton></Skeleton>
+                                </Flex>
+                            )}
+                        </Row>
+                    )}
+                    {totalUsers > 0 && (
 						<Flex justify="center" style={{ marginTop: "8px", marginBottom: "24px" }}>
 							<Pagination
 								current={currentPage}

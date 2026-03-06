@@ -3,6 +3,7 @@ const { Title, Text } = Typography;
 import { LoadingOutlined } from "@ant-design/icons";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
+import { useMobileDetect } from "../main";
 
 export default function LoadingScreen({
 	socketErrors,
@@ -13,6 +14,8 @@ export default function LoadingScreen({
 	httpErrors: number;
 	isConnected: boolean;
 }) {
+    const isMobile = useMobileDetect();
+    
 	return (
 		<>
 			<Flex
@@ -25,7 +28,7 @@ export default function LoadingScreen({
 				<Title
 					style={{
 						color: "#fff9",
-						fontSize: "120px",
+						fontSize: isMobile ? "70px" : "120px",
 						fontWeight: 700,
 						marginBottom: "0",
 					}}
@@ -74,6 +77,7 @@ export default function LoadingScreen({
 						fontSize: "20px",
 						fontWeight: 500,
 						marginTop: "0",
+                        textAlign: "center",
 					}}
 				>
 					{!isConnected ? randomText() : "Loading panel..."}

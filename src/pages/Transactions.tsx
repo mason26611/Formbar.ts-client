@@ -5,7 +5,7 @@ const { Title, Text } = Typography;
 
 import TransactionItem from "../components/TransactionItem";
 import type { Transaction } from "../types";
-import { useUserData } from "../main";
+import { useMobileDetect, useUserData } from "../main";
 import { useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../socket";
 import { useParams } from "react-router-dom";
@@ -22,6 +22,7 @@ export default function Transactions() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 	const [totalTransactions, setTotalTransactions] = useState(0);
+    const isMobile = useMobileDetect();
 
 	useEffect(() => {
 		// Fetch transactions from API when userData is available
@@ -104,9 +105,9 @@ export default function Transactions() {
 					vertical
 					gap={10}
 					style={{
-						width: "80%",
+						width: isMobile ? "100%" : "80%",
 						height: "100%",
-						margin: "0px auto",
+						margin: isMobile ? "0" : "0px auto",
 						marginBottom: "64px",
 						padding: "0 20px",
 						paddingBottom: "20px",

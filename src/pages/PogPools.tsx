@@ -55,7 +55,7 @@ export default function PogPools() {
 		const offset = (currentPage - 1) * pageSize;
 		const abortController = new AbortController();
 
-		fetch(`${formbarUrl}/api/v1/user/pools?limit=${pageSize}&offset=${offset}`, {
+		fetch(`${formbarUrl}/api/v1/user/${userData.id}/pools?limit=${pageSize}&offset=${offset}`, {
 			headers: {
 				Authorization: accessToken,
 				"Content-Type": "application/json",

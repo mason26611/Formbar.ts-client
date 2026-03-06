@@ -2,7 +2,7 @@ import { Button, Divider, Flex, Input, Modal, Switch, Typography } from "antd";
 const { Text, Title } = Typography;
 import { textColorForBackground } from "../../CustomStyleFunctions";
 import { socket } from "../../socket";
-import { useClassData } from "../../main";
+import { isMobile, useClassData, useMobileDetect } from "../../main";
 
 const defaultPolls = [
 	{
@@ -98,6 +98,7 @@ export default function PollsMenu({
 }) {
 	const { classData } = useClassData();
 	const { isDark } = useTheme();
+    const isMobile = useMobileDetect();
 
     const [allowVoteChanges, setAllowVoteChanges] = useState<boolean>(false);
     const [allowTextResponses, setAllowTextResponses] = useState<boolean>(false);
@@ -139,9 +140,9 @@ export default function PollsMenu({
 
 	return (
         <>{contextHolder}
-		<Flex align="center" justify="space-between" gap={40} style={{ height: "100%" }}>
-			<Flex vertical align="center" justify="start" style={{ height: "100%", paddingLeft: "20px", paddingRight: "20px"}}>
-				<Title>Default Polls</Title>
+		<Flex align="center" justify="space-between" gap={40} style={{ height: "100%" }} vertical={isMobile}>
+			<Flex vertical align="center" justify="start" style={{ height: isMobile ? "min-content" : "100%" }}>
+				<Title level={isMobile ? 3 : 2}>Default Polls</Title>
 				{defaultPolls.map((poll) => {
 					return (
                         <>
@@ -248,8 +249,9 @@ export default function PollsMenu({
 					);
 				})}
 			</Flex>
-			<Flex vertical align="center" justify="start" style={{ height: "100%", borderLeft: `2px solid ${isDark ? '#0002' : '#fff2'}`, paddingLeft: "20px", paddingRight: "20px", flex: 1 }}>
-				<Title>Previous Polls</Title>
+			<Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1, ...(isMobile ? {
+                borderTop: `2px solid ${isDark ? '#0002' : '#fff2'}`, paddingTop: "20px",} : {borderLeft: `2px solid ${isDark ? '#0002' : '#fff2'}`, paddingLeft: "20px", paddingRight: "20px"}) }}>
+				<Title level={isMobile ? 3 : 2}>Previous Polls</Title>
 				<p>no endpoint</p>
 			</Flex>
 		</Flex></>
