@@ -35,6 +35,14 @@ type StaticIssue = {
 	reason: string;
 };
 
+type SwaggerOperation = {
+	key: string;
+	category: string;
+	method: HttpMethod;
+	path: string;
+	summary: string;
+};
+
 type NotificationRecord = {
 	id: number | string;
 	is_read?: boolean;
@@ -439,6 +447,62 @@ function getStatusTag(status: TestStatus) {
 	}
 }
 
+async function loadSwaggerOperations(): Promise<SwaggerOperation[]> {
+	const response = await fetch(`${formbarUrl}/docs/openapi.json`);
+	if (!response.ok) {
+		throw new Error(`Swagger docs request failed with status ${response.status}.`);
+	}
+
+	const spec = (await response.json()) as { paths?: Record<string, Record<string, unknown>> };
+	const operations: SwaggerOperation[] = [];
+
+	for (const [path, methods] of Object.entries(spec.paths || {})) {
+		if (!isRecord(methods)) {
+			continue;
+		}
+
+		for (const [methodName, operation] of Object.entries(methods)) {
+			const normalizedMethod = methodName.toUpperCase();
+			if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(normalizedMethod)) {
+				continue;
+			}
+
+			const operationRecord = isRecord(operation) ? operation : {};
+			const tags = Array.isArray(operationRecord.tags)
+				? operationRecord.tags.filter(
+						(tag): tag is string => typeof tag === "string" && tag.length > 0,
+					)
+				: [];
+
+			operations.push({
+				key: `${normalizedMethod}:${path}`,
+				category: tags[0] || "Uncategorized",
+				method: normalizedMethod as HttpMethod,
+				path,
+				summary:
+					typeof operationRecord.summary === "string"
+						? operationRecord.summary
+						: typeof operationRecord.description === "string"
+							? truncate(operationRecord.description.replace(/\s+/g, " "), 120)
+							: "",
+			});
+		}
+	}
+
+	return operations.sort((left, right) => {
+		const categoryCompare = left.category.localeCompare(right.category);
+		if (categoryCompare !== 0) {
+			return categoryCompare;
+		}
+
+		if (left.path.length !== right.path.length) {
+			return left.path.length - right.path.length;
+		}
+
+		return left.path.localeCompare(right.path);
+	});
+}
+
 async function callApi(path: string, method: HttpMethod): Promise<ApiResponse> {
 	const response = await fetch(`${formbarUrl}/api/v1${path}`, {
 		method,
@@ -506,6 +570,8 @@ export function Testing() {
 	const [isRunning, setIsRunning] = useState(false);
 	const [fatalError, setFatalError] = useState<string | null>(null);
 	const [runStartedAt, setRunStartedAt] = useState<string | null>(null);
+	const [swaggerOperations, setSwaggerOperations] = useState<SwaggerOperation[]>([]);
+	const [swaggerError, setSwaggerError] = useState<string | null>(null);
 
 	const updateResult = (key: string, updater: (result: TestResult) => TestResult) => {
 		setResults((current) =>
@@ -524,6 +590,7 @@ export function Testing() {
 		setIsRunning(true);
 		setFatalError(null);
 		setRunStartedAt(new Date().toLocaleTimeString());
+		setSwaggerError(null);
 
 		const initialResults: TestResult[] = [
 			{
@@ -548,6 +615,17 @@ export function Testing() {
 		setResults(initialResults);
 
 		try {
+			try {
+				setSwaggerOperations(await loadSwaggerOperations());
+			} catch (error) {
+				const message =
+					error instanceof Error
+						? error.message
+						: "Unable to load Swagger docs.";
+				setSwaggerError(message);
+				setSwaggerOperations([]);
+			}
+
 			updateResult("me", (result) => ({ ...result, status: "running" }));
 			const startedAt = performance.now();
 			const { context, meResult } = await loadContext();
@@ -640,15 +718,20 @@ export function Testing() {
 	const skippedCount = results.filter((result) => result.status === "skipped").length;
 
 	return (
-		<div style={{ padding: "0 20px" }}>
+		<div
+			style={{
+				padding: "0 20px",
+				height: "calc(100vh - 60px)",
+				overflowY: "auto",
+				overflowX: "hidden",
+			}}
+		>
 			<FormbarHeader />
 			<Flex
 				vertical
 				gap={16}
 				style={{
 					padding: "16px 0 32px",
-					minHeight: "calc(100vh - 60px)",
-					overflow: "auto",
 				}}
 			>
 				<Card
@@ -682,6 +765,7 @@ export function Testing() {
 					<Tag color="red">Failed: {failedCount}</Tag>
 					<Tag color="orange">Skipped: {skippedCount}</Tag>
 					<Tag color="blue">Not auto-run: {UNSUPPORTED_ENDPOINTS.length}</Tag>
+					<Tag color="geekblue">Swagger endpoints: {swaggerOperations.length}</Tag>
 				</Space>
 
 				{fatalError ? (
@@ -698,15 +782,25 @@ export function Testing() {
 					type="info"
 					showIcon
 					message="Auto-run scope"
-					description="Read-only endpoints run automatically. Endpoints that mutate user, class, notification, digipog, IP, auth, or OAuth state are listed below as intentionally not auto-run."
+					description="Read-only endpoints run automatically. Endpoints that mutate user, class, notification, digipog, IP, auth, or OAuth state are listed below as intentionally not auto-run. Swagger endpoints are now loaded from the backend JSON docs instead of scraping the HTML docs page."
 					style={getAppearAnimation(settings.disableAnimations, 3)}
 				/>
+
+				{swaggerError ? (
+					<Alert
+						type="warning"
+						showIcon
+						message="Swagger docs unavailable"
+						description={swaggerError}
+						style={getAppearAnimation(settings.disableAnimations, 4)}
+					/>
+				) : null}
 
 				<Card
 					title="Auto-Run Results"
 					style={{
 						background: "#000a",
-						...getAppearAnimation(settings.disableAnimations, 4),
+						...getAppearAnimation(settings.disableAnimations, 5),
 					}}
 				>
 					<Table<TestResult>
@@ -765,7 +859,7 @@ export function Testing() {
 					title="Not Auto-Run"
 					style={{
 						background: "#000a",
-						...getAppearAnimation(settings.disableAnimations, 5),
+						...getAppearAnimation(settings.disableAnimations, 6),
 					}}
 				>
 					<Table<StaticIssue>
@@ -796,6 +890,46 @@ export function Testing() {
 								title: "Reason",
 								dataIndex: "reason",
 								key: "reason",
+							},
+						]}
+					/>
+				</Card>
+
+				<Card
+					title="Swagger Endpoints"
+					style={{
+						background: "#000a",
+						...getAppearAnimation(settings.disableAnimations, 7),
+					}}
+				>
+					<Table<SwaggerOperation>
+						rowKey="key"
+						size="small"
+						pagination={{ pageSize: 12 }}
+						dataSource={swaggerOperations}
+						columns={[
+							{
+								title: "Category",
+								dataIndex: "category",
+								key: "category",
+								width: 160,
+							},
+							{
+								title: "Method",
+								dataIndex: "method",
+								key: "method",
+								width: 90,
+								render: (value: HttpMethod) => <Tag>{value}</Tag>,
+							},
+							{
+								title: "Path",
+								dataIndex: "path",
+								key: "path",
+							},
+							{
+								title: "Summary",
+								dataIndex: "summary",
+								key: "summary",
 							},
 						]}
 					/>
