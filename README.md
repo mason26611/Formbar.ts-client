@@ -95,6 +95,7 @@ In the project root, there is `updater.sh`, an interactive script for updating, 
 | `--no-build` | Skip the build step entirely |
 | `--full` | Fully automated: fetch, install, strict build, and sync |
 | `--full-dev` | Fully automated: fetch, install, development build, and sync |
+| `--sync-dir <path>` | Specify custom directory for syncing (default: `/var/www/formbar`) |
 
 ### Interactive Mode
 When run without `--full` or `--full-dev`, the script presents a menu:
@@ -103,7 +104,22 @@ When run without `--full` or `--full-dev`, the script presents a menu:
 3. **Test Locally** - Run dev server (`npm run dev`)
 4. **Test Over LAN** - Run dev server with network access (`npm run dev -- --host`)
 
-After building, you'll be prompted to sync `dist/` to `/var/www/formbar`.
+After building, you'll be prompted to sync `dist/` to your sync directory (default: `/var/www/formbar`).
+
+### Examples
+```bash
+# Full automated build and sync to default directory
+./updater.sh --full
+
+# Full automated build with custom sync directory
+./updater.sh --full --sync-dir /custom/path
+
+# Development build with custom directory, skip fetch
+./updater.sh --full-dev --no-fetch --sync-dir ~/my-formbar
+
+# Interactive mode with custom sync directory  
+./updater.sh --sync-dir /var/www/formbar-staging
+```
 
 ### Manual Build & Sync
 To manually build and sync folders:

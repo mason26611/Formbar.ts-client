@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Tip: Run this with arguments to skip steps. For example, './updater.sh --no-fetch' to skip fetching from the remote repository."
-echo "Available arguments: --no-fetch, --no-install, --no-build, --full, --full-dev"
+echo "Available arguments: --no-fetch, --no-install, --no-build, --full, --full-dev, --sync-dir <path>"
 
 # Parse arguments
 NO_FETCH=false
@@ -9,27 +9,37 @@ NO_INSTALL=false
 NO_BUILD=false
 FULL=false
 FULL_DEV=false
+SYNC_DIR="/var/www/formbar"
 
-for arg in "$@"; do
-    case $arg in
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --no-fetch)
             NO_FETCH=true
+            shift
             ;;
         --no-install)
             NO_INSTALL=true
+            shift
             ;;
         --no-build)
             NO_BUILD=true
+            shift
             ;;
         --full)
             FULL=true
+            shift
             ;;
         --full-dev)
             FULL_DEV=true
+            shift
+            ;;
+        --sync-dir)
+            SYNC_DIR="$2"
+            shift 2
             ;;
         *)
-            echo "Unknown argument: $arg"
-            echo "Usage: ./updater.sh [--no-fetch] [--no-install] [--no-build] [--full] [--full-dev]"
+            echo "Unknown argument: $1"
+            echo "Usage: ./updater.sh [--no-fetch] [--no-install] [--no-build] [--full] [--full-dev] [--sync-dir <path>]"
             exit 1
             ;;
     esac
@@ -37,10 +47,10 @@ done
 
 # Function must be defined before it's called
 sync_to_formbar() {
-    read -p "Do you want to sync the build to /var/www/formbar? (y/n) " sync_option
+    read -p "Do you want to sync the build to $SYNC_DIR? (y/n) " sync_option
     if [[ "$sync_option" == "y" ]]; then
-        echo "Syncing build to /var/www/formbar..."
-        rsync -av dist/ /var/www/formbar/
+        echo "Syncing build to $SYNC_DIR..."
+        rsync -av dist/ "$SYNC_DIR/"
         echo "Sync complete."
     else
         echo "Skipping sync."
@@ -66,8 +76,8 @@ if [[ "$FULL" == true || "$FULL_DEV" == true ]]; then
         npx vite build
     fi
     
-    echo "Syncing build to /var/www/formbar..."
-    rsync -av dist/ /var/www/formbar/
+    echo "Syncing build to $SYNC_DIR..."
+    rsync -av dist/ "$SYNC_DIR/"
     echo "Sync complete."
     exit 0
 fi
