@@ -33,13 +33,13 @@ export default function LoadingScreen({
 						marginBottom: "0",
 					}}
 				>
-					<span className="bounce">F</span>
-					<span className="bounce">o</span>
-					<span className="bounce">r</span>
-					<span className="bounce">m</span>
-					<span className="bounce">b</span>
-					<span className="bounce">a</span>
-					<span className="bounce">r</span>
+					<span className={!isConnected ? "bounce" : undefined}>F</span>
+					<span className={!isConnected ? "bounce" : undefined}>o</span>
+					<span className={!isConnected ? "bounce" : undefined}>r</span>
+					<span className={!isConnected ? "bounce" : undefined}>m</span>
+					<span className={!isConnected ? "bounce" : undefined}>b</span>
+					<span className={!isConnected ? "bounce" : undefined}>a</span>
+					<span className={!isConnected ? "bounce" : undefined}>r</span>
 				</Title>
 				{isConnected ? (
 					<IonIcon

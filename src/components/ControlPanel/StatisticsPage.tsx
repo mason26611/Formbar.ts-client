@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useClassData } from "../../main";
+import { useClassData, useMobileDetect } from "../../main";
 import { Card, Flex, Statistic, Tooltip, Typography } from "antd";
 const { Title } = Typography;
 import { IonIcon } from "@ionic/react";
@@ -18,6 +18,8 @@ export default function Statistics() {
 	const [responses, setResponses] = useState<number>(0);
 	const [studentsOnBreak, setStudentsOnBreak] = useState<number>(0);
 	const [helpTickets, setHelpTickets] = useState<number>(0);
+
+    const isMobile = useMobileDetect();
 
 	useEffect(() => {
 		let totalResponseTimes: number[] = [];
@@ -60,129 +62,149 @@ export default function Statistics() {
 		setHelpTickets(students.filter((s: any) => s.help).length);
 	}, [students, classData]);
 
+    const [statistics, setStatistics] = useState<Array<{
+        title: string;
+        stats: Array<{
+            title: string;
+            value: number | string;
+            type?: string;
+            format?: string;
+            precision?: number;
+            prefix?: React.ReactNode;
+            suffix?: string;
+        }>;
+    }>>([
+        {
+            title: "Current Poll",
+            stats: [
+                {
+                    title: "Poll Runtime",
+                    value: classData?.poll.startTime == undefined
+                        ? Date.now()
+                        : classData?.poll.startTime,
+                    type: "timer",
+                    format: "H:mm:ss",
+                },
+                {
+                    title: "Allowed to Vote",
+                    value: students.filter((s: any) => !s.tags.includes("Offline")).length,
+                },
+                {
+                    title: "Response Time",
+                    value: responseTime,
+                    precision: 2,
+                    prefix: (<>
+                        <IonIcon
+                            icon={IonIcons.arrowUp}
+                            style={{ marginTop: "2px" }}
+                        />
+                    </>),
+                    suffix: "s",
+                },
+                {
+                    title: "Responses",
+                    value: responses,
+                    suffix: `/ ${students.length}`,
+                },
+            ],
+        },
+        {
+            title: "Users",
+            stats: [
+                {
+                    title: "Help Tickets",
+                    value: helpTickets,
+                },
+                {
+                    title: "On Break",
+                    value: studentsOnBreak,
+                },
+                {
+                    title: "Total Students",
+                    value: students.filter((s: any) => s.id !== classData?.owner)
+                        .length,
+                },
+            ],
+        },
+        {
+            title: "Other Stats",
+            stats: [
+                {
+                    title: "N/A",
+                    value: "N/A",
+                },
+            ],
+        },
+    ]);
+
 	return (
 		<>
-			<Flex style={{}} vertical justify="start" align="center" gap={20}>
-				<Title style={{ marginBottom: "auto" }}>Statistics</Title>
-				<Flex gap={20} wrap="wrap" justify="center" align="center">
-                    <Card title={"Current Poll"} styles={{body: gridStyle}}>
-                        <Card variant="borderless">
-                            <Statistic.Timer
-                                type="countup"
-                                title="Poll Runtime"
-                                value={
-                                    classData?.poll.startTime == undefined
-                                        ? Date.now()
-                                        : classData?.poll.startTime
+			<Flex style={{height: '100%', maxHeight: '100%'}} vertical justify="start" align="center" gap={20}>
+				<Title level={isMobile ? 3 : 1} style={{ marginBottom: 0, flexShrink: 0 }}>Statistics</Title>
+				<Flex gap={20} wrap="wrap" justify="center" align="center" style={{flex: '1 1 0', overflowY:'auto', width: '100%', paddingBottom: '20px'}}>
+                    {statistics.map((card, cardIndex) => (
+                        <Card key={cardIndex} title={card.title} styles={!isMobile ? {body: gridStyle} : {body: {display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto"}}}>
+                            {card.stats.map((stat, statIndex) => {
+                                const statContent = stat.type === "timer" ? (
+                                    <Statistic.Timer
+                                        type="countup"
+                                        title={stat.title}
+                                        value={stat.value}
+                                        format={stat.format}
+                                    />
+                                ) : (
+                                    <Statistic
+                                        title={stat.title}
+                                        value={stat.value}
+                                        precision={stat.precision}
+                                        prefix={stat.prefix}
+                                        suffix={stat.suffix}
+                                    />
+                                );
+
+                                const cardContent = (
+                                    <Card key={statIndex} variant="borderless">
+                                        {statContent}
+                                    </Card>
+                                );
+
+                                // Add tooltip for Response Time stat
+                                if (stat.title === "Response Time") {
+                                    return (
+                                        <Tooltip
+                                            key={statIndex}
+                                            mouseEnterDelay={0.5}
+                                            title={
+                                                "Average Response Time: " +
+                                                responseTime.toFixed(2) +
+                                                " seconds"
+                                            }
+                                            placement="top"
+                                        >
+                                            <Card variant="borderless">
+                                                <Statistic
+                                                    title={stat.title}
+                                                    value={stat.value}
+                                                    precision={stat.precision}
+                                                    styles={{
+                                                        content: { color: "#3f8600" },
+                                                    }}
+                                                    style={{
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                    }}
+                                                    prefix={stat.prefix}
+                                                    suffix={stat.suffix}
+                                                />
+                                            </Card>
+                                        </Tooltip>
+                                    );
                                 }
-                                format="H:mm:ss"
-                            />
-                        </Card>
 
-                        <Card variant="borderless">
-                            <Statistic
-                                title="Allowed to Vote"
-                                value={
-                                    students.filter(
-                                        (s: any) =>
-                                            !s.tags.includes("Offline"),
-                                    ).length
-                                }
-                            />
+                                return cardContent;
+                            })}
                         </Card>
-
-                        <Tooltip
-                            mouseEnterDelay={0.5}
-                            title={
-                                "Average Response Time: " +
-                                responseTime.toFixed(2) +
-                                " seconds"
-                            }
-                            placement="top"
-                        >
-                            <Card variant="borderless">
-                                <Statistic
-                                    title="Response Time"
-                                    value={responseTime}
-                                    precision={2}
-                                    styles={{
-                                        content: { color: "#3f8600" },
-                                    }}
-                                    style={{
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                    }}
-                                    prefix={
-                                        <>
-                                            <IonIcon
-                                                icon={IonIcons.arrowUp}
-                                                style={{ marginTop: "2px" }}
-                                            />
-                                        </>
-                                    }
-                                    suffix="s"
-                                />
-                            </Card>
-                        </Tooltip>
-
-                        <Card variant="borderless">
-                            <Statistic
-                                title="Responses"
-                                value={responses}
-                                suffix={`/ ${students.length}`}
-                            />
-                        </Card>
-                    </Card>
-
-                    <Card title={"Users"} styles={{body: gridStyle}}>
-                        <Card variant="borderless">
-                            <Statistic
-                                title="Help Tickets"
-                                value={helpTickets}
-                            />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic
-                                title="On Break"
-                                value={studentsOnBreak}
-                            />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic
-                                title="Total Students"
-                                value={
-                                    students.filter(
-                                        (s: any) =>
-                                            s.id !== classData?.owner,
-                                    ).length
-                                }
-                            />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic title="N/A" value={"N/A"} />
-                        </Card>
-                    </Card>
-
-                    <Card title={"Other Stats"} styles={{body: gridStyle}}>
-                        <Card variant="borderless">
-                            <Statistic title="N/A" value={"N/A"} />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic title="N/A" value={"N/A"} />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic title="N/A" value={"N/A"} />
-                        </Card>
-
-                        <Card variant="borderless">
-                            <Statistic title="N/A" value={"N/A"} />
-                        </Card>
-                    </Card>
+                    ))}
 				</Flex>
 			</Flex>
 		</>

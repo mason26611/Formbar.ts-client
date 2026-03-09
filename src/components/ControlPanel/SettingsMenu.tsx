@@ -199,6 +199,14 @@ export default function SettingsMenu() {
 								<Button type="primary" style={{cursor:'not-allowed', opacity: 0.5}}>Change Class Name</Button>
 							</Flex>
 
+                            {isMobile && (
+                                <Flex align="center" justify="center">
+                                    <Tooltip title="Tap to enlarge" mouseEnterDelay={0.5}>
+                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={70} style={{cursor:'pointer'}} iconSize={20} type="svg" icon="/img/FormbarLogo-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
+                                    </Tooltip>
+                                </Flex>
+                            )}
+
 							<Flex
 								gap={10}
 								style={{ width: isMobile ? "100%" : "400px" }}
@@ -220,30 +228,31 @@ export default function SettingsMenu() {
                                 <Flex vertical gap={10} align="center" justify="center" style={{borderLeft: `2px solid ${isDark ? '#fff2' : '#0002'}`,paddingLeft: 20}}>
 
                                     <Tooltip title="Click to enlarge" mouseEnterDelay={0.5}>
-                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={150} style={{cursor:'pointer'}} type="svg" icon="/img/FormbarLogo2-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
+                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} size={150} style={{cursor:'pointer'}} type="svg" icon="/img/FormbarLogo-Circle.png" onClick={() => { setIsQRModalOpen(true) }}/>
                                     </Tooltip>
 
                                     <Text strong type="secondary" style={{fontSize:16}}>Scan to join class</Text>
                                     
-                                    <Modal 
-                                        open={isQRModalOpen}
-                                        title="Join Class"
-                                        footer={null}
-                                        centered
-                                        onCancel={() => {
-                                            setIsQRModalOpen(false)
-                                        }}
-                                        >
-                                        <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} style={{
-                                            width: '100%',
-                                            aspectRatio: 1,
-                                            height: 'unset'
-                                        }} type="svg" icon="/img/FormbarLogo2-Circle.png"/>
-                                        
-                                    </Modal>
+                                    
                                 </Flex>
                             )
                         }
+                        <Modal 
+                            open={isQRModalOpen}
+                            title="Join Class"
+                            footer={null}
+                            centered
+                            onCancel={() => {
+                                setIsQRModalOpen(false)
+                            }}
+                            >
+                            <QRCode value={"https://formbar.ljharnish.org/joinClass?code=" + classData?.key} bordered={false} style={{
+                                width: '100%',
+                                aspectRatio: 1,
+                                height: 'unset'
+                            }} type="svg" icon="/img/FormbarLogo-Circle.png"/>
+                            
+                        </Modal>
 					</Flex>
 
 					<Divider />
@@ -427,6 +436,7 @@ export default function SettingsMenu() {
                             ))
                         }
                     </Flex>
+
 				</Flex>
 			</Flex>
 		</>

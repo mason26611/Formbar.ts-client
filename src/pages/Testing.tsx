@@ -104,6 +104,13 @@ const testFuncs = [
 
     // Pools
     { name: 'Get User Pools', func: getUserPools, hasArgs: false, category: 'Pools', method: 'GET' },
+
+    // Notifications
+    { name: 'Get Notifications', func: getNotifications, hasArgs: false, category: 'Notifications', method: 'GET', testedWorks: true },
+    { name: 'Get Notification by ID', func: getNotifByID, hasArgs: true, category: 'Notifications', method: 'GET', testedWorks: true },
+    { name: 'Mark Notification as Read', func: markNotifAsRead, hasArgs: true, category: 'Notifications', method: 'POST', testedWorks: true },
+    { name: 'Delete Notifications', func: deleteAllNotif, hasArgs: false, category: 'Notifications', method: 'DELETE', testedWorks: true },
+    { name: 'Delete Notification by ID', func: deleteNotifByID, hasArgs: true, category: 'Notifications', method: 'DELETE', testedWorks: true },
 ]
 
 function getButtonStyle(method?: string) {
@@ -872,4 +879,44 @@ async function getUserPools() {
         const data = await res.json();
         console.log('Get User Pools:', data);
     } catch (err) { console.error('Error getting user pools:', err); }
+}
+
+async function getNotifications() {
+    try {
+        const res = await fetch(`${formbarUrl}/api/v1/notifications`, getFetchOptions());
+        const data = await res.json();
+        console.log('Get Notifications:', data);
+    } catch (err) { console.error('Error getting notifications:', err); }
+}
+
+async function getNotifByID(notifId: string) {
+    try {
+        const res = await fetch(`${formbarUrl}/api/v1/notifications/${encodeURIComponent(notifId)}`, getFetchOptions());
+        const data = await res.json();
+        console.log('Get Notification by ID:', data);
+    } catch (err) { console.error('Error getting notification by ID:', err); }
+}
+
+async function markNotifAsRead(notifId: string) {
+    try {
+        const res = await fetch(`${formbarUrl}/api/v1/notifications/${encodeURIComponent(notifId)}/mark-read`, getFetchOptions("POST", { read: true }));
+        const data = await res.json();
+        console.log('Mark Notification as Read:', data);
+    } catch (err) { console.error('Error marking notification as read:', err); }
+}
+
+async function deleteAllNotif() {
+    try {
+        const res = await fetch(`${formbarUrl}/api/v1/notifications`, getFetchOptions("DELETE"));
+        const data = await res.json();
+        console.log('Delete Notifications:', data);
+    } catch (err) { console.error('Error deleting notifications:', err); }
+}
+
+async function deleteNotifByID(notifId: string) {
+    try {
+        const res = await fetch(`${formbarUrl}/api/v1/notifications/${encodeURIComponent(notifId)}`, getFetchOptions("DELETE"));
+        const data = await res.json();
+        console.log('Delete Notification by ID:', data);
+    } catch (err) { console.error('Error deleting notification by ID:', err); }
 }

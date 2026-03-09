@@ -1,4 +1,4 @@
-# <img src="https://github.com/csmith1188/Formbar.ts-client/blob/main/public/img/FormbarLogo2-Circle.png?raw=true" height=36> Formbar.ts-Client
+# <img src="https://github.com/csmith1188/Formbar.ts-client/blob/main/public/img/FormbarLogo-Circle.png?raw=true" height=36> Formbar.ts-Client
 
 Formbar.js is a classroom polling and management system built with Node.js.
 
