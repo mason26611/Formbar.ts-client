@@ -8,9 +8,9 @@ import {
 	Tag,
 	Typography,
 } from "antd";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import FormbarHeader from "../components/FormbarHeader";
-import { getAppearAnimation, useSettings, useUserData } from "../main";
+import { getAppearAnimation, useSettings } from "../main";
 import { accessToken, formbarUrl, refreshToken } from "../socket";
 import { type CurrentUserData } from "../types";
 
@@ -26,6 +26,10 @@ type ApiResponse = {
 	status: number;
 	body: unknown;
 	rawText: string;
+	/** True when the server responded with HTTP 429 (rate limit). */
+	isRateLimit?: boolean;
+	/** Milliseconds to wait before retrying (parsed from Retry-After or defaulting to 60 s). */
+	retryAfterMs?: number;
 };
 
 type TestResult = {
@@ -200,14 +204,30 @@ const AUTO_TEST_DISPLAY_NAME = "Auto Test User";
 // Matched by method + normalised apiPath against whatever the Swagger spec exposes.
 const SETUP_API_PATHS: Array<{ method: HttpMethod; apiPath: string }> = [
 	{ method: "POST", apiPath: "/class/create" },
-	{ method: "POST", apiPath: "/class/{id}/start" },
 	{ method: "POST", apiPath: "/class/{id}/join" },
+	{ method: "POST", apiPath: "/class/{id}/start" },
 ];
 
 // Teardown operations run last to clean up test state.
 const TEARDOWN_API_PATHS: Array<{ method: HttpMethod; apiPath: string }> = [
 	{ method: "POST", apiPath: "/class/{id}/end" },
+	{ method: "DELETE", apiPath: "/room/{id}/leave" },
 ];
+
+// Pool keys to wipe when a setup operation fails, so downstream tests that
+// depend on those resources are skipped cleanly instead of running with a
+// stale or wrong ID.
+const SETUP_FAILURE_INVALIDATES: Partial<Record<string, string[]>> = {
+	// If temp-class creation fails, do not let later setup/main requests fall
+	// back to a pre-seeded active class from /user/me.
+	"POST:/class/create": ["classid", "roomid"],
+	// If joining fails, later class-scoped requests would mostly return auth
+	// errors because the user is not attached to the test class.
+	"POST:/class/{id}/join": ["classid", "roomid"],
+	// If starting fails, most class-scoped endpoints would cascade with
+	// inactive-class errors. Remove the class id so they are skipped cleanly.
+	"POST:/class/{id}/start": ["classid"],
+};
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -296,19 +316,107 @@ function addToPool(pool: ValuePool, key: string, value: unknown) {
 	}
 }
 
-function harvestPool(pool: ValuePool, value: unknown, keyHint?: string) {
+/**
+ * Like addToPool but REPLACES any existing entry rather than appending.
+ * Used by setup operations so newly-created IDs take priority over values
+ * that were pre-seeded from /user/me.
+ */
+function setInPool(pool: ValuePool, key: string, value: unknown) {
+	const str =
+		typeof value === "string"
+			? value
+			: typeof value === "number" || typeof value === "boolean"
+				? String(value)
+				: null;
+	if (!str) return;
+	const k = normalizeKey(key);
+	if (!k) return;
+	pool.set(k, [str]);
+}
+
+/**
+ * Harvest scalar values from an API response into the pool.
+ *
+ * parentResourceHint carries the singular resource name of the collection an
+ * object was found inside (e.g. "notification" when iterating
+ * `data.notifications[]`).  When present, id-like property keys ("id" or keys
+ * ending with "id") are ALSO stored under the resource-qualified key so that
+ * endpoints like GET /notifications/{id} can find "notificationid" in the pool
+ * and distinguish it from the user's generic "id".
+ */
+function harvestPool(
+	pool: ValuePool,
+	value: unknown,
+	keyHint?: string,
+	parentResourceHint?: string,
+) {
 	if (value == null || typeof value === "function") return;
 	if (
 		typeof value === "string" ||
 		typeof value === "number" ||
 		typeof value === "boolean"
 	) {
-		if (keyHint) addToPool(pool, keyHint, value);
+		if (keyHint) {
+			addToPool(pool, keyHint, value);
+			// Also index under the resource-qualified key so callers that
+			// search for e.g. "notificationid" find it before the bare "id".
+			if (parentResourceHint) {
+				const norm = normalizeKey(keyHint);
+				if (norm === "id" || norm.endsWith("id")) {
+					const qualified = `${parentResourceHint}${norm}`;
+					if (qualified !== norm)
+						addToPool(pool, qualified, value);
+				}
+			}
+		}
+		return;
+	}
+	if (Array.isArray(value)) {
+		// Derive the singular resource name from the array's key so it can be
+		// passed down as the parentResourceHint for each item.
+		const childResource = keyHint
+			? singularize(normalizeKey(keyHint))
+			: parentResourceHint;
+		for (const item of value)
+			harvestPool(pool, item, childResource, childResource);
+		return;
+	}
+	if (isRecord(value)) {
+		for (const [k, v] of Object.entries(value)) {
+			harvestPool(pool, v, k, parentResourceHint);
+		}
+	}
+}
+
+/**
+ * Like harvestPool but replaces existing pool entries for id-like keys
+ * instead of appending.  Used for setup-phase responses so that a freshly
+ * created classId overwrites the one pre-seeded from /user/me.
+ */
+function priorityHarvestPool(
+	pool: ValuePool,
+	value: unknown,
+	keyHint?: string,
+) {
+	if (value == null || typeof value === "function") return;
+	if (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
+	) {
+		if (keyHint) {
+			const norm = normalizeKey(keyHint);
+			if (norm === "id" || norm.endsWith("id")) {
+				setInPool(pool, keyHint, value);
+			} else {
+				addToPool(pool, keyHint, value);
+			}
+		}
 		return;
 	}
 	if (Array.isArray(value)) {
 		for (const item of value)
-			harvestPool(
+			priorityHarvestPool(
 				pool,
 				item,
 				keyHint ? singularize(keyHint) : undefined,
@@ -317,7 +425,7 @@ function harvestPool(pool: ValuePool, value: unknown, keyHint?: string) {
 	}
 	if (isRecord(value)) {
 		for (const [k, v] of Object.entries(value)) {
-			harvestPool(pool, v, k);
+			priorityHarvestPool(pool, v, k);
 		}
 	}
 }
@@ -584,13 +692,26 @@ function getPreferredRequestContentType(
 // NODE_ENV is intentionally NOT checked; the user triggers this suite
 // explicitly and wants mutations (class create/start/etc.) to run.
 
+function isManagedTeardownOperation(
+	apiPath: string,
+	method: HttpMethod,
+): boolean {
+	return TEARDOWN_API_PATHS.some(
+		(operation) =>
+			operation.apiPath === apiPath && operation.method === method,
+	);
+}
+
 function getAutoRunBlocker(
 	operation: Pick<
 		SwaggerOperation,
 		"apiPath" | "method" | "security" | "parameters" | "requestContentType"
 	>,
 ): string | null {
-	if (operation.method === "DELETE")
+	if (
+		operation.method === "DELETE" &&
+		!isManagedTeardownOperation(operation.apiPath, operation.method)
+	)
 		return "DELETE endpoints are excluded from auto-run to avoid destructive actions.";
 
 	if (
@@ -790,10 +911,49 @@ function resolveParameterValue(
 	const name = parameter.name;
 	if (!name) return null;
 
+	// For PATH parameters: consult the pool FIRST so real IDs harvested from
+	// earlier responses (e.g. classId from POST /class/create) take priority
+	// over any static Swagger example value (e.g. example: 42 in the spec).
+	if (parameter.in === "path") {
+		const norm = normalizeKey(name);
+		const isIdParam = norm === "id" || norm.endsWith("id");
+		const resourcePrefixed = operation.resourceNames.map(
+			(r) => `${r}${name}`,
+		);
+		// For ID-typed path parameters only search resource-prefixed pool keys.
+		// Falling back to the bare "id" would match the user's own id for
+		// unrelated resources (e.g. room, notification), producing false 404s.
+		const pooled = findInPool(
+			context.valuePool,
+			isIdParam ? resourcePrefixed : [...resourcePrefixed, name],
+		);
+		if (pooled) return pooled;
+
+		// For ID-typed params, skip static swagger examples too – a hardcoded
+		// example value is unlikely to exist in the live database.
+		if (!isIdParam) {
+			const seeded = stringifyParameterValue(getParameterSeedValue(parameter));
+			if (seeded) return seeded;
+		}
+
+		// No real value available. For ID-typed path parameters return null so
+		// the caller skips the test rather than firing it with a fabricated ID.
+		if (isIdParam) return null;
+
+		// Non-ID path params (e.g. a slug or enum segment): synthesise.
+		const synthesized = buildValueFromSchema(parameter.schema, spec, {
+			parameterMode: true,
+			propertyName: name,
+			valuePool: context.valuePool,
+			currentUser: context.me,
+		});
+		return stringifyParameterValue(synthesized);
+	}
+
+	// Non-path parameters: original priority (swagger example → pool → synthesise).
 	const seeded = stringifyParameterValue(getParameterSeedValue(parameter));
 	if (seeded) return seeded;
 
-	// Build lookup names: resource-prefixed variants first, then the bare name.
 	const resourcePrefixed = operation.resourceNames.map(
 		(r) => `${r}${name}`,
 	);
@@ -1017,12 +1177,107 @@ async function callApi(
 		("error" in responseBody ||
 			("success" in responseBody && responseBody.success === false));
 
+	const retryAfterHeader = response.headers.get("Retry-After");
+	const retryAfterMs = retryAfterHeader
+		? parseInt(retryAfterHeader, 10) * 1000
+		: 60_000;
+
 	return {
 		ok: response.ok && bodySuccess !== false && !hasStructuredError,
 		status: response.status,
 		body: responseBody,
 		rawText,
+		isRateLimit: response.status === 429,
+		retryAfterMs: response.status === 429 ? retryAfterMs : undefined,
 	};
+}
+
+// ─── Feature-disabled detection ─────────────────────────────────────────────
+// Some endpoints are gated behind optional server features (Google OAuth,
+// email, etc.).  When the feature is not configured the server returns a 403
+// with a descriptive message.  These should be reported as "skipped", not
+// "failed", because the endpoint itself is working correctly.
+
+const FEATURE_DISABLED_PATTERNS: RegExp[] = [
+	/not enabled on this server/i,
+	/is not enabled/i,
+	/is disabled on this server/i,
+	/not configured on this server/i,
+];
+
+function getFeatureDisabledReason(response: ApiResponse): string | null {
+	if (response.status !== 403 && response.status !== 501) return null;
+	const text = summarizePayload(response.body);
+	for (const pattern of FEATURE_DISABLED_PATTERNS) {
+		if (pattern.test(text)) return `Feature not available: ${text}`;
+	}
+	return null;
+}
+
+function isClassScopedOperation(operation: SwaggerOperation): boolean {
+	return (
+		operation.apiPath.startsWith("/class/") ||
+		operation.apiPath.startsWith("/room/")
+	);
+}
+
+function getRuntimeOperationBlocker(
+	operation: SwaggerOperation,
+	context: TestingContext,
+): string | null {
+	const canCreateTemporaryClass = (context.me.permissions ?? 0) >= 4;
+	const hasClassContext = Boolean(
+		findInPool(context.valuePool, ["classid", "roomid"]),
+	);
+	const classContextUnavailableReason =
+		"No active class is available. Creating a temporary class requires global Teacher permissions.";
+
+	if (operation.apiPath === "/class/create" && operation.method === "POST") {
+		return canCreateTemporaryClass
+			? null
+			: "Temporary class creation requires global Teacher permissions.";
+	}
+
+	if (!canCreateTemporaryClass) {
+		if (operation.phase === "setup") {
+			if (
+				operation.apiPath === "/class/{id}/join" &&
+				operation.method === "POST"
+			) {
+				return hasClassContext
+					? "Using the current active class instead of creating and joining a temporary class."
+					: classContextUnavailableReason;
+			}
+			if (
+				operation.apiPath === "/class/{id}/start" &&
+				operation.method === "POST"
+			) {
+				return hasClassContext
+					? "Automatic class start is skipped when reusing the current class."
+					: classContextUnavailableReason;
+			}
+		}
+
+		if (operation.phase === "teardown" && isClassScopedOperation(operation)) {
+			return hasClassContext
+				? "Automatic teardown is skipped when reusing the current class."
+				: "No temporary class was created for teardown.";
+		}
+
+		if (isClassScopedOperation(operation) && !hasClassContext) {
+			return classContextUnavailableReason;
+		}
+
+		if (
+			operation.phase === "main" &&
+			isClassScopedOperation(operation) &&
+			operation.method !== "GET"
+		) {
+			return "Class mutations are skipped unless the suite can create a temporary class.";
+		}
+	}
+
+	return null;
 }
 
 // ─── Context loader ───────────────────────────────────────────────────────────
@@ -1049,6 +1304,8 @@ async function loadContext(valuePool: ValuePool): Promise<{
 	const activeClass = me.activeClass ?? me.classId;
 	if (activeClass != null) {
 		addToPool(valuePool, "classid", String(activeClass));
+		// Room endpoints use the class ID as their {id} path param – keep in sync.
+		addToPool(valuePool, "roomid", String(activeClass));
 	}
 
 	return { meResult, context: { me, valuePool } };
@@ -1073,9 +1330,6 @@ async function loadSwaggerSpec(): Promise<{
 
 export function Testing() {
 	const { settings } = useSettings();
-	const { userData } = useUserData();
-	const autoRunKeyRef = useRef<string | null>(null);
-	const runSuiteRef = useRef<() => Promise<void>>(async () => {});
 	const [results, setResults] = useState<TestResult[]>([]);
 	const [isRunning, setIsRunning] = useState(false);
 	const [fatalError, setFatalError] = useState<string | null>(null);
@@ -1084,6 +1338,9 @@ export function Testing() {
 		SwaggerOperation[]
 	>([]);
 	const [swaggerError, setSwaggerError] = useState<string | null>(null);
+	const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(
+		null,
+	);
 
 	const updateResult = (
 		key: string,
@@ -1094,7 +1351,7 @@ export function Testing() {
 		);
 	};
 
-	runSuiteRef.current = async () => {
+	const runSuite = async () => {
 		if (!accessToken) {
 			setFatalError(
 				"No access token available. Please log in first.",
@@ -1107,6 +1364,7 @@ export function Testing() {
 		setRunStartedAt(new Date().toLocaleTimeString());
 		setSwaggerError(null);
 		setResults([]);
+		setRateLimitMessage(null);
 
 		try {
 			const valuePool = createValuePool();
@@ -1190,7 +1448,8 @@ export function Testing() {
 
 				const start = performance.now();
 				try {
-					const response = await callApi(
+					// Initial call – retried automatically on 429.
+					let response: ApiResponse = await callApi(
 						prepared.path,
 						operation.method,
 						{
@@ -1199,22 +1458,96 @@ export function Testing() {
 						},
 					);
 
-					if (response.ok) {
-						// Harvest all scalar values from the response into the pool.
-						harvestPool(valuePool, response.body);
-						// Also harvest data-field values keyed by resource name so
-						// later endpoints can find e.g. "classid" from a create response.
-						const data = getResponseData<unknown>(response.body);
-						if (data) harvestPool(valuePool, data);
+					const MAX_RATE_LIMIT_RETRIES = 10;
+					let rateLimitRetries = 0;
+
+					while (
+						response.isRateLimit &&
+						rateLimitRetries < MAX_RATE_LIMIT_RETRIES
+					) {
+						const waitMs = response.retryAfterMs ?? 60_000;
+						const waitSec = Math.ceil(waitMs / 1000);
+						setRateLimitMessage(
+							`Rate limited on ${operation.path}. Retrying in ${waitSec}s\u2026 (attempt ${rateLimitRetries + 1}/${MAX_RATE_LIMIT_RETRIES})`,
+						);
+						updateResult(operation.key, (r) => ({
+							...r,
+							status: "running",
+							details: `Rate limited – waiting ${waitSec}s before retry`,
+						}));
+						await new Promise<void>((resolve) =>
+							setTimeout(resolve, waitMs),
+						);
+						setRateLimitMessage(null);
+						rateLimitRetries++;
+						response = await callApi(
+							prepared.path,
+							operation.method,
+							{
+								headers: prepared.headers,
+								body: prepared.body,
+							},
+						);
 					}
 
+					if (response.isRateLimit) {
+						// Exhausted retries.
+						setRateLimitMessage(null);
+						updateResult(operation.key, (r) => ({
+							...r,
+							status: "failed",
+							statusCode: response.status,
+							durationMs: Math.round(performance.now() - start),
+							details: `Rate limit exceeded after ${MAX_RATE_LIMIT_RETRIES} retries.`,
+						}));
+						continue;
+					}
+
+					if (response.ok) {
+						if (operation.phase === "setup") {
+							// For setup operations use priority harvest so that
+							// freshly-created IDs (e.g. classId from POST
+							// /class/create) replace any stale value that was
+							// pre-seeded from /user/me.
+							priorityHarvestPool(valuePool, response.body);
+							const data = getResponseData<unknown>(response.body);
+							if (data) priorityHarvestPool(valuePool, data);
+							// Room endpoints use the class ID as their {id} path param – keep in sync.
+							const latestClassId = findInPool(valuePool, ["classid"]);
+							if (latestClassId) setInPool(valuePool, "roomid", latestClassId);
+						} else {
+							harvestPool(valuePool, response.body);
+							const data = getResponseData<unknown>(response.body);
+							if (data) harvestPool(valuePool, data);
+						}
+					}
+
+					// Detect feature-disabled responses (e.g. Google OAuth not configured).
+					const skipReason = getFeatureDisabledReason(response);
 					updateResult(operation.key, (r) => ({
 						...r,
-						status: response.ok ? "passed" : "failed",
+						status: skipReason
+							? "skipped"
+							: response.ok
+								? "passed"
+								: "failed",
 						statusCode: response.status,
 						durationMs: Math.round(performance.now() - start),
-						details: summarizePayload(response.body),
+						details: skipReason ?? summarizePayload(response.body),
 					}));
+
+					// If a setup step failed, wipe dependent pool keys so that
+					// downstream tests that need those resources are skipped.
+					if (operation.phase === "setup" && !response.ok && !skipReason) {
+						const toInvalidate =
+							SETUP_FAILURE_INVALIDATES[
+								`${operation.method}:${operation.apiPath}`
+							];
+						if (toInvalidate) {
+							for (const key of toInvalidate)
+								valuePool.delete(normalizeKey(key));
+						}
+					}
 				} catch (error) {
 					updateResult(operation.key, (r) => ({
 						...r,
@@ -1240,16 +1573,32 @@ export function Testing() {
 	};
 
 	const handleRunSuite = () => {
-		void runSuiteRef.current();
+		void runSuite();
 	};
 
 	useEffect(() => {
-		if (!userData?.id) return;
-		const nextKey = String(userData.id);
-		if (autoRunKeyRef.current === nextKey) return;
-		autoRunKeyRef.current = nextKey;
-		void runSuiteRef.current();
-	}, [userData?.id]);
+		let cancelled = false;
+		setSwaggerError(null);
+
+		void loadSwaggerSpec()
+			.then(({ operations }) => {
+				if (cancelled) return;
+				setSwaggerOperations(operations);
+			})
+			.catch((error) => {
+				if (cancelled) return;
+				setSwaggerOperations([]);
+				setSwaggerError(
+					error instanceof Error
+						? error.message
+						: "Unable to load the Swagger spec.",
+				);
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	const passedCount = results.filter((r) => r.status === "passed").length;
 	const failedCount = results.filter((r) => r.status === "failed").length;
@@ -1337,12 +1686,11 @@ export function Testing() {
 								Endpoint Testing
 							</Typography.Title>
 							<Typography.Paragraph style={{ margin: "8px 0 0" }}>
-								Automatically tests all API endpoints from the
-								Swagger spec. Setup operations (class create /
-								start / join) run first to establish class
-								state, then main endpoints, then teardown.
-								Values harvested from each response are fed
-								forward into subsequent requests.
+								Builds a browser-side test suite from the
+								Swagger spec. Click Run Suite to create a
+								temporary class, join it, start it, execute the
+								eligible endpoints, then end and remove that
+								class during teardown.
 							</Typography.Paragraph>
 							<Typography.Text type="secondary">
 								Last run: {runStartedAt ?? "Not run yet"}
@@ -1353,7 +1701,7 @@ export function Testing() {
 							onClick={handleRunSuite}
 							loading={isRunning}
 						>
-							Run Suite Again
+							{runStartedAt ? "Run Suite Again" : "Run Suite"}
 						</Button>
 					</Flex>
 				</Card>
@@ -1367,7 +1715,7 @@ export function Testing() {
 					<Tag color="red">Failed: {failedCount}</Tag>
 					<Tag color="orange">Skipped: {skippedCount}</Tag>
 					<Tag color="blue">
-						Not auto-run: {unsupportedEndpoints.length}
+						Excluded: {unsupportedEndpoints.length}
 					</Tag>
 					<Tag color="geekblue">
 						Total endpoints: {swaggerOperations.length}
@@ -1400,10 +1748,19 @@ export function Testing() {
 					/>
 				)}
 
+				{rateLimitMessage && (
+					<Alert
+						type="warning"
+						showIcon
+						message="Rate limited — waiting before retry"
+						description={rateLimitMessage}
+					/>
+				)}
+
 				<Alert
 					type="info"
 					showIcon
-					message="Auto-run scope"
+					message="Suite scope"
 					description="The suite is generated from /docs/openapi.json at runtime. Setup operations run first in a fixed order (class create → start → join) so subsequent tests have a real class to work with. DELETE endpoints and password-management endpoints are always excluded."
 					style={getAppearAnimation(settings.disableAnimations, 4)}
 				/>
@@ -1467,7 +1824,7 @@ export function Testing() {
 				)}
 
 				<Card
-					title="Not Auto-Run"
+					title="Excluded From Suite"
 					style={{
 						background: "#000a",
 						...getAppearAnimation(settings.disableAnimations, 8),
