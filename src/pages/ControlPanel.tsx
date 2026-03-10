@@ -213,11 +213,29 @@ export default function ControlPanel() {
 					}}
 					vertical
 				>
+                    {/* <Flex justify="center" align="center" vertical>
                     { 
                         classData?.poll && (
-                            <FullCircularPoll poll={classData.poll} size={200}/>
+                            <Flex gap={10}>
+                                <FullCircularPoll poll={classData.poll} size={150}/>
+                                <Flex vertical gap={10} justify="center" align="center">
+                                    {
+                                        classData.poll.responses.map((resp: any, index: number) => (
+                                            <Tooltip key={index} title={`${resp.answer}: ${resp.responses} responses`} placement="right" mouseEnterDelay={0.5}>
+                                                <Flex key={index} gap={5} align="center">
+                                                    <div style={{ width: "15px", height: "15px", backgroundColor: resp.color, borderRadius: "50%" }}></div>
+                                                    <span>{resp.text}: {resp.responses}</span>
+                                                </Flex>
+                                            </Tooltip>
+                                        ))
+                                    }
+                                </Flex>
+                            </Flex>
                         )
                     }
+                    </Flex> */}
+
+                    
 
 
 					<Activity mode={classActive ? "hidden" : "visible"}>

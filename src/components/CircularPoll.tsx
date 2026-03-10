@@ -125,7 +125,7 @@ export default function FullCircularPoll({
 					}}
 				/>
             {/* Timer */}
-            <Progress
+            {/* <Progress
                 style={{
                     position: 'absolute',
                     pointerEvents: 'none',
@@ -142,7 +142,7 @@ export default function FullCircularPoll({
                 strokeWidth={15}
                 gapDegree={50}
                 size={size / 2}
-            />
+            /> */}
 			<Progress
 				style={{
 					position: "absolute" as "absolute",
