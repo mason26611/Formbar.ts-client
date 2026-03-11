@@ -14,11 +14,19 @@ type answer = {
 export default function PollButton({
 	answerData,
 	Respond,
+	allowMultipleResponses = false,
+	selected,
+	onSelectToggle,
 }: {
 	answerData: answer;
 	Respond: (response: string) => void;
+	allowMultipleResponses?: boolean;
+	selected?: boolean;
+	onSelectToggle?: (answer: string, nextSelected: boolean) => void;
 }) {
 	const [answerStyleState, setAnswerStyleState] = useState<any>({});
+	const [localSelected, setLocalSelected] = useState(false);
+	const isSelected = selected ?? localSelected;
 
 	useEffect(() => {
 		setAnswerStyleState(createButtonStyles(answerData.color));
@@ -27,8 +35,27 @@ export default function PollButton({
 	return (
 		<Button
 			variant="solid"
-			style={{ marginTop: "5px", width: "auto" }}
-			onClick={() => Respond(answerData.answer)}
+			style={answerData.answer !== "remove" && answerData.answer !== "Submit" && allowMultipleResponses ? {
+                opacity: isSelected ? 1 : 0.5,
+                transform: isSelected ? "scale(1)" : "scale(0.95)",
+                transition: "all 0.3s ease-in-out",
+            } : {}}
+			onClick={() => {
+				if (
+					allowMultipleResponses &&
+					answerData.answer !== "remove" &&
+					answerData.answer !== "Submit"
+				) {
+					const nextSelected = !isSelected;
+					if (onSelectToggle) {
+						onSelectToggle(answerData.answer, nextSelected);
+					} else {
+						setLocalSelected(nextSelected);
+					}
+					return;
+				}
+				Respond(answerData.answer);
+			}}
 			styles={answerStyleState[answerStyleState.current]}
 			onMouseEnter={() => {
 				setAnswerStyleState((prevState: any) => {

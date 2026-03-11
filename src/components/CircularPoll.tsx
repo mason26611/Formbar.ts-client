@@ -1,6 +1,8 @@
 import { Progress } from "antd";
 import type { Poll } from "../types";
 import { useTheme } from "../main";
+import { useState } from "react";
+import { textColorForBackground } from "../CustomStyleFunctions";
 
 type CircularPollProperties = {
 	percentage: number;
@@ -19,6 +21,79 @@ export default function FullCircularPoll({
 	size = 400,
 }: PollObjectProperties) {
     const { isDark } = useTheme();
+	const ringStrokeWidth = 23;
+	const [hoveredSegment, setHoveredSegment] = useState<{
+		answer: string;
+		color?: string;
+	} | null>(null);
+	const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
+
+	const responderBase =
+		typeof poll.totalResponders === "number" &&
+		Number.isFinite(poll.totalResponders) &&
+		poll.totalResponders > 0
+			? poll.totalResponders
+			: poll.responses.reduce(
+				(acc, response) =>
+					acc +
+					(typeof response.responses === "number" &&
+					Number.isFinite(response.responses)
+						? response.responses
+						: 0),
+				0,
+			);
+
+	const getHoveredAnswerFromEvent = (
+		event: React.MouseEvent<HTMLDivElement>,
+	) => {
+		if (poll.blind || responderBase <= 0) {
+			return null;
+		}
+
+		const rect = event.currentTarget.getBoundingClientRect();
+		const centerX = rect.left + rect.width / 2;
+		const centerY = rect.top + rect.height / 2;
+		const dx = event.clientX - centerX;
+		const dy = event.clientY - centerY;
+		const distance = Math.sqrt(dx * dx + dy * dy);
+		const outerRadius = rect.width / 2;
+		const ringThickness = (rect.width * ringStrokeWidth) / 100;
+		const innerRadius = Math.max(0, outerRadius - ringThickness);
+
+		if (distance > outerRadius || distance < innerRadius) {
+			return null;
+		}
+
+		const angleFromTopClockwise =
+			((Math.atan2(dy, dx) * 180) / Math.PI + 90 + 360) % 360;
+		const percentageFromAngle = (angleFromTopClockwise / 360) * 100;
+
+		let cumulativePercentage = 0;
+		for (const response of poll.responses) {
+			const responseCount =
+				typeof response.responses === "number" &&
+				Number.isFinite(response.responses)
+					? response.responses
+					: 0;
+			const responsePercentage =
+				responseCount === 0
+					? 0
+					: (responseCount / responderBase) * 100;
+			if (responsePercentage <= 0) {
+				continue;
+			}
+
+			cumulativePercentage += responsePercentage;
+			if (percentageFromAngle <= cumulativePercentage) {
+				return {
+					answer: response.answer,
+					color: response.color,
+				};
+			}
+		}
+
+		return null;
+	};
     
 	return (
 		<div
@@ -28,6 +103,27 @@ export default function FullCircularPoll({
 				height: `${size}px`,
 			}}
 		>
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						zIndex: 5,
+						cursor: "default",
+					}}
+					onMouseMove={(event) => {
+						const segment = getHoveredAnswerFromEvent(event);
+						setHoveredSegment(segment);
+						const rect = event.currentTarget.getBoundingClientRect();
+						setHoverPosition({
+							x: event.clientX - rect.left,
+							y: event.clientY - rect.top,
+						});
+					}}
+					onMouseLeave={() => {
+						setHoveredSegment(null);
+						setHoverPosition(null);
+					}}
+				/>
             {/* Timer */}
             {/* <Progress
                 style={{
@@ -65,7 +161,7 @@ export default function FullCircularPoll({
 					"100%": "#bfbfbf",
 				}}
 				size={size}
-				strokeWidth={23}
+				strokeWidth={ringStrokeWidth}
 				railColor="transparent"
 				showInfo={false}
 				strokeLinecap="butt"
@@ -110,6 +206,27 @@ export default function FullCircularPoll({
 				))
 				)
 			}
+			{!poll.blind && hoveredSegment && hoverPosition ? (
+				<div
+					style={{
+						position: "absolute",
+						left: hoverPosition.x,
+						top: hoverPosition.y - 20,
+						transform: "translate(-50%, -50%)",
+						zIndex: 10,
+						pointerEvents: "none",
+						backgroundColor: hoveredSegment.color || "rgba(0, 0, 0, 0.78)",
+                        border: `1px solid #000`,
+						color: textColorForBackground(hoveredSegment.color || "rgba(0, 0, 0, 0.78)"),
+						padding: "4px 8px",
+						borderRadius: 6,
+						fontSize: 12,
+						whiteSpace: "nowrap",
+					}}
+				>
+					{hoveredSegment.answer}
+				</div>
+			) : null}
 		</div>
 	);
 }

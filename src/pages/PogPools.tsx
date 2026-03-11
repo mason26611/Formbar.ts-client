@@ -17,7 +17,7 @@ type Pool = {
 	owners: number[];
 };
 
-const DEFAULT_PAGE_SIZE = 12;
+const DEFAULT_PAGE_SIZE = 6;
 
 function parsePools(responseData: unknown): Pool[] {
 	const data = responseData as {
@@ -27,6 +27,10 @@ function parsePools(responseData: unknown): Pool[] {
 
 	if (Array.isArray(data?.poolItems)) {
 		return data.poolItems as Pool[];
+	}
+
+	if (Array.isArray(data?.pools)) {
+		return data.pools as Pool[];
 	}
 
 	if (typeof data?.pools === "string") {
@@ -55,7 +59,7 @@ export default function PogPools() {
 		const offset = (currentPage - 1) * pageSize;
 		const abortController = new AbortController();
 
-		fetch(`${formbarUrl}/api/v1/user/pools?limit=${pageSize}&offset=${offset}`, {
+		fetch(`${formbarUrl}/api/v1/user/${userData.id}/pools?limit=${pageSize}&offset=${offset}`, {
 			headers: {
 				Authorization: accessToken,
 				"Content-Type": "application/json",
@@ -95,15 +99,48 @@ export default function PogPools() {
 		return () => abortController.abort();
 	}, [userData, currentPage, pageSize]);
 
+	const handlePayout = (poolId: number) => {
+		Log({ message: `Payout initiated for pool ${poolId}` });
+		// TODO: Implement payout logic
+	};
+
+	const handleAddMember = (poolId: number) => {
+		Log({ message: `Add member initiated for pool ${poolId}` });
+		// TODO: Implement add member logic
+	};
+
+	const handleRemoveMember = (poolId: number) => {
+		Log({ message: `Remove member initiated for pool ${poolId}` });
+		// TODO: Implement remove member logic
+	};
+
+	const handleDelete = (poolId: number) => {
+		Log({ message: `Delete pool ${poolId}` });
+		// TODO: Implement delete logic
+	};
+
 	return (
 		<>
 			<FormbarHeader />
 
-			<Title style={{ textAlign: "center", marginTop: "20px" }}>
-				Pog Pools
-			</Title>
+			<div
+				style={{
+					height: "calc(100vh - 80px)",
+					overflowY: "auto",
+					overflowX: "hidden",
+					WebkitOverflowScrolling: "touch",
+				}}
+			>
+				<Title style={{ textAlign: "center", marginTop: "20px" }}>
+					Pog Pools
+				</Title>
 
-			<Row gutter={[16, 16]} style={{ margin: "20px" }}>
+				<Row
+					gutter={[16, 16]}
+					style={{
+						margin: "20px",
+					}}
+				>
 				{isLoading && (
 					<Col span={24}>
 						<Flex justify="center">
@@ -157,25 +194,45 @@ export default function PogPools() {
 												title="Payout Funds"
 												key="payout"
 												placement="top"
+												color="green"
 											>
 												<IonIcon
 													icon={IonIcons.cashOutline}
 													style={{ fontSize: "32px" }}
+													onClick={() => handlePayout(pool.id)}
 													key="payout"
 												/>
 											</Tooltip>,
 											<Tooltip
                                                 mouseEnterDelay={0.5}
-												title="Add or Remove Members"
+												title="Add Member"
 												key="addmember"
 												placement="top"
+												color="blue"
 											>
 												<IonIcon
 													icon={
-														IonIcons.personOutline
+														IonIcons.personAddOutline
 													}
 													style={{ fontSize: "32px" }}
+													onClick={() => handleAddMember(pool.id)}
 													key="addmember"
+												/>
+											</Tooltip>,
+											<Tooltip
+                                                mouseEnterDelay={0.5}
+												title="Remove Member"
+												key="removemember"
+												placement="top"
+												color="red"
+											>
+												<IonIcon
+													icon={
+														IonIcons.personRemoveOutline
+													}
+													style={{ fontSize: "32px" }}
+													onClick={() => handleRemoveMember(pool.id)}
+													key="removemember"
 												/>
 											</Tooltip>,
 											<Tooltip
@@ -188,6 +245,7 @@ export default function PogPools() {
 												<IonIcon
 													icon={IonIcons.trashOutline}
 													style={{ fontSize: "32px" }}
+													onClick={() => handleDelete(pool.id)}
 													key="delete"
 												/>
 											</Tooltip>,
@@ -270,13 +328,14 @@ export default function PogPools() {
 			</Row>
 
 			{totalPools > 0 && (
-				<Flex justify="center" style={{ marginBottom: "32px" }}>
+				<Flex justify="center" style={{ marginBottom: "32px", marginTop: "20px" }}>
 					<Pagination
 						current={currentPage}
 						pageSize={pageSize}
 						total={totalPools}
 						showSizeChanger
 						pageSizeOptions={[6, 12, 24, 48]}
+                        defaultPageSize={6}
 						onChange={(page, size) => {
 							setIsLoading(true);
 							setCurrentPage(page);
@@ -285,6 +344,7 @@ export default function PogPools() {
 					/>
 				</Flex>
 			)}
+			</div>
 		</>
 	);
 }

@@ -14,7 +14,7 @@ const { Title } = Typography;
 
 import StudentObject from "../StudentObject";
 
-import { useClassData, useUserData, useSettings, getAppearAnimation } from "../../main";
+import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDetect } from "../../main";
 import { useEffect, useState } from "react";
 import ClassroomPage from "../ControlPanel/ClassroomPage";
 import * as IonIcons from "ionicons/icons";
@@ -30,6 +30,7 @@ export default function Dashboard({
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
 }) {
 	const { isDark } = useTheme();
+    const isMobile = useMobileDetect();
 
 	const [allResponseModalOpen, setAllResponseModalOpen] =
 		useState<boolean>(false);
@@ -195,9 +196,10 @@ export default function Dashboard({
         // socket.emit('updateExcludedRespondents', excludedRespondents);
     }
 
+
 	return (
 		<>
-			<Segmented
+			{/* <Segmented
 				options={[
 					"Dashboard",
 					'Classroom View',
@@ -211,7 +213,7 @@ export default function Dashboard({
 					bottom: "20px",
 					opacity: 0.85,
 				}}
-			/>
+			/> */}
 			{currentView === "class" && <ClassroomPage />}
 			{currentView === "dash" && (
 				<Flex
@@ -221,254 +223,265 @@ export default function Dashboard({
 				>
 					<Flex style={{ flex: 1 }} vertical gap={10}>
 						<Flex
-							align="center"
+							align={isMobile ? "start" : "center"}
 							gap={10}
 							style={{
 								paddingBottom: "10px",
 								borderBottom: "1px solid var(--border-color)",
 							}}
-						>
-							<Title style={{ margin: "0" }}>Dashboard</Title>
-							<Tooltip title="All Responses" mouseEnterDelay={0.5}>
-								<Button
-									type="primary"
-									style={{ height: "60%" }}
-									onClick={() =>
-										setAllResponseModalOpen(true)
-									}
-								>
-									<IonIcon icon={IonIcons.barChart} />
-								</Button>
-							</Tooltip>
-							<Modal
-								title="All User Responses"
-								open={allResponseModalOpen}
-								onCancel={() => setAllResponseModalOpen(false)}
-								footer={null}
-								width={"90%"}
-							>
-								{classData.poll ? (
-									<div
-										style={{
-											display: "grid",
-											gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-											gap: "16px",
-											width: "100%",
-										}}
-									>
-										{...students.sort((a, b) => a.displayName.localeCompare(b.displayName))
-											.filter((e) => e.id !== userData?.id)
-											.map((student: any) => {
-												const matchingResponse = classData.poll.responses.find(
-													(e: any) => e.answer === student.pollRes?.buttonRes,
-												);
-												return (
-													<div
-														key={student.id}
-														style={{
-															border: "1px solid var(--border-color)",
-															borderRadius: "8px",
-															padding: "12px",
-															background: isDark ? "#fff2" : "#0002",
-															minHeight: "80px",
-															display: "flex",
-															flexDirection: "column",
-															justifyContent: "center",
-															position: "relative",
-														}}
-													>
-														<strong style={{paddingRight: 40}}>
-															{student.displayName}
-														</strong>
-                                                        <Tooltip title="Allow Vote" mouseEnterDelay={0.5}>
-                                                            <Switch 
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    top: 20,
-                                                                    right: 20,
-                                                                }}
-                                                                size="small"
-                                                                onChange={(e) => {
-                                                                    handleExcludeRespondent(student.id, e);
-                                                                }}
-                                                            />
-                                                        </Tooltip>
-														<span style={{ color: matchingResponse?.color }}>
-															{student.pollRes?.buttonRes
-																? student.pollRes.buttonRes
-																: "No Response"}
-														</span>
-														<span style={{ opacity: 0.75, display: classData?.poll.allowTextResponses ? 'initial' : 'none', fontSize: 16 }}>
-															{student.pollRes?.textRes
-															? student.pollRes.textRes
-															: "No Text"}
-														</span>
-													</div>
-												);
-											})}
-									</div>
-								) : (
-									<p>No active poll.</p>
-								)}
-							</Modal>
-							<Tooltip title="Sort & Filter" mouseEnterDelay={0.5}>
-								<Popover
-									placement="bottomLeft"
-									trigger={"click"}
-									title="Sort & Filter Options"
-									content={
-										<Flex vertical gap={10}>
+                            vertical={isMobile}
+						> 
+							<Title style={{ margin: "0" }} level={isMobile ? 3 : 1}>Dashboard</Title>
+                            <Flex
+							    gap={10}
+                                style={{height: "60%" }}
+                            >
+                                <Tooltip title="All Responses" mouseEnterDelay={0.5}>
+                                    <Button
+                                        type="primary"
+                                        style={{ height: "100%" }}
+                                        onClick={() =>
+                                            setAllResponseModalOpen(true)
+                                        }
+                                    >
+                                        <IonIcon icon={IonIcons.barChart} />
+                                    </Button>
+                                </Tooltip>
+                                <Modal
+                                    title="All User Responses"
+                                    open={allResponseModalOpen}
+                                    onCancel={() => setAllResponseModalOpen(false)}
+                                    footer={null}
+                                    width={"90%"}
+                                >
+                                    {classData.poll ? (
+                                        <div
+                                            style={{
+                                                display: isMobile ? "flex" : "grid",
+                                                gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(220px, 1fr))",
+                                                gap: "16px",
+                                                width: "100%",
+                                                height: '100%',
+                                                overflowY: isMobile ? 'scroll' : 'unset',
+                                                flexDirection: isMobile ? "column" : "unset",
+                                            }}
+                                        >
+                                            {...students.sort((a, b) => a.displayName.localeCompare(b.displayName))
+                                                .filter((e) => e.id !== userData?.id)
+                                                .map((student: any) => {
+                                                    const matchingResponse = classData.poll.responses.find(
+                                                        (e: any) => e.answer === student.pollRes?.buttonRes,
+                                                    );
+                                                    return (
+                                                        <div
+                                                            key={student.id}
+                                                            style={{
+                                                                border: "1px solid var(--border-color)",
+                                                                borderRadius: "8px",
+                                                                padding: "12px",
+                                                                background: isDark ? "#fff2" : "#0002",
+                                                                minHeight: "80px",
+                                                                display: "flex",
+                                                                flexDirection: "column",
+                                                                justifyContent: "center",
+                                                                position: "relative",
+                                                            }}
+                                                        >
+                                                            <strong style={{paddingRight: 40}}>
+                                                                {student.displayName}
+                                                            </strong>
+                                                            <Tooltip title="Allow Vote" mouseEnterDelay={0.5}>
+                                                                <Switch 
+                                                                    style={{
+                                                                        position: 'absolute',
+                                                                        top: 20,
+                                                                        right: 20,
+                                                                    }}
+                                                                    size="small"
+                                                                    onChange={(e) => {
+                                                                        handleExcludeRespondent(student.id, e);
+                                                                    }}
+                                                                />
+                                                            </Tooltip>
+                                                            <span style={{ color: matchingResponse?.color }}>
+                                                                {student.pollRes?.buttonRes
+                                                                    ? student.pollRes.buttonRes
+                                                                    : "No Response"}
+                                                            </span>
+                                                            <span style={{ opacity: 0.75, display: classData?.poll.allowTextResponses ? 'initial' : 'none', fontSize: 16 }}>
+                                                                {student.pollRes?.textRes
+                                                                ? student.pollRes.textRes
+                                                                : "No Text"}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    ) : (
+                                        <p>No active poll.</p>
+                                    )}
+                                </Modal>
+                                <Tooltip title="Sort & Filter" mouseEnterDelay={0.5}>
+                                    <Popover
+                                        placement={isMobile ? "bottom" : "bottomRight"}
+                                        trigger={"click"}
+                                        title="Sort & Filter Options"
+                                        content={
                                             <Flex vertical gap={10}>
-                                                <p>Sort by:</p>
-                                                <Flex gap={10}>
-													<Select
-														style={{ flex: '1 1 auto'}}
-														value={sortType}
-														onChange={(value) =>
-															setSortType(value)
-														}
-													>
-														<Select.Option value="Name">
-															Name
-														</Select.Option>
-														<Select.Option value="Permissions">
-															Permissions
-														</Select.Option>
-														<Select.Option value="Response Order">
-															Response Order
-														</Select.Option>
-														<Select.Option value="Response Time">
-															Response Time
-														</Select.Option>
-														<Select.Option value="Response Text">
-															Response Text 
-														</Select.Option>
-														<Select.Option value="Help Time">
-															Help Time
-														</Select.Option>
-													</Select>
-													<Switch 
-                                                        checked={sortDirection === "▲"}
-                                                        onChange={() => setSortDirection(sortDirection === "▲" ? "▼" : "▲")}
-                                                        style={{flex: '0 0 auto', margin: 'auto '}}
-                                                        
-                                                        checkedChildren={"▲"}
-                                                        unCheckedChildren={"▼"}
-                                                    />
+                                                <Flex vertical gap={10}>
+                                                    <p>Sort by:</p>
+                                                    <Flex gap={10}>
+                                                        <Select
+                                                            style={{ flex: '1 1 auto'}}
+                                                            value={sortType}
+                                                            onChange={(value) =>
+                                                                setSortType(value)
+                                                            }
+                                                        >
+                                                            <Select.Option value="Name">
+                                                                Name
+                                                            </Select.Option>
+                                                            <Select.Option value="Permissions">
+                                                                Permissions
+                                                            </Select.Option>
+                                                            <Select.Option value="Response Order">
+                                                                Response Order
+                                                            </Select.Option>
+                                                            <Select.Option value="Response Time">
+                                                                Response Time
+                                                            </Select.Option>
+                                                            <Select.Option value="Response Text">
+                                                                Response Text 
+                                                            </Select.Option>
+                                                            <Select.Option value="Help Time">
+                                                                Help Time
+                                                            </Select.Option>
+                                                        </Select>
+                                                        <Switch 
+                                                            checked={sortDirection === "▲"}
+                                                            onChange={() => setSortDirection(sortDirection === "▲" ? "▼" : "▲")}
+                                                            style={{flex: '0 0 auto', margin: 'auto '}}
+                                                            
+                                                            checkedChildren={"▲"}
+                                                            unCheckedChildren={"▼"}
+                                                        />
+                                                    </Flex>
+                                                </Flex>
+
+                                                <Flex vertical gap={10}>
+                                                    <p>Filter by:</p>
+                                                    <Flex align="center" gap={10}>
+                                                        <Switch 
+                                                            checked={matchAllFilters}
+                                                            onChange={() => setMatchAllFilters(!matchAllFilters)}
+                                                        />
+                                                        <p>Match all filters?</p>
+                                                    </Flex>
+                                                    <Button
+                                                        variant="solid"
+                                                        color={
+                                                            filterState.answeredPoll
+                                                                ? "green"
+                                                                : "red"
+                                                        }
+                                                        onClick={() => {
+                                                            setFilterState(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    answeredPoll:
+                                                                        !prev.answeredPoll,
+                                                                }),
+                                                            );
+                                                        }}
+                                                    >
+                                                        Answered Poll
+                                                    </Button>
+                                                    <Button
+                                                        variant="solid"
+                                                        color={
+                                                            filterState.needsHelp
+                                                                ? "green"
+                                                                : "red"
+                                                        }
+                                                        onClick={() => {
+                                                            setFilterState(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    needsHelp:
+                                                                        !prev.needsHelp,
+                                                                }),
+                                                            );
+                                                        }}
+                                                    >
+                                                        Needs Help
+                                                    </Button>
+                                                    <Button
+                                                        variant="solid"
+                                                        color={
+                                                            filterState.onBreak
+                                                                ? "green"
+                                                                : "red"
+                                                        }
+                                                        onClick={() => {
+                                                            setFilterState(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    onBreak:
+                                                                        !prev.onBreak,
+                                                                }),
+                                                            );
+                                                        }}
+                                                    >
+                                                        On / Requesting Break
+                                                    </Button>
+                                                    <Button
+                                                        variant="solid"
+                                                        color={
+                                                            filterState.canVote
+                                                                ? "green"
+                                                                : "red"
+                                                        }
+                                                        onClick={() => {
+                                                            setFilterState(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    canVote:
+                                                                        !prev.canVote,
+                                                                }),
+                                                            );
+                                                        }}
+                                                    >
+                                                        Can Vote
+                                                    </Button>
                                                 </Flex>
                                             </Flex>
-
-											<Flex vertical gap={10}>
-											    <p>Filter by:</p>
-                                                <Flex align="center" gap={10}>
-                                                    <Switch 
-                                                        checked={matchAllFilters}
-                                                        onChange={() => setMatchAllFilters(!matchAllFilters)}
-                                                    />
-                                                    <p>Match all filters?</p>
-                                                </Flex>
-												<Button
-													variant="solid"
-													color={
-														filterState.answeredPoll
-															? "green"
-															: "red"
-													}
-													onClick={() => {
-														setFilterState(
-															(prev) => ({
-																...prev,
-																answeredPoll:
-																	!prev.answeredPoll,
-															}),
-														);
-													}}
-												>
-													Answered Poll
-												</Button>
-												<Button
-													variant="solid"
-													color={
-														filterState.needsHelp
-															? "green"
-															: "red"
-													}
-													onClick={() => {
-														setFilterState(
-															(prev) => ({
-																...prev,
-																needsHelp:
-																	!prev.needsHelp,
-															}),
-														);
-													}}
-												>
-													Needs Help
-												</Button>
-												<Button
-													variant="solid"
-													color={
-														filterState.onBreak
-															? "green"
-															: "red"
-													}
-													onClick={() => {
-														setFilterState(
-															(prev) => ({
-																...prev,
-																onBreak:
-																	!prev.onBreak,
-															}),
-														);
-													}}
-												>
-													On / Requesting Break
-												</Button>
-												<Button
-													variant="solid"
-													color={
-														filterState.canVote
-															? "green"
-															: "red"
-													}
-													onClick={() => {
-														setFilterState(
-															(prev) => ({
-																...prev,
-																canVote:
-																	!prev.canVote,
-															}),
-														);
-													}}
-												>
-													Can Vote
-												</Button>
-											</Flex>
-										</Flex>
-									}
-								>
-									<Button
-										type="primary"
-										style={{ height: "60%" }}
-									>
-										<IonIcon icon={IonIcons.swapVertical} />
-									</Button>
-								</Popover>
-							</Tooltip>
-							<Input
-								placeholder="Search students"
-								style={{ height: "60%", width: "300px" }}
-								size="large"
-								onChange={(e) => setSearchQuery(e.target.value)}
-							/>
+                                        }
+                                    >
+                                        <Button
+                                            type="primary"
+                                            style={{ height: "100%" }}
+                                        >
+                                            <IonIcon icon={IonIcons.swapVertical} />
+                                        </Button>
+                                    </Popover>
+                                </Tooltip>
+                                <Input
+                                    placeholder={"Search" + (isMobile ? "" : " students")}
+                                    style={{ height: "100%", width: "100%" }}
+                                    size="large"
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                </Flex>
 						</Flex>
 						<div
 							style={{
-								display: "grid",
-								gridTemplateColumns:
-									"repeat(auto-fill, minmax(200px, 1fr))",
+								display: isMobile ? "flex" : "grid",
+                                flexDirection: isMobile ? "column" : "unset",
+								gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(200px, 1fr))",
 								gap: "16px",
 								width: "100%",
+                                overflowY: isMobile ? 'scroll' : 'unset',
+                                padding: isMobile ? "20px 15px" : "0",
 							}}
 						>
 							{displayedStudents

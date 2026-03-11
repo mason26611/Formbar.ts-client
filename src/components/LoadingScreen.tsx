@@ -3,6 +3,7 @@ const { Title, Text } = Typography;
 import { LoadingOutlined } from "@ant-design/icons";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
+import { useMobileDetect } from "../main";
 
 export default function LoadingScreen({
 	socketErrors,
@@ -13,6 +14,8 @@ export default function LoadingScreen({
 	httpErrors: number;
 	isConnected: boolean;
 }) {
+    const isMobile = useMobileDetect();
+    
 	return (
 		<>
 			<Flex
@@ -25,18 +28,18 @@ export default function LoadingScreen({
 				<Title
 					style={{
 						color: "#fff9",
-						fontSize: "120px",
+						fontSize: isMobile ? "70px" : "120px",
 						fontWeight: 700,
 						marginBottom: "0",
 					}}
 				>
-					<span className="bounce">F</span>
-					<span className="bounce">o</span>
-					<span className="bounce">r</span>
-					<span className="bounce">m</span>
-					<span className="bounce">b</span>
-					<span className="bounce">a</span>
-					<span className="bounce">r</span>
+					<span className={!isConnected ? "bounce" : undefined}>F</span>
+					<span className={!isConnected ? "bounce" : undefined}>o</span>
+					<span className={!isConnected ? "bounce" : undefined}>r</span>
+					<span className={!isConnected ? "bounce" : undefined}>m</span>
+					<span className={!isConnected ? "bounce" : undefined}>b</span>
+					<span className={!isConnected ? "bounce" : undefined}>a</span>
+					<span className={!isConnected ? "bounce" : undefined}>r</span>
 				</Title>
 				{isConnected ? (
 					<IonIcon
@@ -74,6 +77,7 @@ export default function LoadingScreen({
 						fontSize: "20px",
 						fontWeight: 500,
 						marginTop: "0",
+                        textAlign: "center",
 					}}
 				>
 					{!isConnected ? randomText() : "Loading panel..."}
@@ -101,7 +105,7 @@ export default function LoadingScreen({
 }
 
 function randomText() {
-	const texts = [
+	const splashTexts = [
 		"Printing Digipogs...",
 		"Building Classrooms...",
 		"Forming the Bar...",
@@ -109,12 +113,15 @@ function randomText() {
 		"Filling Pog Meters...",
 		"Releasing Half-Life 3...",
 		"I'm the Formboy!",
+		"I'm the Femboy!",
 		"Yo, Gurt!!",,
         "Steven, fix it!!",
-        "PR #85"
+        "PR #85",
+        "Robert was here... It's in your skin. It's in your blood. It's in your brain. It is part of you.",
+        "Wishlist Kogama on Steam!"
 	];
 
-	return texts[Math.floor(Math.random() * texts.length)];
+	return splashTexts[Math.floor(Math.random() * splashTexts.length)];
 }
 
 const hideLoadingStyle = {

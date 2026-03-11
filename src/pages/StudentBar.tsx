@@ -148,6 +148,7 @@ export default function StudentBar() {
 											color: resp.color,
 										}}
 										Respond={Respond}
+										allowMultipleResponses={classData?.poll?.allowMultipleResponses}
 									/>
 								),
 							)}

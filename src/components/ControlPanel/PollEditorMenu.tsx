@@ -1,8 +1,10 @@
 import { Button, Card, Flex, Input, Switch, Tooltip, Typography, notification } from "antd";
 const { Title, Text } = Typography;
-import { useClassData } from "../../main";
+import { useClassData, useMobileDetect } from "../../main";
 import PollEditorResponse from "../PollEditorResponse";
 import { useState } from "react";
+import { IonIcon } from "@ionic/react";
+import * as IonIcons from "ionicons/icons";
 
 type PollAnswer = {
     color: string;
@@ -77,6 +79,7 @@ function generateColors(amount: number) {
 }
 
 export default function PollsEditorMenu() {
+    const isMobile = useMobileDetect();
     const { classData } = useClassData();
 
 	const [api, contextHolder] = notification.useNotification();
@@ -136,40 +139,49 @@ export default function PollsEditorMenu() {
 
     return (
         <>{contextHolder}
-        <Flex vertical align="center" justify="start" style={{ height: "100%", padding: "20px", flex: 1 }}>
-            <Title>Poll Editor</Title>
+        <Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1 }}>
+            <Title level={isMobile ? 3 : 2}>Poll Editor</Title>
             
-            <Flex gap={20}>
+            <Flex gap={20} vertical={isMobile} style={isMobile ? {width: '100%'} : {}}>
                 <Card title="Poll Properties">
 
-                    <Flex vertical gap={15} style={{height: 400}}>
-                        <Input placeholder="Poll Prompt" style={{ marginBottom: "20px" }}
+                    <Flex vertical gap={15} style={{height: isMobile ? 'min-content' : 400}}>
+                        <Input placeholder="Poll Prompt" style={{ marginBottom: isMobile ? undefined : '20px' }}
                             value={pollProperties.prompt} onChange={(e) => setPollProperties({ ...pollProperties, prompt: e.target.value })}
                         />
+                        {
+                            isMobile ? (
+                                null
+                            ) : (
+                                <>
 
-                        <Flex align="center" justify="space-between">
-                            Allow Vote Changes
-                            <Switch defaultChecked={pollProperties.allowVoteChanges} onChange={(e) => setPollProperties({...pollProperties, allowVoteChanges: e})} />
-                        </Flex>
+                                <Flex align="center" justify="space-between">
+                                    Allow Vote Changes
+                                    <Switch defaultChecked={pollProperties.allowVoteChanges} onChange={(e) => setPollProperties({...pollProperties, allowVoteChanges: e})} />
+                                </Flex>
 
-                        <Flex align="center" justify="space-between">
-                            Allow Text Responses
-                            <Switch defaultChecked={pollProperties.allowTextResponses} onChange={(e) => setPollProperties({...pollProperties, allowTextResponses: e})} />
-                        </Flex>
+                                <Flex align="center" justify="space-between">
+                                    Allow Text Responses
+                                    <Switch defaultChecked={pollProperties.allowTextResponses} onChange={(e) => setPollProperties({...pollProperties, allowTextResponses: e})} />
+                                </Flex>
 
-                        <Flex align="center" justify="space-between">
-                            Blind Poll
-                            <Switch defaultChecked={pollProperties.blind} onChange={(e) => setPollProperties({...pollProperties, blind: e})} />
-                        </Flex>
+                                <Flex align="center" justify="space-between">
+                                    Blind Poll
+                                    <Switch defaultChecked={pollProperties.blind} onChange={(e) => setPollProperties({...pollProperties, blind: e})} />
+                                </Flex>
 
-                        <Flex align="center" justify="space-between" style={{cursor:'not-allowed', opacity: 0.5}}>
-                            Multiple Answer Poll
-                            <Switch defaultChecked={pollProperties.allowMultipleResponses} onChange={(e) => setPollProperties({...pollProperties, allowMultipleResponses: e})} />
-                        </Flex>
+                                <Flex align="center" justify="space-between">
+                                    Multiple Answer Poll
+                                    <Switch defaultChecked={pollProperties.allowMultipleResponses} onChange={(e) => setPollProperties({...pollProperties, allowMultipleResponses: e})} />
+                                </Flex>
+                                </>
+                            )
+                        }
 
                         <Flex align="center" justify="space-between" gap={10} style={{marginTop: '10px'}}>
                             <Tooltip title="Reset answers to 'Answer X'." mouseEnterDelay={0.5}>
                                 <Button type="primary"
+                                    style={isMobile ? {width: '100%'} : {}}
                                     onClick={() => {
                                         // Change all answers to "Answer {index}"
                                         setPollProperties({
@@ -181,11 +193,19 @@ export default function PollsEditorMenu() {
                                         });
                                     }}
                                 >
-                                    Reset Answers
+                                    {
+                                        isMobile ? (
+                                            <Flex align="center" justify="center" gap={5}>
+                                                <IonIcon icon={IonIcons.refresh} />
+                                                Reset
+                                            </Flex>
+                                        ) : "Reset Answers"
+                                    }
                                 </Button>
                             </Tooltip>
                             <Tooltip title="Assign each answer a unique color." mouseEnterDelay={0.5}>
                                 <Button type="primary"
+                                    style={isMobile ? {width: '100%'} : {}}
                                     onClick={() => {
                                         let colors = generateColors(pollProperties.answers.length);
 
@@ -199,18 +219,43 @@ export default function PollsEditorMenu() {
                                         });
                                     }}
                                 >
-                                    Auto Color
+                                    {
+                                        isMobile ? (
+                                            <Flex align="center" justify="center" gap={5}>
+                                                <IonIcon icon={IonIcons.brush} />
+                                                Colors
+                                            </Flex>
+                                        ) : "Auto Color"
+                                    }
                                 </Button>
                             </Tooltip>
                         </Flex>
 
                         <Flex align="center" justify="space-between" gap={10} style={{cursor:'not-allowed', opacity: 0.5}}>
-                            <Button variant="solid" color="green">
-                                Save in My Polls
-                            </Button>
-                            <Button variant="solid" color="green">
-                                Save as Class poll
-                            </Button>
+                            <Tooltip title={isMobile && "Save in My Polls"} mouseEnterDelay={0.5}>
+                                <Button variant="solid" color="green" style={isMobile ? {width: '100%'} : {}}>
+                                    {
+                                        isMobile ? (
+                                            <Flex align="center" justify="center" gap={5}>
+                                                <IonIcon icon={IonIcons.save} />
+                                                My Polls
+                                            </Flex>
+                                        ) : "Save in My Polls"
+                                    }
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title={isMobile && "Save as Class Poll"} mouseEnterDelay={0.5}>
+                                <Button variant="solid" color="green" style={isMobile ? {width: '100%'} : {}}>
+                                    {
+                                        isMobile ? (
+                                            <Flex align="center" justify="center" gap={5}>
+                                                <IonIcon icon={IonIcons.save} />
+                                                Class
+                                            </Flex>
+                                        ) : "Save as Class Poll"
+                                    }
+                                </Button>
+                            </Tooltip>
                         </Flex>
 
                         <Button type="primary" danger 
@@ -229,8 +274,8 @@ export default function PollsEditorMenu() {
                             Add Answer
                         </Button>
                     </Flex>
-                } style={{ width: "500px" }}>
-                    <Flex vertical gap={10} style={{ height: "400px", overflowY: "auto" }}>
+                } style={{ width: isMobile ? '100%' : "500px", ...(isMobile ? {flex: '1 1 auto', height: 'unset'} : {})  }}>
+                    <Flex vertical gap={10} style={{ maxHeight: "400px", overflowY: "auto", ...{height: isMobile ? '200px' : 'auto'} }}>
                         {
                             pollProperties.answers.map((answer, index) => (
                                 <PollEditorResponse 

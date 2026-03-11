@@ -37,16 +37,17 @@ export type ClassData = {
 		sound: boolean;
 	};
 	poll: {
-		status: boolean;
-		responses: any[];
+		allowMultipleResponses: boolean;
 		allowTextResponses: boolean;
-		prompt: string;
-		weight: number;
+		allowVoteChanges: boolean;
 		blind: boolean;
 		excludedRespondents: any[];
-		totalResponses: number;
-		totalResponders: number;
-		startTime?: number;
+		prompt: string;
+        responses: any[];
+        status: boolean;
+        totalResponders: number;
+        totalResponses: number;
+        weight: number;
 	};
 	permissions: {
 		links: number;
@@ -148,7 +149,7 @@ export type Student = {
 };
 
 export type Poll = {
-	id: string;
+	id?: string;
 	prompt: string;
 	responses: any[];
 	blind: boolean;

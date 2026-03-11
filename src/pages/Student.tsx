@@ -21,6 +21,7 @@ export default function Student() {
 	// const [lastPollData, setLastPollData] = useState<any>(null);
 
 	const [textResponse, setTextResponse] = useState<string>("");
+	const [selectedResponses, setSelectedResponses] = useState<string[]>([]);
 	const lastPollDataRef = useRef<any>(null);
 
 	const [pollWidth, setPollWidth] = useState<number>(
@@ -29,7 +30,7 @@ export default function Student() {
 			: Math.min(window.innerWidth - 40, window.innerHeight / 2 - 100),
 	);
 
-	function Respond(response: string) {
+	function Respond(response: string | string[]) {
 		if (!socket || !socket.connected) {
 			Log({
 				message: "Socket not connected, cannot send response",
@@ -90,6 +91,7 @@ export default function Student() {
 				classData.poll.startTime !== lastPollDataRef.current?.startTime
 			) {
 				setTextResponse("");
+				setSelectedResponses([]);
 			}
 
 			setClassData(classData);
@@ -249,19 +251,45 @@ export default function Student() {
 													color: resp.color,
 												}}
 												Respond={Respond}
+												allowMultipleResponses={classData?.poll?.allowMultipleResponses}
+												selected={selectedResponses.includes(resp.answer)}
+												onSelectToggle={(answer, nextSelected) => {
+													setSelectedResponses((prev) => {
+														if (nextSelected) {
+															return prev.includes(answer)
+																? prev
+																: [...prev, answer];
+														}
+														return prev.filter(
+															(selectedAnswer) =>
+																selectedAnswer !== answer,
+														);
+													});
+												}}
 											/>
 										),
 									)}
 								</Flex>
+                                <Flex gap={10}>
+								{classData?.poll.allowMultipleResponses ? (
+									<PollButton
+										answerData={{
+											answer: "Submit",
+											color: "#7dfc9f",
+										}}
+											Respond={() => Respond(selectedResponses)}
+									/>
+								) : null}
 								{classData?.poll.allowVoteChanges ? (
 									<PollButton
 										answerData={{
 											answer: "remove",
-											color: "#ff0000",
+											color: "#f3655b",
 										}}
 										Respond={Respond}
 									/>
 								) : null}
+                                </Flex>
 							</Flex>
 						) : !classData?.poll.prompt  ? (
 							<Title>There is no current poll.</Title>

@@ -16,9 +16,9 @@ import {
 const { Text, Link } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useEffect, useState } from "react";
+import { Activity, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useUserData, isMobile, useSettings } from "../main";
+import { useUserData, useSettings, useMobileDetect } from "../main";
 import { accessToken, formbarUrl } from "../socket";
 import CountUp from 'react-countup';
 
@@ -49,6 +49,7 @@ export default function Profile() {
 	const [pinLoading, setPinLoading] = useState(false);
 	const [pinResetLoading, setPinResetLoading] = useState(false);
 	const [pinVerifyLoading, setPinVerifyLoading] = useState(false);
+    const isMobile = useMobileDetect();
 
 	const { id } = useParams<{ id?: string }>();
 	const isOwnProfile = !id || String(id) === String(userData?.id);
@@ -410,7 +411,7 @@ export default function Profile() {
 						justify="center"
 						style={{
 							padding: "10px",
-							minWidth: isMobile() ? "300px" : "500px",
+							minWidth: isMobile ? "300px" : "500px",
 						}}
 						gap={15}
 					>
@@ -436,54 +437,103 @@ export default function Profile() {
 									width: "100%",
 								}}
 							>
-								<Button
-									variant="solid"
-									color="blue"
-									onClick={() => {
-										navigate(
-											id
-												? `/profile/${id}/transactions`
-												: "/profile/transactions",
-										);
-									}}
-									style={{ width: "130px" }}
-								>
-									Transactions
-								</Button>
-								{
-                                    id == userData?.id || !id ? (
-                                        <span>Your Profile</span>
-                                    ) : (
-                                        <span>Profile</span>
+                                {
+                                    !isMobile && (
+                                        <Button
+                                            variant="solid"
+                                            color="blue"
+                                            onClick={() => {
+                                                navigate(
+                                                    id
+                                                        ? `/profile/${id}/transactions`
+                                                        : "/profile/transactions",
+                                                );
+                                            }}
+                                            style={{ width: "130px" }}
+                                        >
+                                            Transactions
+                                        </Button>
                                     )
                                 }
-								<Button
-									variant="solid"
-									color="blue"
-									onClick={() => navigate("/pools")}
-									style={{ width: "130px" }}
-									disabled
-								>
-									Pog Pools
-								</Button>
+								{
+                                    <span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{(id && Number(id) == userData?.id) || !isMobile ? "Your Profile" : "Profile"}</span>
+                                }
+                                {
+                                    !isMobile && (
+                                        <Button
+                                            variant="solid"
+                                            color="blue"
+                                            onClick={() => navigate("/pools")}
+                                            style={{ width: "130px" }}
+                                        >
+                                            Pog Pools
+                                        </Button>
+                                    )   
+                                }
+								
 							</h2>
 						)}
 
-						{!error &&
-							Object.entries(profileProps).map(([key, value]) =>
-								key == "Pog Meter" || value == "N/A" ? 
-                                null : key == "Digipogs" && settings.disableAnimations === false ? (
-                                    <p key={key} style={infoStyle}>
-										<strong>{key}:</strong>
-										{<CountUp end={Number(value)} separator={''} duration={1} />}
-									</p>
-                                )  : (
-									<p key={key} style={infoStyle}>
-										<strong>{key}:</strong>
-										{value}
-									</p>
-								),
-							)}
+                        {
+                            isMobile && (
+                                <Flex gap={10} style={{width:'100%'}} justify="center">
+                                    <Button
+                                        variant="solid"
+                                        color="blue"
+                                        onClick={() => {
+                                            navigate(
+                                                id
+                                                    ? `/profile/${id}/transactions`
+                                                    : "/profile/transactions",
+                                            );
+                                        }}
+                                        style={{ width: "130px" }}
+                                    >
+                                        Transactions
+                                    </Button>
+                            
+                                    <Button
+                                        variant="solid"
+                                        color="blue"
+                                        onClick={() => navigate("/pools")}
+                                        style={{ width: "130px" }}
+                                    >
+                                        Pog Pools
+                                    </Button>
+                                </Flex>
+                            )
+                        }
+
+                        <div style={isMobile ? {
+                            height: sensitiveActiveKeys.includes("1") ? '0' : '120px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                            width: '100%',
+                            overflow: 'hidden',
+                            transition: 'height 0.3s ease',
+                        } : {
+                            width:'100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                        }}>
+                            {!error &&
+                                Object.entries(profileProps).map(([key, value]) =>
+                                    key == "Pog Meter" || value == "N/A" ? 
+                                    null : key == "Digipogs" && settings.disableAnimations === false ? (
+                                        <p key={key} style={infoStyle}>
+                                            <strong>{key}:</strong>
+                                            {<CountUp end={Number(value)} separator={''} duration={1} />}
+                                        </p>
+                                    )  : (
+                                        <p key={key} style={infoStyle}>
+                                            <strong>{key}:</strong>
+                                            {value}
+                                        </p>
+                                    ),
+                            )}
+                        </div>
 
 						{!error && (
 							<div
@@ -549,7 +599,7 @@ export default function Profile() {
                                                                         <Text
                                                                             strong
                                                                         >
-                                                                            API Key
+                                                                            API{!isMobile && " Key"}
                                                                         </Text>
                                                                         <Button
                                                                             type="primary"
@@ -658,7 +708,7 @@ export default function Profile() {
                                                                                     )
                                                                                 }
                                                                             />
-                                                                            <Button
+                                                                            { !isMobile && (<Button
                                                                                 type="primary"
                                                                                 onClick={
                                                                                     updatePin
@@ -669,8 +719,20 @@ export default function Profile() {
                                                                             >
                                                                                 Update
                                                                                 PIN
-                                                                            </Button>
+                                                                            </Button>)}
                                                                         </Flex>
+                                                                        { isMobile && (<Button
+                                                                            type="primary"
+                                                                            onClick={
+                                                                                updatePin
+                                                                            }
+                                                                            loading={
+                                                                                pinLoading
+                                                                            }
+                                                                        >
+                                                                            Update
+                                                                            PIN
+                                                                        </Button>)}
 																	</>
 																)}
 																<Button

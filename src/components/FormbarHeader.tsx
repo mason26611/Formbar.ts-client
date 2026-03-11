@@ -236,30 +236,6 @@ export default function FormbarHeader() {
 					}}
 				/>)}
 
-				<Tooltip
-                    mouseEnterDelay={0.5}
-					placement="bottomRight"
-					title={isDark ? "Light Mode" : "Dark Mode"}
-					arrow={{ pointAtCenter: true }}
-					color={isDark ? "#aac" : "#222"}
-				>
-					<Button
-						variant="solid"
-						onClick={toggleTheme}
-						size="large"
-						style={{
-							...styles.headerButton,
-							backgroundColor: isDark ? "#aac" : "#222",
-							color: isDark ? "#222" : "#ddd",
-						}}
-					>
-						<IonIcon
-							icon={isDark ? IonIcons.sunny : IonIcons.moon}
-							size="large"
-						/>
-					</Button>
-				</Tooltip>
-
 				{userData && (
 					<Tooltip
                         mouseEnterDelay={0.5}

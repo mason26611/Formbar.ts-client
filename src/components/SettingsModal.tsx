@@ -11,8 +11,8 @@ import {
 
 const { Text } = Typography;
 
-import { Activity, useState } from "react";
-import { useMobileDetect, useSettings } from "../main";
+import { useState } from "react";
+import { useMobileDetect, useSettings, useTheme } from "../main";
 
 type MenuItem = Required<MenuProps>['items'][number] & {
     selectedicon?: React.ReactNode;
@@ -22,14 +22,18 @@ type MenuItem = Required<MenuProps>['items'][number] & {
 const items: MenuItem[] = [
     {
         key: "1",
+        icon: <IonIcon icon={IonIcons.colorPaletteOutline} />,
+        deselectedicon: <IonIcon icon={IonIcons.colorPaletteOutline} />,
+        selectedicon: <IonIcon icon={IonIcons.colorPalette} />,
+        label: "Appearance",
+    },
+    {
+        key: "2",
         icon: <IonIcon icon={IonIcons.accessibility} />,
         deselectedicon: <IonIcon icon={IonIcons.accessibilityOutline} />,
         selectedicon: <IonIcon icon={IonIcons.accessibility} />,
         label: "Accessibility",
     },
-    // {
-    //     type: "divider",
-    // },
 ];
 
 
@@ -38,6 +42,7 @@ export default function SettingsModal() {
     const [currentMenu, setCurrentMenu] = useState("1");
     const [menuItems, setMenuItems] = useState(items);
     const { settings, updateSettings } = useSettings();
+    const { isDark, toggleTheme } = useTheme();
 
     function openMenu(key: string) {
 		if (key === currentMenu) return;
@@ -85,14 +90,29 @@ export default function SettingsModal() {
                 onClick={(e) => openMenu(e.key)}
             />
             <Flex style={{padding: 20, width:'100%', height: '100%'}}>
-                <Activity>
-                    <Flex gap={10}>
-                        <Text>Disable Animations</Text>
-                        <Switch checked={settings.disableAnimations} onChange={(checked) => {
-                            updateSettings({ disableAnimations: checked });
-                        }} />
+                {currentMenu === "1" && (
+                    <Flex vertical gap={15}>
+                        <Flex gap={10} align="center">
+                            <Switch
+                                checkedChildren={<IonIcon icon={IonIcons.moon} />}
+                                unCheckedChildren={<IonIcon icon={IonIcons.sunny} />}
+                                checked={isDark}
+                                onChange={toggleTheme}
+                            />
+                            <Text>{isDark ? "Dark Mode" : "Light Mode"}</Text>
+                        </Flex>
                     </Flex>
-                </Activity>
+                )}
+                {currentMenu === "2" && (
+                    <Flex vertical gap={15}>
+                        <Flex gap={10} align="center">
+                            <Switch checked={settings.disableAnimations} onChange={(checked) => {
+                                updateSettings({ disableAnimations: checked });
+                            }} />
+                            <Text>Disable Animations</Text>
+                        </Flex>
+                    </Flex>
+                )}
             </Flex>
         </Flex>
     );
