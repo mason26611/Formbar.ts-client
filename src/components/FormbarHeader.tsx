@@ -1,4 +1,4 @@
-import { Button, Flex, Tooltip, Popconfirm, Modal } from "antd";
+import { Button, Flex, Tooltip, Popconfirm, Modal, Badge } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +31,42 @@ export default function FormbarHeader() {
 	const primaryTextColor = isDark
 		? themeColors.dark.text.primary
 		: themeColors.light.text.primary;
+
+	// Badge style that adapts to dark / light themes for better contrast
+	const badgeStyle: React.CSSProperties = isDark
+		? {
+			marginLeft: 10,
+			backgroundColor: "transparent",
+			border: "1px solid rgba(0,200,255,0.95)",
+			boxShadow:
+				"0 0 10px rgba(0,200,255,0.95), inset 0 0 6px rgba(0,200,255,0.06)",
+			padding: "2px 8px",
+			borderRadius: "999px",
+			fontWeight: 700,
+			background: "linear-gradient(90deg,#dffcff,#66e0ff,#bff5ff)",
+			WebkitBackgroundClip: "text",
+			WebkitTextFillColor: "transparent",
+			color: "#e6fbff",
+			textShadow: "0 0 10px rgba(0,200,255,0.9)",
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+		}
+		: {
+			marginLeft: 10,
+			// Give a subtle translucent backdrop in light mode for legibility
+			backgroundColor: "rgba(255,255,255,0.14)",
+			border: "1px solid rgba(0,120,200,0.25)",
+			boxShadow: "0 2px 8px rgba(0,170,255,0.12)",
+			padding: "4px 10px",
+			borderRadius: "999px",
+			fontWeight: 700,
+			color: "#003e6b",
+			textShadow: "0 0 6px rgba(0,120,200,0.18)",
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+		};
 
 	function logoutHandler() {
 		localStorage.removeItem("accessToken");
@@ -88,6 +124,7 @@ export default function FormbarHeader() {
 					onClick={() => navigate("/")}
 				>
 					Formbar
+					<Badge count={"v3"} style={badgeStyle} />
 				</h1>
                 {/* <Badge count={1} size="small">
                     <Button style={{marginLeft: 10}} type="primary" shape="square" variant="solid" color="default" size="large"
