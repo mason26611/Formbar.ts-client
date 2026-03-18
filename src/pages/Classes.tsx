@@ -94,7 +94,7 @@ export default function ClassesPage() {
                 fetch(`${formbarUrl}/api/v1/room/${selectedClass}/`, {
                     method: "DELETE",
                     headers: {
-                        Authorization: `Bearer ${accessToken}`
+                        Authorization: accessToken
                     }
                 })
                 .then((res) => res.json())

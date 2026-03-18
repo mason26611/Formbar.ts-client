@@ -52,13 +52,6 @@ export default function Student() {
 	);
 
 	function Respond(response: string | string[]) {
-		if (!socket || !socket.connected) {
-			Log({
-				message: "Socket not connected, cannot send response",
-				level: "warn",
-			});
-			return;
-		}
 		let resTextResponse = classData?.poll.allowTextResponses
 			? textResponse.trim()
 			: "";
@@ -66,7 +59,7 @@ export default function Student() {
         fetch(`${formbarUrl}/api/v1/class/${classData.id}/polls/response`, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: accessToken,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({

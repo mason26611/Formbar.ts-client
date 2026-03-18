@@ -238,7 +238,39 @@ export default function SettingsMenu() {
                                             .then((res) => res.json())
                                             .then((res) => {
                                                 Log({message: "Class deleted:", data: res});
-                                            })
+                                                                                                 if (!res.ok) {
+                                                     return res
+                                                         .json()
+                                                         .catch(() => {
+                                                             throw new Error("Failed to delete class.");
+                                                         })
+                                                         .then((body: any) => {
+                                                             const message =
+                                                                 (body && (body.detail || body.message)) ||
+                                                                 "Failed to delete class.";
+                                                             throw new Error(message);
+                                                         });
+                                                 }
+                                                 return res.json();
+                                             })
+                                             .then((res) => {
+                                                 Log({ message: "Class deleted:", data: res });
+                                                 notification.success({
+                                                    title: "Class deleted",
+                                                     message: "Class deleted",
+                                                     description: "The class has been deleted successfully.",
+                                                 });
+                                             })
+                                             .catch((error) => {
+                                                 console.error("Failed to delete class:", error);
+                                                 notification.error({
+                                                        title: "Error",
+                                                     message: "Failed to delete class",
+                                                     description:
+                                                         (error && error.message) ||
+                                                         "An unexpected error occurred while deleting the class.",
+                                                 });
+                                            });
                                         }
                                     })
                                 }>

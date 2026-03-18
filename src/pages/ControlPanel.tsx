@@ -34,8 +34,6 @@ import Statistics from "../components/ControlPanel/StatisticsPage";
 import { isMobile } from "../main";
 import { useNavigate } from "react-router-dom";
 import TimerPage from "../components/ControlPanel/TimerPage";
-import FullCircularPoll from "../components/CircularPoll";
-import type { Poll } from "../types";
 import { formatTime, textColorForBackground } from "../GlobalFunctions";
 
 function toEpochMs(value: unknown): number | null {
