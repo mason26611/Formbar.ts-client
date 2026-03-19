@@ -2,7 +2,7 @@ import { Progress } from "antd";
 import type { Poll } from "../types";
 import { useTheme } from "../main";
 import { useState } from "react";
-import { textColorForBackground } from "../CustomStyleFunctions";
+import { formatTime, textColorForBackground } from "../GlobalFunctions";
 
 type CircularPollProperties = {
 	percentage: number;
@@ -14,11 +14,20 @@ type CircularPollProperties = {
 type PollObjectProperties = {
 	poll: Poll;
 	size?: number;
+    timer?: {
+        active: boolean;
+        current: number;
+        duration: number;
+        remainingSeconds: number;
+    };
+    onlyTimer?: boolean;
 };
 
 export default function FullCircularPoll({
 	poll,
 	size = 400,
+    timer = { active: false, current: 0, duration: 0, remainingSeconds: 0 },
+    onlyTimer = false,
 }: PollObjectProperties) {
     const { isDark } = useTheme();
 	const ringStrokeWidth = 23;
@@ -99,8 +108,8 @@ export default function FullCircularPoll({
 		<div
 			style={{
 				position: "relative",
-				width: `${size}px`,
-				height: `${size}px`,
+				width: onlyTimer ? `${size / 2}px` : `${size}px`,
+				height: onlyTimer ? `${size / 2}px` : `${size}px`,
 			}}
 		>
 				<div
@@ -125,108 +134,120 @@ export default function FullCircularPoll({
 					}}
 				/>
             {/* Timer */}
-            {/* <Progress
-                style={{
-                    position: 'absolute',
-                    pointerEvents: 'none',
-                    left: '50%',
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-                type="dashboard"
-                percent={100}
-                strokeColor={{
-                    '0%': 'rgb(94, 158, 230)',
-                    '100%': 'rgba(41, 96, 167, 0.9)',
-                }}
-                strokeWidth={15}
-                gapDegree={50}
-                size={size / 2}
-            /> */}
-			<Progress
-				style={{
-					position: "absolute" as "absolute",
-					pointerEvents: "none",
-                    left: "50%",
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
-				}}
-				type="circle"
-				percent={100}
-				strokeColor={isDark ? {
-					"0%": "rgba(255, 255, 255, 0.38)",
-					"100%": "rgba(255, 255, 255, 0.1)",
-				} : {
-					"0%": "#e6e6e6",
-					"100%": "#bfbfbf",
-				}}
-				size={size}
-				strokeWidth={ringStrokeWidth}
-				railColor="transparent"
-				showInfo={false}
-				strokeLinecap="butt"
-				styles={{
-					root: {
-						filter: "drop-shadow(0 0 5px #0004)",
-					},
-				}}
-			/>
-			{
-				poll.blind ? (
-                    <CircularPoll
-						percentage={
-							poll.totalResponses / poll.totalResponders * 100
-						}
-						color={"#ff9f22"}
-						offset={0}
-						size={size}
-					/>
-                ) : (
-					poll.responses.map((answer, index) => (
-					<CircularPoll
-						key={index}
-						percentage={
-							answer.responses === 0
-								? 0
-								: (answer.responses / poll.totalResponders) * 100
-						}
-						color={answer.color}
-						offset={poll.responses
-							.slice(0, index)
-							.reduce(
-								(acc, curr) =>
-									acc +
-									(curr.responses === 0
-										? 0
-										: (curr.responses / poll.totalResponders) * 100),
-								0,
-							)}
-						size={size}
-					/>
-				))
-				)
-			}
-			{!poll.blind && hoveredSegment && hoverPosition ? (
-				<div
-					style={{
-						position: "absolute",
-						left: hoverPosition.x,
-						top: hoverPosition.y - 20,
-						transform: "translate(-50%, -50%)",
-						zIndex: 10,
-						pointerEvents: "none",
-						backgroundColor: hoveredSegment.color || "rgba(0, 0, 0, 0.78)",
-                        border: `1px solid #000`,
-						color: textColorForBackground(hoveredSegment.color || "rgba(0, 0, 0, 0.78)"),
-						padding: "4px 8px",
-						borderRadius: 6,
-						fontSize: 12,
-						whiteSpace: "nowrap",
-					}}
-				>
-					{hoveredSegment.answer}
-				</div>
-			) : null}
+            {
+                timer.duration > 0 && (
+                    <Progress
+                        style={{
+                            position: 'absolute',
+                            pointerEvents: 'none',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                        }}
+                        type="dashboard"
+                        percent={Math.round(timer.current)}
+                        
+                        format={() => `${formatTime(timer.remainingSeconds)}`}
+                        strokeColor={{
+                            '0%': 'rgb(94, 158, 230)',
+                            '100%': 'rgba(41, 96, 167, 0.9)',
+                        }}
+                        strokeWidth={15}
+                        gapDegree={50}
+                        size={size / 2}
+                    />
+                )
+            }
+            {
+                !onlyTimer && (
+                    <>
+                        <Progress
+                            style={{
+                                position: "absolute" as "absolute",
+                                pointerEvents: "none",
+                                left: "50%",
+                                top: "50%",
+                                transform: "translate(-50%, -50%)",
+                            }}
+                            type="circle"
+                            percent={100}
+                            strokeColor={isDark ? {
+                                "0%": "rgba(255, 255, 255, 0.38)",
+                                "100%": "rgba(255, 255, 255, 0.1)",
+                            } : {
+                                "0%": "#e6e6e6",
+                                "100%": "#bfbfbf",
+                            }}
+                            size={size}
+                            strokeWidth={ringStrokeWidth}
+                            railColor="transparent"
+                            showInfo={false}
+                            strokeLinecap="butt"
+                            styles={{
+                                root: {
+                                    filter: "drop-shadow(0 0 5px #0004)",
+                                },
+                            }}
+                        />
+                        {
+                            poll.blind ? (
+                                <CircularPoll
+                                    percentage={
+                                        poll.totalResponses / poll.totalResponders * 100
+                                    }
+                                    color={"#ff9f22"}
+                                    offset={0}
+                                    size={size}
+                                />
+                            ) : (
+                                poll.responses.map((answer, index) => (
+                                <CircularPoll
+                                    key={index}
+                                    percentage={
+                                        answer.responses === 0
+                                            ? 0
+                                            : (answer.responses / poll.totalResponders) * 100
+                                    }
+                                    color={answer.color}
+                                    offset={poll.responses
+                                        .slice(0, index)
+                                        .reduce(
+                                            (acc, curr) =>
+                                                acc +
+                                                (curr.responses === 0
+                                                    ? 0
+                                                    : (curr.responses / poll.totalResponders) * 100),
+                                            0,
+                                        )}
+                                    size={size}
+                                />
+                            ))
+                            )
+                        }
+                        {!poll.blind && hoveredSegment && hoverPosition ? (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    left: hoverPosition.x,
+                                    top: hoverPosition.y - 20,
+                                    transform: "translate(-50%, -50%)",
+                                    zIndex: 10,
+                                    pointerEvents: "none",
+                                    backgroundColor: hoveredSegment.color || "rgba(0, 0, 0, 0.78)",
+                                    border: `1px solid #000`,
+                                    color: textColorForBackground(hoveredSegment.color || "rgba(0, 0, 0, 0.78)"),
+                                    padding: "4px 8px",
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                {hoveredSegment.answer}
+                            </div>
+                        ) : null}
+                    </>
+                )
+            }
 		</div>
 	);
 }

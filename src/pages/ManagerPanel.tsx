@@ -13,6 +13,7 @@ import {
 	Input,
 	Skeleton,
 	Pagination,
+    Modal,
 } from "antd";
 
 const { Title, Text } = Typography;
@@ -42,7 +43,7 @@ export default function ManagerPanel() {
 		"Users" | "IP Addresses" | "Banned Users"
 	>("Users");
 	const [users, setUsers] = useState<ManagerPanelUser[]>([]);
-	const [pendingUsers, setPendingUsers] = useState<ManagerPanelUser[]>([]);
+    const [bannedUsers, setBannedUsers] = useState<ManagerPanelUser[]>([])
 	const { settings } = useSettings();
 	const [initialLoad, setInitialLoad] = useState(true);
 	const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +54,7 @@ export default function ManagerPanel() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 	const [refreshNonce, setRefreshNonce] = useState(0);
+    const [modal, contextModal] = Modal.useModal()
 
 	useEffect(() => {
 		const timeout = setTimeout(() => {
@@ -81,7 +83,7 @@ export default function ManagerPanel() {
 		fetch(`${formbarUrl}/api/v1/manager/?${params.toString()}`, {
 			method: "GET",
 			headers: {
-				Authorization: `${accessToken}`,
+				Authorization: `Bearer ${accessToken}`,
 			},
 			signal: abortController.signal,
 		})
@@ -91,17 +93,14 @@ export default function ManagerPanel() {
 				Log({ message: "Manager panel data", data });
 
 				const userItems = Array.isArray(data?.users) ? data.users : [];
-				const pendingUserItems = Array.isArray(data?.pendingUsers)
-					? data.pendingUsers
-					: [];
-				const total =
-					typeof data?.pagination?.total === "number"
-						? data.pagination.total
-						: userItems.length;
 
-				setUsers(userItems);
-				setPendingUsers(pendingUserItems);
-				setTotalUsers(total);
+                const unbannedUsers = userItems.filter((user: ManagerPanelUser) => user.permissions > 0);
+                const bannedUserItems  = userItems.filter((user: ManagerPanelUser) => user.permissions === 0);
+
+				setUsers(unbannedUsers);
+                setBannedUsers(bannedUserItems);
+
+				setTotalUsers(unbannedUsers.length);
 			})
 			.catch((err) => {
 				if (err?.name === "AbortError") {
@@ -143,7 +142,7 @@ export default function ManagerPanel() {
 		fetch(`${formbarUrl}/api/v1/user/${userId}/verify`, {
 			method: "PATCH",
 			headers: {
-				Authorization: `${accessToken}`,
+				Authorization: `Bearer ${accessToken}`,
 			},
 		})
 			.then((res) => res.json())
@@ -151,7 +150,7 @@ export default function ManagerPanel() {
 				const { data } = response;
 				Log({ message: "User verified", data });
 				setIsLoading(true);
-				setInitialLoad(true);
+				setInitialLoad(false);
 				setCurrentPage(1);
 				setRefreshNonce((value) => value + 1);
 			})
@@ -164,106 +163,285 @@ export default function ManagerPanel() {
 			});
 	}
 
-	function renderUserCard(user: ManagerPanelUser, index: number, keyPrefix: string) {
-		const animateStyle =
+    function deleteUserButton(userId: number | string) {
+        const targetUser =
+            users.find((e) => e.id == userId) ??
+            bannedUsers?.find((e) => e.id == userId);
+        const userLabel =
+            targetUser?.displayName ||
+            targetUser?.email ||
+            "This user";
+        modal.warning({ 
+            centered: true,
+            title: "Are you sure you want to delete this user?",
+            content: `${userLabel} will be unable to log in and removed from all classes.`,
+            okCancel: true,
+            onOk: () => {
+                fetch(`${formbarUrl}/api/v1/user/${userId}`,
+                    {
+                        method: "DELETE",
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                )
+                .then(async (res) => {
+                    let resp: any = null;
+                    try { resp = await res.json(); } catch { resp = null; }
+                    if (!res.ok) {
+                        Log({ message: "Failed to delete user:", data: resp, level: "error" });
+                        return;
+                    }
+                    if (resp?.success) {
+                        setIsLoading(true);
+                        setInitialLoad(false);
+                        setRefreshNonce((value) => value + 1);
+                    }
+                })
+                .catch((err) => {
+                    Log({ message: "Error deleting user:", data: err, level: "error" });
+                });
+            }
+        })
+
+    }
+
+    function banUserButton(userId: number | string) {
+        const user = users.find((e) => e.id == userId) ??
+            (typeof bannedUsers !== "undefined"
+                ? bannedUsers.find((e: { id: number | string }) => e.id == userId)
+                : undefined);
+         const displayName = user?.displayName ?? "This user";
+        modal.warning({ 
+            centered: true,
+            title: "Are you sure you want to ban this user?",
+            content: `${displayName} will be unable to login or create a new account with this email`,
+            okCancel: true,
+            onOk: () => {
+                fetch(`${formbarUrl}/api/v1/user/${userId}/ban`,
+                    {
+                        method: "PATCH",
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                )
+                .then(async (res) => {
+                    let resp: any = null;
+                    try { resp = await res.json(); } catch { resp = null; }
+                    if (!res.ok) {
+                        Log({ message: "Failed to ban user:", data: resp, level: "error" });
+                        return;
+                    }
+                    if (resp?.success) {
+                        setIsLoading(true);
+                        setInitialLoad(false);
+                        setRefreshNonce((value) => value + 1);
+                    }
+                })
+                .catch((err) => {
+                    Log({ message: "Error banning user:", data: err, level: "error" });
+                });
+            }
+        })
+    }
+
+    function unbanUserButton(userId: number | string) {
+        const user = users.find((e) => e.id == userId) ??
+            (typeof bannedUsers !== "undefined"
+                ? bannedUsers.find((e: { id: number | string }) => e.id == userId)
+                : undefined);
+
+        const displayName = user?.displayName ?? "This user";
+        
+        modal.warning({ 
+            centered: true,
+            title: "Are you sure you want to unban this user?",
+            content: `${displayName} will now be able to login or create a new account with this email`,
+            okCancel: true,
+            onOk: () => {
+                fetch(`${formbarUrl}/api/v1/user/${userId}/unban`,
+                    {
+                        method: "PATCH",
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                )
+                .then(async (res) => {
+                    let resp: any = null;
+                    try { resp = await res.json(); } catch { resp = null; }
+                    if (!res.ok) {
+                        Log({ message: "Failed to unban user:", data: resp, level: "error" });
+                        return;
+                    }
+                    if (resp?.success) {
+                        setIsLoading(true);
+                        setInitialLoad(false);
+                        setRefreshNonce((value) => value + 1);
+                    }
+                })
+                .catch((err) => {
+                    Log({ message: "Error unbanning user:", data: err, level: "error" });
+                });
+            }
+        })
+    }
+
+
+
+	function renderUserCard(user: ManagerPanelUser, index: number, mobileCard: boolean) {
+		const colStyle =
 			initialLoad && !isLoading
-				? {
-						opacity: 0,
-						animation: "appear 0.3s ease-in-out forwards",
-						animationDelay: `${index * 0.05}s`,
-				  }
+				? getAppearAnimation(settings.disableAnimations, index)
 				: {};
 
-		return (
-			<Col span={4} key={`${keyPrefix}-${user.id}`} style={animateStyle}>
-				<Card
-					title={user.displayName || user.email || "Pending User"}
-					styles={{
-						title: {
-							textAlign: "center",
-						},
-						body: {
-							textAlign: "center",
-						},
-						root: {
-							height: "100%",
-						},
-					}}
-				>
-					<Flex vertical style={{ marginBottom: "10px" }}>
+		const card = (
+			<Card
+				key={`user-card-${user.id}`}
+				title={user.displayName || user.email || "Pending User"}
+				styles={{
+					title: {
+						textAlign: "center",
+					},
+					body: {
+						textAlign: "center",
+					},
+					root: {
+						height: "100%",
+					},
+				}}
+			>
+				<Flex vertical style={{ marginBottom: "10px" }}>
+					<Text type="secondary" style={{ fontSize: "16px" }}>
+						{user.email}
+					</Text>
+					{!isUnverifiedUser(user) ? (
 						<Text type="secondary" style={{ fontSize: "16px" }}>
-							{user.email}
+							ID: {user.id}
 						</Text>
-						{!isUnverifiedUser(user) ? (
-							<Text type="secondary" style={{ fontSize: "16px" }}>
-								ID: {user.id}
-							</Text>
-						) : (
-							<Text
-								type="secondary"
-								style={{
-									fontSize: "16px",
-									fontStyle: "italic",
-								}}
-							>
-								Pending Verification
-							</Text>
-						)}
-					</Flex>
-					<Select style={{ width: "100%" }} defaultValue={user.permissions}>
-						<Select.Option value={5}>Manager</Select.Option>
-						<Select.Option value={4}>Teacher</Select.Option>
-						<Select.Option value={3}>Mod</Select.Option>
-						<Select.Option value={2}>Student</Select.Option>
-						<Select.Option value={1}>Guest</Select.Option>
-					</Select>
-					<Flex gap={10} justify="space-evenly" style={{ marginTop: "10px" }} wrap>
-						{isUnverifiedUser(user) ? (
-							<Tooltip title={"Verify User"} color="green">
-								<Button
-									variant="solid"
-									color="green"
-									size="large"
-									style={{
-										padding: "0 20px",
-									}}
-									onClick={() => handleVerify(user.id)}
-								>
-									<IonIcon icon={IonIcons.checkmarkCircle} size="large" />
-								</Button>
-							</Tooltip>
-						) : null}
-						<Tooltip title={"Ban User"} color="red">
+					) : (
+						<Text
+							type="secondary"
+							style={{
+								fontSize: "16px",
+								fontStyle: "italic",
+							}}
+						>
+							Pending Verification
+						</Text>
+					)}
+				</Flex>
+                {
+                    !isMobile && (
+                        <Select style={{ width: "100%" }} defaultValue={user.permissions}>
+                            <Select.Option value={5}>Manager</Select.Option>
+                            <Select.Option value={4}>Teacher</Select.Option>
+                            <Select.Option value={3}>Mod</Select.Option>
+                            <Select.Option value={2}>Student</Select.Option>
+                            <Select.Option value={1}>Guest</Select.Option>
+                            {
+                                user.permissions === 0 && (
+                                    <Select.Option value={0}>Banned</Select.Option>
+                                )
+                            }
+                        </Select>
+                    )
+                }
+				<Flex gap={10} justify="space-evenly" style={{ marginTop: "10px" }} wrap>
+					{isUnverifiedUser(user) ? (
+						<Tooltip mouseEnterDelay={0.5} title={"Verify User"} color="green">
 							<Button
 								variant="solid"
-								color="red"
+								color="green"
 								size="large"
 								style={{
 									padding: "0 20px",
 								}}
+								onClick={() => handleVerify(user.id)}
 							>
-								<IonIcon icon={IonIcons.ban} size="large" />
+								<IonIcon icon={IonIcons.checkmarkCircle} size="large" />
 							</Button>
 						</Tooltip>
-						<Tooltip title={"Delete User"} color="red">
-							<Button
-								variant="solid"
-								color="red"
-								size="large"
-								style={{
-									padding: "0 20px",
-								}}
-							>
-								<IonIcon icon={IonIcons.trash} size="large" />
-							</Button>
-						</Tooltip>
-					</Flex>
-				</Card>
+					) : null}
+                    {
+                        user.permissions > 0 ? (
+                            <Tooltip mouseEnterDelay={0.5} title={"Ban User"} color="red">
+                                <Button
+                                    variant="solid"
+                                    color="red"
+                                    size="large"
+                                    style={{
+                                        padding: "0 20px",
+                                    }}
+                                    onClick={() => banUserButton(user.id)}
+                                >
+                                    <IonIcon icon={IonIcons.ban} size="large" />
+                                </Button>
+                            </Tooltip>
+                        ) : (
+                            <Tooltip mouseEnterDelay={0.5} title={"Unban User"} color="green">
+                                <Button
+                                    variant="solid"
+                                    color="green"
+                                    size="large"
+                                    style={{
+                                        padding: "0 20px",
+                                    }}
+                                    onClick={() => unbanUserButton(user.id)}
+                                >
+                                    <IonIcon icon={IonIcons.checkmarkCircle} size="large" />
+                                </Button>
+                            </Tooltip>
+                        )
+                    }
+                    {
+                        isMobile && (
+                            <Select style={{ flex: '1 1 auto' }} defaultValue={user.permissions}>
+                                <Select.Option value={5}>Manager</Select.Option>
+                                <Select.Option value={4}>Teacher</Select.Option>
+                                <Select.Option value={3}>Mod</Select.Option>
+                                <Select.Option value={2}>Student</Select.Option>
+                                <Select.Option value={1}>Guest</Select.Option>
+                                {
+                                    user.permissions === 0 && (
+                                        <Select.Option value={0}>Banned</Select.Option>
+                                    )
+                                }
+                            </Select>
+                        )
+                    }
+					<Tooltip mouseEnterDelay={0.5} title={"Delete User"} color="red">
+						<Button
+							variant="solid"
+							color="red"
+							size="large"
+							style={{
+								padding: "0 20px",
+							}}
+							onClick={() => deleteUserButton(user.id)}
+						>
+							<IonIcon icon={IonIcons.trash} size="large" />
+						</Button>
+					</Tooltip>
+				</Flex>
+			</Card>
+		);
+
+		if (mobileCard) {
+			return card;
+		}
+
+		return (
+			<Col span={4} key={`user-col-${user.id}`} style={colStyle}>
+				{card}
 			</Col>
 		);
 	}
 
 	return (
+        <>
+        {contextModal}
 		<div
 			style={{
 				display: "flex",
@@ -349,150 +527,8 @@ export default function ManagerPanel() {
 
 					{ isMobile ? (
                         <Flex vertical gap={10} style={{ margin: "10px" }}>
-                            {Object.keys(users).length > 0 ? (
-                                users.map((user, k) => (
-                                    <Card
-										title={
-											user.displayName ||
-											user.email ||
-											"Pending User"
-										}
-										styles={{
-											title: {
-												textAlign: "center",
-											},
-											body: {
-												textAlign: "center",
-											},
-											root: {
-												height: "100%",
-											},
-										}}
-									>
-										<Flex
-											vertical
-											style={{ marginBottom: "10px" }}
-										>
-											<Text
-												type="secondary"
-												style={{ fontSize: "16px" }}
-											>
-												{user.email}
-											</Text>
-											{user.verified !== 0 ? (
-												<Text
-													type="secondary"
-													style={{ fontSize: "16px" }}
-												>
-													ID: {user.id}
-												</Text>
-											) : (
-												<Text
-													type="secondary"
-													style={{
-														fontSize: "16px",
-														fontStyle: "italic",
-													}}
-												>
-													Pending Verification
-												</Text>
-											)}
-										</Flex>
-										<Select
-											style={{ width: "100%" }}
-											defaultValue={user.permissions}
-										>
-											<Select.Option value={5}>
-												Manager
-											</Select.Option>
-											<Select.Option value={4}>
-												Teacher
-											</Select.Option>
-											<Select.Option value={3}>
-												Mod
-											</Select.Option>
-											<Select.Option value={2}>
-												Student
-											</Select.Option>
-											<Select.Option value={1}>
-												Guest
-											</Select.Option>
-										</Select>
-										<Flex
-											gap={10}
-											justify="space-evenly"
-											style={{ marginTop: "10px" }}
-											wrap
-										>
-											{user.verified === 0 ? (
-												<Tooltip
-                                                    mouseEnterDelay={0.5}
-													title={"Verify User"}
-													color="green"
-												>
-													<Button
-														variant="solid"
-														color="green"
-														size="large"
-														style={{
-															padding: "0 20px",
-														}}
-														onClick={() =>
-															handleVerify(
-																user.id,
-															)
-														}
-													>
-														<IonIcon
-															icon={
-																IonIcons.checkmarkCircle
-															}
-															size="large"
-														/>
-													</Button>
-												</Tooltip>
-											) : null}
-											<Tooltip
-                                                mouseEnterDelay={0.5}
-												title={"Ban User"}
-												color="red"
-											>
-												<Button
-													variant="solid"
-													color="red"
-													size="large"
-													style={{
-														padding: "0 20px",
-													}}
-												>
-													<IonIcon
-														icon={IonIcons.ban}
-														size="large"
-													/>
-												</Button>
-											</Tooltip>
-											<Tooltip
-                                                mouseEnterDelay={0.5}
-												title={"Delete User"}
-												color="red"
-											>
-												<Button
-													variant="solid"
-													color="red"
-													size="large"
-													style={{
-														padding: "0 20px",
-													}}
-												>
-													<IonIcon
-														icon={IonIcons.trash}
-														size="large"
-													/>
-												</Button>
-											</Tooltip>
-										</Flex>
-									</Card>
-                                ))
+                            {users.length > 0 ? (
+                                users.map((user, index) => renderUserCard(user, index, true))
                             ) : (
                                 <Flex justify="center" style={{ width: "100%" }}>
                                     <Skeleton active></Skeleton>
@@ -501,152 +537,8 @@ export default function ManagerPanel() {
                         </Flex>
                     ) : (
                         <Row gutter={[8, 8]} style={{ margin: "10px" }}>
-                            {Object.keys(users).length > 0 ? (
-                                users.map((user, k) => (
-                                    <Col span={4} key={user.id} style={initialLoad ? getAppearAnimation(settings.disableAnimations, k) : {}}>
-                                        <Card
-                                            title={
-                                                user.displayName ||
-                                                user.email ||
-                                                "Pending User"
-                                            }
-                                            styles={{
-                                                title: {
-                                                    textAlign: "center",
-                                                },
-                                                body: {
-                                                    textAlign: "center",
-                                                },
-                                                root: {
-                                                    height: "100%",
-                                                },
-                                            }}
-                                        >
-                                            <Flex
-                                                vertical
-                                                style={{ marginBottom: "10px" }}
-                                            >
-                                                <Text
-                                                    type="secondary"
-                                                    style={{ fontSize: "16px" }}
-                                                >
-                                                    {user.email}
-                                                </Text>
-                                                {user.verified !== 0 ? (
-                                                    <Text
-                                                        type="secondary"
-                                                        style={{ fontSize: "16px" }}
-                                                    >
-                                                        ID: {user.id}
-                                                    </Text>
-                                                ) : (
-                                                    <Text
-                                                        type="secondary"
-                                                        style={{
-                                                            fontSize: "16px",
-                                                            fontStyle: "italic",
-                                                        }}
-                                                    >
-                                                        Pending Verification
-                                                    </Text>
-                                                )}
-                                            </Flex>
-                                            <Select
-                                                style={{ width: "100%" }}
-                                                defaultValue={user.permissions}
-                                            >
-                                                <Select.Option value={5}>
-                                                    Manager
-                                                </Select.Option>
-                                                <Select.Option value={4}>
-                                                    Teacher
-                                                </Select.Option>
-                                                <Select.Option value={3}>
-                                                    Mod
-                                                </Select.Option>
-                                                <Select.Option value={2}>
-                                                    Student
-                                                </Select.Option>
-                                                <Select.Option value={1}>
-                                                    Guest
-                                                </Select.Option>
-                                            </Select>
-                                            <Flex
-                                                gap={10}
-                                                justify="space-evenly"
-                                                style={{ marginTop: "10px" }}
-                                                wrap
-                                            >
-                                                {user.verified === 0 ? (
-                                                    <Tooltip
-                                                        mouseEnterDelay={0.5}
-                                                        title={"Verify User"}
-                                                        color="green"
-                                                    >
-                                                        <Button
-                                                            variant="solid"
-                                                            color="green"
-                                                            size="large"
-                                                            style={{
-                                                                padding: "0 20px",
-                                                            }}
-                                                            onClick={() =>
-                                                                handleVerify(
-                                                                    user.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <IonIcon
-                                                                icon={
-                                                                    IonIcons.checkmarkCircle
-                                                                }
-                                                                size="large"
-                                                            />
-                                                        </Button>
-                                                    </Tooltip>
-                                                ) : null}
-                                                <Tooltip
-                                                    mouseEnterDelay={0.5}
-                                                    title={"Ban User"}
-                                                    color="red"
-                                                >
-                                                    <Button
-                                                        variant="solid"
-                                                        color="red"
-                                                        size="large"
-                                                        style={{
-                                                            padding: "0 20px",
-                                                        }}
-                                                    >
-                                                        <IonIcon
-                                                            icon={IonIcons.ban}
-                                                            size="large"
-                                                        />
-                                                    </Button>
-                                                </Tooltip>
-                                                <Tooltip
-                                                    mouseEnterDelay={0.5}
-                                                    title={"Delete User"}
-                                                    color="red"
-                                                >
-                                                    <Button
-                                                        variant="solid"
-                                                        color="red"
-                                                        size="large"
-                                                        style={{
-                                                            padding: "0 20px",
-                                                        }}
-                                                    >
-                                                        <IonIcon
-                                                            icon={IonIcons.trash}
-                                                            size="large"
-                                                        />
-                                                    </Button>
-                                                </Tooltip>
-                                            </Flex>
-                                        </Card>
-                                    </Col>
-                                ))
+                            {users.length > 0 ? (
+								users.map((user, index) => renderUserCard(user, index, false))
                             ) : (
                                 <Flex justify="center" style={{ width: "100%" }}>
                                     <Skeleton></Skeleton>
@@ -678,44 +570,18 @@ export default function ManagerPanel() {
 				<Activity mode={listCategory === "Banned Users" ? "visible" : "hidden"}>
 					<Row gutter={[8, 8]} style={{ margin: "10px" }}>
 						{
-							<p>endpoint needed</p>
-							// bannedUsers.map((user) => (
-							//     <Col span={3} key={user.id}>
-							//         <Card
-							//             title={user.displayName}
-
-							//             styles={
-							//                 {
-							//                     title: {
-							//                         textAlign: 'center',
-							//                     },
-							//                     body: {
-							//                         textAlign: 'center',
-							//                     },
-							//                     root: {
-							//                         height: '100%',
-							//                     }
-							//                 }
-							//             }
-
-							//             >
-							//             <Flex vertical style={{marginBottom:'10px'}}>
-							//                 <Text type='secondary' style={{fontSize:'16px'}}>{user.email}</Text>
-							//             </Flex>
-							//             <Flex gap={10} justify="space-evenly" style={{marginTop:'10px'}} wrap>
-							//                 <Tooltip title={"Unban User"} color="unban">
-							//                     <Button variant="solid" color='green' size='large' style={{padding: '0 20px',}}>
-							//                         <IonIcon icon={IonIcons.checkmarkCircle} size='large' />
-							//                     </Button>
-							//                 </Tooltip>
-							//             </Flex>
-							//         </Card>
-							//     </Col>
-							// ))
+                            bannedUsers.length > 0 ? (
+                                bannedUsers.map((user, index) => renderUserCard(user, index, false))
+                            ) : (
+                                <Flex justify="center" style={{ width: "100%" }}>
+                                    <Skeleton></Skeleton>
+                                </Flex>
+                            )
 						}
 					</Row>
 				</Activity>
 			</div>
 		</div>
+        </>
 	);
 }

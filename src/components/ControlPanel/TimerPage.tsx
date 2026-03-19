@@ -1,32 +1,76 @@
 import {
-    Flex, Button, Typography, Card, Row, Col, Progress
+    Flex, Button, Typography, Card, Row, Col, Progress, InputNumber
 } from 'antd';
-import { useMobileDetect } from '../../main';
+import { useClassData, useMobileDetect } from '../../main';
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
+import { accessToken, formbarUrl } from '../../socket';
+import { useState } from 'react';
+import Log from '../../debugLogger';
 
-const { Title, Text } = Typography;
+const { Text, Title } = Typography;
 
 const defaultTimers = [
     {
         name: "Timer 1",
-        duration: 60,
+        duration: 30,
         isRunning: false,
     },
     {
         name: "Timer 2",
-        duration: 120,
+        duration: 60,
         isRunning: false,
     },
     {
         name: "Timer 3",
-        duration: 180,
+        duration: 90,
         isRunning: false,
     }
 ]
 
 export default function TimerPage() {
     const isMobile = useMobileDetect();
+    const {classData} = useClassData();
+    const [customMinutes, setCustomMinutes] = useState(1);
+    const [customSeconds, setCustomSeconds] = useState(0);
+
+    function getCustomTimerTotalSeconds() {
+        const minutes = Math.max(0, Number(customMinutes || 0));
+        const seconds = Math.min(59, Math.max(0, Number(customSeconds || 0)));
+        return (minutes * 60) + seconds;
+    }
+
+    function setCustomFromTotalSeconds(totalSeconds: number) {
+        const safeTotal = Math.max(0, Math.floor(totalSeconds));
+        setCustomMinutes(Math.floor(safeTotal / 60));
+        setCustomSeconds(safeTotal % 60);
+    }
+
+    function startTimer(duration: number) {
+        if (!classData?.id) {
+            Log({ message: "Cannot start timer: no active class.", level: "warn" });
+            return;
+        }
+
+        fetch(`${formbarUrl}/api/v1/class/${classData.id}/timer/start`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ duration: duration * 1000, sound: false })
+        })
+        .then((res) => {
+            if (!res.ok) {
+                throw new Error("Failed to start timer");
+            }
+        })
+        .catch((err) => {
+            Log({ message: "Error starting timer:", data: err, level: "error" });
+        });
+    }
+
+    const customTotalSeconds = getCustomTimerTotalSeconds();
 
     // Create a 5x2 grid using defaultTimers
     const grid = [];
@@ -61,13 +105,15 @@ export default function TimerPage() {
                                         }}
                                         strokeLinecap='round'
                                     />
-                                    <Button style={{cursor:'not-allowed', opacity: 0.5}} type='primary'>
+                                    <Button type='primary' variant='solid' onClick={()=> {startTimer(timer.duration)}} color={'green'}>
                                         {
                                             isMobile ? (
                                                 <Flex align="center" justify="center" gap={5}>
                                                     <IonIcon icon={IonIcons.play} />
                                                 </Flex>
-                                            ) : "Start"
+                                            ) : (
+                                                "Start"
+                                            )
                                         }
                                     </Button>
                                 </Flex>
@@ -87,7 +133,56 @@ export default function TimerPage() {
                 </Row>
                 <Flex gap={20} style={{width: '100%'}}>
                     <Card title="Custom Timer" style={{width: '100%'}}>
+                        <Flex vertical gap={16}>
+                            <Flex gap={12} wrap align='end'>
+                                <Flex style={{minWidth: isMobile ? '100px' : '140px'}} align='center' gap={10}>
+                                    <InputNumber
+                                        min={0}
+                                        max={120}
+                                        step={1}
+                                        value={customMinutes}
+                                        onChange={(value) => setCustomMinutes(Number(value ?? 0))}
+                                        style={{width: '100%'}}
+                                        suffix="m"
+                                    />
+                                    :
+                                    <InputNumber
+                                        min={0}
+                                        max={59}
+                                        step={1}
+                                        value={customSeconds}
+                                        onChange={(value) => setCustomSeconds(Number(value ?? 0))}
+                                        style={{width: '100%'}}
+                                        suffix="s"
 
+                                    />
+                                    <Button disabled type='default'>
+                                        {customTotalSeconds}s
+                                    </Button>
+                                </Flex>
+                            </Flex>
+
+                            <Text>Or select a preset:</Text>
+                            <Flex gap={8} wrap>
+                                <Button onClick={() => setCustomFromTotalSeconds(30)}>30s</Button>
+                                <Button onClick={() => setCustomFromTotalSeconds(60)}>1m</Button>
+                                <Button onClick={() => setCustomFromTotalSeconds(120)}>2m</Button>
+                                <Button onClick={() => setCustomFromTotalSeconds(300)}>5m</Button>
+                                <Button onClick={() => setCustomFromTotalSeconds(600)}>10m</Button>
+                            </Flex>
+
+                            <Flex gap={10} align="center" justify="center" vertical={isMobile}>
+                                <Button
+                                    type='primary'
+                                    variant='solid'
+                                    color='green'
+                                    disabled={!classData?.id || customTotalSeconds <= 0}
+                                    onClick={() => startTimer(customTotalSeconds)}
+                                >
+                                    Start Custom Timer
+                                </Button>
+                            </Flex>
+                        </Flex>
                     </Card>
                 </Flex>
             </Flex>

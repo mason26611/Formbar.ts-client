@@ -19,6 +19,7 @@ const { Title, Text } = Typography;
 import { useClassData, useMobileDetect, useTheme } from "../../main";
 import { useEffect, useState } from "react";
 import { accessToken, formbarUrl } from "../../socket";
+import Log from "../../debugLogger";
 
 export default function SettingsMenu() {
 	const { classData } = useClassData();
@@ -32,6 +33,7 @@ export default function SettingsMenu() {
     const [newTagInput, setNewTagInput] = useState<string>("");
 
 	const [api, contextHolder] = notification.useNotification();
+    const [modal, contextHolderModal] = Modal.useModal();
 
 	const showErrorNotification = (message: string) => {
 		api["error"]({
@@ -58,14 +60,12 @@ export default function SettingsMenu() {
 		})
 		.then((res) => res.json())
 		.then((data) => {
-			console.log(data)
 			if (data.success && data.data) {
-				console.log("Fetched class links:", data.data);
 				setClassLinks(data.data);
 			}
 		})
 		.catch((err) => {
-			console.error("Error fetching class links:", err);
+			Log({ message: "Error fetching class links:", data: err, level: "error" });
 		});
 		
 	}, [classData]);
@@ -102,7 +102,7 @@ export default function SettingsMenu() {
             }
         })
         .catch((err) => {
-            console.error("Error adding link:", err);
+            Log({ message: "Error adding link:", data: err, level: "error" });
             showErrorNotification("An error occurred while adding the link.");
         });
 
@@ -126,7 +126,7 @@ export default function SettingsMenu() {
             }
         })
         .catch((err) => {
-            console.error("Error removing link:", err);
+            Log({ message: "Error removing link:", data: err, level: "error" });
             showErrorNotification("An error occurred while removing the link.");
         });
     }
@@ -154,7 +154,7 @@ export default function SettingsMenu() {
             }
         })
         .catch((err) => {
-            console.error("Error adding tag:", err);
+            Log({ message: "Error adding tag:", data: err, level: "error" });
             showErrorNotification("An error occurred while adding the tag.");
         });
     }
@@ -164,7 +164,9 @@ export default function SettingsMenu() {
 
 
 	return (
-		<>{contextHolder}
+		<>
+        {contextHolder}
+        {contextHolderModal}
 			<Flex
 				gap={50}
 				style={{ height: "100%", width: "100%", overflowY: "auto" }}
@@ -187,7 +189,7 @@ export default function SettingsMenu() {
 						<Flex vertical gap={20}>
 							<Flex
 								gap={10}
-								style={{ width: isMobile ? "100%" :"500px" }}
+								style={{ width: isMobile ? "100%" :"600px" }}
 								justify="center"
 								align="center"
                                 vertical={isMobile}
@@ -209,7 +211,7 @@ export default function SettingsMenu() {
 
 							<Flex
 								gap={10}
-								style={{ width: isMobile ? "100%" : "400px" }}
+								style={{ width: isMobile ? "100%" : "600px" }}
 								justify="center"
 								align="center"
                                 vertical={isMobile}
@@ -220,6 +222,52 @@ export default function SettingsMenu() {
 								<Button variant="solid" color="danger" style={{cursor:'not-allowed', opacity: 0.5}}>
 									Regenerate Code
 								</Button>
+								<Button variant="solid" color="danger" onClick={()=>
+                                    modal.warning({
+                                        title: "Are you sure you want to delete this class?",
+                                        centered: true,
+                                        content: 'This action is irreversible, and you will not be able to recover this class.',
+                                        okCancel: true,
+                                        onOk: () => {
+                                            fetch(`${formbarUrl}/api/v1/room/${classData?.id}/`, {
+                                                method: "DELETE",
+                                                headers: {
+                                                    Authorization: `Bearer ${accessToken}`
+                                                }
+                                            })
+                                            .then(async (response) => {
+                                                let body: any = null;
+                                                try {
+                                                    body = await response.json();
+                                                } catch {
+                                                    body = null;
+                                                }
+                                                if (!response.ok) {
+                                                    const message =
+                                                        (body && (body.detail || body.message)) ||
+                                                        "Failed to delete class.";
+                                                    throw new Error(message);
+                                                }
+                                                Log({ message: "Class deleted:", data: body });
+                                                notification.success({
+                                                    title: "Class deleted",
+                                                    description: "The class has been deleted successfully.",
+                                                });
+                                            })
+                                            .catch((error) => {
+                                                Log({ message: "Failed to delete class:", data: error, level: "error" });
+                                                notification.error({
+                                                    title: "Failed to delete class",
+                                                    description:
+                                                    (error && error.message) || "An unexpected error occurred while deleting the class.",
+                                                });
+                                            });
+                                        }
+                                    })
+                                }>
+									Delete Class
+								</Button>
+
 							</Flex>
 						</Flex>
 						
