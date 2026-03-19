@@ -32,7 +32,7 @@ export type ClassData = {
 	owner: number;
 	timer: {
 		startTime: number;
-		timeLeft: number;
+		endTime: number;
 		active: boolean;
 		sound: boolean;
 	};
@@ -47,6 +47,7 @@ export type ClassData = {
         status: boolean;
         totalResponders: number;
         totalResponses: number;
+        startTime: number;
         weight: number;
 	};
 	permissions: {

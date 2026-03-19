@@ -1,7 +1,6 @@
 import {
 	Button,
 	Flex,
-	Segmented,
 	Tooltip,
 	Typography,
 	Input,
@@ -16,7 +15,6 @@ import StudentObject from "../StudentObject";
 
 import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDetect } from "../../main";
 import { useEffect, useState } from "react";
-import ClassroomPage from "../ControlPanel/ClassroomPage";
 import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 
@@ -34,7 +32,6 @@ export default function Dashboard({
 
 	const [allResponseModalOpen, setAllResponseModalOpen] =
 		useState<boolean>(false);
-	const [currentView, setView] = useState<"dash" | "class">("dash");
 	const [searchQuery, setSearchQuery] = useState<string>("");
 
 	const [sortType, setSortType] = useState<
@@ -191,320 +188,308 @@ export default function Dashboard({
         }
         setExcludedRespondents(newExcluded);
 
-        console.log("Emitting updateExcludedRespondents with: ", newExcluded);
-
         // socket.emit('updateExcludedRespondents', excludedRespondents);
     }
 
 
 	return (
 		<>
-			{/* <Segmented
-				options={[
-					"Dashboard",
-					'Classroom View',
-				]}
-				onChange={(e) => {
-					e === "Dashboard" ? setView("dash") : setView("class");
-				}}
-				style={{
-					position: "absolute",
-					left: "270px",
-					bottom: "20px",
-					opacity: 0.85,
-				}}
-			/> */}
-			{currentView === "class" && <ClassroomPage />}
-			{currentView === "dash" && (
-				<Flex
-					style={{ width: "100%", height: "100%" }}
-					gap={20}
-					justify="space-between"
-				>
-					<Flex style={{ flex: 1 }} vertical gap={10}>
-						<Flex
-							align={isMobile ? "start" : "center"}
-							gap={10}
-							style={{
-								paddingBottom: "10px",
-								borderBottom: "1px solid var(--border-color)",
-							}}
-                            vertical={isMobile}
-						> 
-							<Title style={{ margin: "0" }} level={isMobile ? 3 : 1}>Dashboard</Title>
-                            <Flex
-							    gap={10}
-                                style={{height: "60%" }}
+            <Flex
+                style={{ width: "100%", height: "100%" }}
+                gap={20}
+                justify="space-between"
+            >
+                <Flex style={{ flex: 1 }} vertical gap={10}>
+                    <Flex
+                        align={isMobile ? "start" : "center"}
+                        gap={10}
+                        style={{
+                            paddingBottom: "10px",
+                            borderBottom: "1px solid var(--border-color)",
+                        }}
+                        vertical={isMobile}
+                    > 
+                        <Title style={{ margin: "0" }} level={isMobile ? 3 : 1}>Dashboard</Title>
+                        <Flex
+                            gap={10}
+                            style={{height: "60%" }}
+                        >
+                            <Tooltip title="All Responses" mouseEnterDelay={0.5}>
+                                <Button
+                                    type="primary"
+                                    style={{ height: "100%" }}
+                                    onClick={() =>
+                                        setAllResponseModalOpen(true)
+                                    }
+                                >
+                                    <IonIcon icon={IonIcons.barChart} />
+                                </Button>
+                            </Tooltip>
+                            <Modal
+                                title="All User Responses"
+                                open={allResponseModalOpen}
+                                onCancel={() => setAllResponseModalOpen(false)}
+                                footer={null}
+                                width={"90%"}
                             >
-                                <Tooltip title="All Responses" mouseEnterDelay={0.5}>
+                                {classData.poll ? (
+                                    <div
+                                        style={{
+                                            display: isMobile ? "flex" : "grid",
+                                            gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(220px, 1fr))",
+                                            gap: "16px",
+                                            width: "100%",
+                                            height: '100%',
+                                            overflowY: isMobile ? 'scroll' : 'unset',
+                                            flexDirection: isMobile ? "column" : "unset",
+                                        }}
+                                    >
+                                        {...students.sort((a, b) => a.displayName.localeCompare(b.displayName))
+                                            .filter((e) => e.id !== userData?.id)
+                                            .map((student: any) => {
+                                                const matchingResponse = classData.poll.responses.find(
+                                                    (e: any) => e.answer === student.pollRes?.buttonRes,
+                                                );
+                                                return (
+                                                    <div
+                                                        key={student.id}
+                                                        style={{
+                                                            border: "1px solid var(--border-color)",
+                                                            borderRadius: "8px",
+                                                            padding: "12px",
+                                                            background: isDark ? "#fff2" : "#0002",
+                                                            minHeight: "80px",
+                                                            display: "flex",
+                                                            flexDirection: "column",
+                                                            justifyContent: "center",
+                                                            position: "relative",
+                                                        }}
+                                                    >
+                                                        <strong style={{paddingRight: 40}}>
+                                                            {student.displayName}
+                                                        </strong>
+                                                        <Tooltip title="Allow Vote" mouseEnterDelay={0.5}>
+                                                            <Switch 
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: 20,
+                                                                    right: 20,
+                                                                }}
+                                                                size="small"
+                                                                onChange={(e) => {
+                                                                    handleExcludeRespondent(student.id, e);
+                                                                }}
+                                                            />
+                                                        </Tooltip>
+                                                        <span style={{ color: matchingResponse?.color }}>
+                                                            {student.pollRes?.buttonRes
+                                                                ? student.pollRes.buttonRes
+                                                                : "No Response"}
+                                                        </span>
+                                                        <span style={{ opacity: 0.75, display: classData?.poll.allowTextResponses ? 'initial' : 'none', fontSize: 16 }}>
+                                                            {student.pollRes?.textRes
+                                                            ? student.pollRes.textRes
+                                                            : "No Text"}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                ) : (
+                                    <p>No active poll.</p>
+                                )}
+                            </Modal>
+                            <Tooltip title="Sort & Filter" mouseEnterDelay={0.5}>
+                                <Popover
+                                    placement={isMobile ? "bottom" : "bottomRight"}
+                                    trigger={"click"}
+                                    title="Sort & Filter Options"
+                                    content={
+                                        <Flex vertical gap={10}>
+                                            <Flex vertical gap={10}>
+                                                <p>Sort by:</p>
+                                                <Flex gap={10}>
+                                                    <Select
+                                                        style={{ flex: '1 1 auto'}}
+                                                        value={sortType}
+                                                        onChange={(value) =>
+                                                            setSortType(value)
+                                                        }
+                                                    >
+                                                        <Select.Option value="Name">
+                                                            Name
+                                                        </Select.Option>
+                                                        <Select.Option value="Permissions">
+                                                            Permissions
+                                                        </Select.Option>
+                                                        <Select.Option value="Response Order">
+                                                            Response Order
+                                                        </Select.Option>
+                                                        <Select.Option value="Response Time">
+                                                            Response Time
+                                                        </Select.Option>
+                                                        <Select.Option value="Response Text">
+                                                            Response Text 
+                                                        </Select.Option>
+                                                        <Select.Option value="Help Time">
+                                                            Help Time
+                                                        </Select.Option>
+                                                    </Select>
+                                                    <Switch 
+                                                        checked={sortDirection === "▲"}
+                                                        onChange={() => setSortDirection(sortDirection === "▲" ? "▼" : "▲")}
+                                                        style={{flex: '0 0 auto', margin: 'auto '}}
+                                                        
+                                                        checkedChildren={"▲"}
+                                                        unCheckedChildren={"▼"}
+                                                    />
+                                                </Flex>
+                                            </Flex>
+
+                                            <Flex vertical gap={10}>
+                                                <p>Filter by:</p>
+                                                <Flex align="center" gap={10}>
+                                                    <Switch 
+                                                        checked={matchAllFilters}
+                                                        onChange={() => setMatchAllFilters(!matchAllFilters)}
+                                                    />
+                                                    <p>Match all filters?</p>
+                                                </Flex>
+                                                <Button
+                                                    variant="solid"
+                                                    color={
+                                                        filterState.answeredPoll
+                                                            ? "green"
+                                                            : "red"
+                                                    }
+                                                    onClick={() => {
+                                                        setFilterState(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                answeredPoll:
+                                                                    !prev.answeredPoll,
+                                                            }),
+                                                        );
+                                                    }}
+                                                >
+                                                    Answered Poll
+                                                </Button>
+                                                <Button
+                                                    variant="solid"
+                                                    color={
+                                                        filterState.needsHelp
+                                                            ? "green"
+                                                            : "red"
+                                                    }
+                                                    onClick={() => {
+                                                        setFilterState(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                needsHelp:
+                                                                    !prev.needsHelp,
+                                                            }),
+                                                        );
+                                                    }}
+                                                >
+                                                    Needs Help
+                                                </Button>
+                                                <Button
+                                                    variant="solid"
+                                                    color={
+                                                        filterState.onBreak
+                                                            ? "green"
+                                                            : "red"
+                                                    }
+                                                    onClick={() => {
+                                                        setFilterState(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                onBreak:
+                                                                    !prev.onBreak,
+                                                            }),
+                                                        );
+                                                    }}
+                                                >
+                                                    On / Requesting Break
+                                                </Button>
+                                                <Button
+                                                    variant="solid"
+                                                    color={
+                                                        filterState.canVote
+                                                            ? "green"
+                                                            : "red"
+                                                    }
+                                                    onClick={() => {
+                                                        setFilterState(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                canVote:
+                                                                    !prev.canVote,
+                                                            }),
+                                                        );
+                                                    }}
+                                                >
+                                                    Can Vote
+                                                </Button>
+                                            </Flex>
+                                        </Flex>
+                                    }
+                                >
                                     <Button
                                         type="primary"
                                         style={{ height: "100%" }}
-                                        onClick={() =>
-                                            setAllResponseModalOpen(true)
-                                        }
                                     >
-                                        <IonIcon icon={IonIcons.barChart} />
+                                        <IonIcon icon={IonIcons.swapVertical} />
                                     </Button>
-                                </Tooltip>
-                                <Modal
-                                    title="All User Responses"
-                                    open={allResponseModalOpen}
-                                    onCancel={() => setAllResponseModalOpen(false)}
-                                    footer={null}
-                                    width={"90%"}
-                                >
-                                    {classData.poll ? (
-                                        <div
-                                            style={{
-                                                display: isMobile ? "flex" : "grid",
-                                                gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(220px, 1fr))",
-                                                gap: "16px",
-                                                width: "100%",
-                                                height: '100%',
-                                                overflowY: isMobile ? 'scroll' : 'unset',
-                                                flexDirection: isMobile ? "column" : "unset",
-                                            }}
-                                        >
-                                            {...students.sort((a, b) => a.displayName.localeCompare(b.displayName))
-                                                .filter((e) => e.id !== userData?.id)
-                                                .map((student: any) => {
-                                                    const matchingResponse = classData.poll.responses.find(
-                                                        (e: any) => e.answer === student.pollRes?.buttonRes,
-                                                    );
-                                                    return (
-                                                        <div
-                                                            key={student.id}
-                                                            style={{
-                                                                border: "1px solid var(--border-color)",
-                                                                borderRadius: "8px",
-                                                                padding: "12px",
-                                                                background: isDark ? "#fff2" : "#0002",
-                                                                minHeight: "80px",
-                                                                display: "flex",
-                                                                flexDirection: "column",
-                                                                justifyContent: "center",
-                                                                position: "relative",
-                                                            }}
-                                                        >
-                                                            <strong style={{paddingRight: 40}}>
-                                                                {student.displayName}
-                                                            </strong>
-                                                            <Tooltip title="Allow Vote" mouseEnterDelay={0.5}>
-                                                                <Switch 
-                                                                    style={{
-                                                                        position: 'absolute',
-                                                                        top: 20,
-                                                                        right: 20,
-                                                                    }}
-                                                                    size="small"
-                                                                    onChange={(e) => {
-                                                                        handleExcludeRespondent(student.id, e);
-                                                                    }}
-                                                                />
-                                                            </Tooltip>
-                                                            <span style={{ color: matchingResponse?.color }}>
-                                                                {student.pollRes?.buttonRes
-                                                                    ? student.pollRes.buttonRes
-                                                                    : "No Response"}
-                                                            </span>
-                                                            <span style={{ opacity: 0.75, display: classData?.poll.allowTextResponses ? 'initial' : 'none', fontSize: 16 }}>
-                                                                {student.pollRes?.textRes
-                                                                ? student.pollRes.textRes
-                                                                : "No Text"}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })}
-                                        </div>
-                                    ) : (
-                                        <p>No active poll.</p>
-                                    )}
-                                </Modal>
-                                <Tooltip title="Sort & Filter" mouseEnterDelay={0.5}>
-                                    <Popover
-                                        placement={isMobile ? "bottom" : "bottomRight"}
-                                        trigger={"click"}
-                                        title="Sort & Filter Options"
-                                        content={
-                                            <Flex vertical gap={10}>
-                                                <Flex vertical gap={10}>
-                                                    <p>Sort by:</p>
-                                                    <Flex gap={10}>
-                                                        <Select
-                                                            style={{ flex: '1 1 auto'}}
-                                                            value={sortType}
-                                                            onChange={(value) =>
-                                                                setSortType(value)
-                                                            }
-                                                        >
-                                                            <Select.Option value="Name">
-                                                                Name
-                                                            </Select.Option>
-                                                            <Select.Option value="Permissions">
-                                                                Permissions
-                                                            </Select.Option>
-                                                            <Select.Option value="Response Order">
-                                                                Response Order
-                                                            </Select.Option>
-                                                            <Select.Option value="Response Time">
-                                                                Response Time
-                                                            </Select.Option>
-                                                            <Select.Option value="Response Text">
-                                                                Response Text 
-                                                            </Select.Option>
-                                                            <Select.Option value="Help Time">
-                                                                Help Time
-                                                            </Select.Option>
-                                                        </Select>
-                                                        <Switch 
-                                                            checked={sortDirection === "▲"}
-                                                            onChange={() => setSortDirection(sortDirection === "▲" ? "▼" : "▲")}
-                                                            style={{flex: '0 0 auto', margin: 'auto '}}
-                                                            
-                                                            checkedChildren={"▲"}
-                                                            unCheckedChildren={"▼"}
-                                                        />
-                                                    </Flex>
-                                                </Flex>
-
-                                                <Flex vertical gap={10}>
-                                                    <p>Filter by:</p>
-                                                    <Flex align="center" gap={10}>
-                                                        <Switch 
-                                                            checked={matchAllFilters}
-                                                            onChange={() => setMatchAllFilters(!matchAllFilters)}
-                                                        />
-                                                        <p>Match all filters?</p>
-                                                    </Flex>
-                                                    <Button
-                                                        variant="solid"
-                                                        color={
-                                                            filterState.answeredPoll
-                                                                ? "green"
-                                                                : "red"
-                                                        }
-                                                        onClick={() => {
-                                                            setFilterState(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    answeredPoll:
-                                                                        !prev.answeredPoll,
-                                                                }),
-                                                            );
-                                                        }}
-                                                    >
-                                                        Answered Poll
-                                                    </Button>
-                                                    <Button
-                                                        variant="solid"
-                                                        color={
-                                                            filterState.needsHelp
-                                                                ? "green"
-                                                                : "red"
-                                                        }
-                                                        onClick={() => {
-                                                            setFilterState(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    needsHelp:
-                                                                        !prev.needsHelp,
-                                                                }),
-                                                            );
-                                                        }}
-                                                    >
-                                                        Needs Help
-                                                    </Button>
-                                                    <Button
-                                                        variant="solid"
-                                                        color={
-                                                            filterState.onBreak
-                                                                ? "green"
-                                                                : "red"
-                                                        }
-                                                        onClick={() => {
-                                                            setFilterState(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    onBreak:
-                                                                        !prev.onBreak,
-                                                                }),
-                                                            );
-                                                        }}
-                                                    >
-                                                        On / Requesting Break
-                                                    </Button>
-                                                    <Button
-                                                        variant="solid"
-                                                        color={
-                                                            filterState.canVote
-                                                                ? "green"
-                                                                : "red"
-                                                        }
-                                                        onClick={() => {
-                                                            setFilterState(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    canVote:
-                                                                        !prev.canVote,
-                                                                }),
-                                                            );
-                                                        }}
-                                                    >
-                                                        Can Vote
-                                                    </Button>
-                                                </Flex>
-                                            </Flex>
-                                        }
-                                    >
-                                        <Button
-                                            type="primary"
-                                            style={{ height: "100%" }}
-                                        >
-                                            <IonIcon icon={IonIcons.swapVertical} />
-                                        </Button>
-                                    </Popover>
-                                </Tooltip>
-                                <Input
-                                    placeholder={"Search" + (isMobile ? "" : " students")}
-                                    style={{ height: "100%", width: "100%" }}
-                                    size="large"
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                </Flex>
-						</Flex>
-						<div
-							style={{
-								display: isMobile ? "flex" : "grid",
-                                flexDirection: isMobile ? "column" : "unset",
-								gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(200px, 1fr))",
-								gap: "16px",
-								width: "100%",
-                                overflowY: isMobile ? 'scroll' : 'unset',
-                                padding: isMobile ? "20px 15px" : "0",
-							}}
-						>
-							{displayedStudents
-								.filter((student) =>
-									student.displayName
-										.toLowerCase()
-										.includes(searchQuery.toLowerCase()),
-								)
-								.map((student: any, index: number) =>
-									student.id !== userData?.id ? (
-										<StudentObject
-                                            style={getAppearAnimation(settings.disableAnimations, index)}
-											key={student.id}
-											student={student}
-											openModalId={openModalId}
-											setOpenModalId={setOpenModalId}
-										/>
-									) : null,
-								)}
-						</div>
-					</Flex>
-				</Flex>
-			)}
+                                </Popover>
+                            </Tooltip>
+                            <Input
+                                placeholder={"Search" + (isMobile ? "" : " students")}
+                                style={{ height: "100%", width: "100%" }}
+                                size="large"
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            </Flex>
+                    </Flex>
+                    <div
+                        style={{
+                            display: isMobile ? "flex" : "grid",
+                            flexDirection: isMobile ? "column" : "unset",
+                            gridTemplateColumns: isMobile ? "unset" : "repeat(auto-fill, minmax(200px, 1fr))",
+                            gap: "16px",
+                            width: "100%",
+                            overflowY: isMobile ? 'scroll' : 'unset',
+                            padding: isMobile ? "20px 15px" : "0",
+                        }}
+                    >
+                        {
+                            // Show message if only one student (the teacher) is in the class
+                            students.length === 1 && (
+                                <p style={{ gridColumn: "1 / -1", textAlign: "center", opacity: 0.75 }}>
+                                    No students found.
+                                </p>
+                            )
+                        }
+                        {displayedStudents
+                            .filter((student) =>
+                                student.displayName
+                                    .toLowerCase()
+                                    .includes(searchQuery.toLowerCase()),
+                            )
+                            .map((student: any, index: number) =>
+                                student.id !== userData?.id ? (
+                                    <StudentObject
+                                        style={getAppearAnimation(settings.disableAnimations, index)}
+                                        key={student.id}
+                                        student={student}
+                                        openModalId={openModalId}
+                                        setOpenModalId={setOpenModalId}
+                                    />
+                                ) : null,
+                            )}
+                    </div>
+                </Flex>
+            </Flex>
 		</>
 	);
 }

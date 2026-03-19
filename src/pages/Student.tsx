@@ -9,6 +9,7 @@ import PollButton from "../components/PollButton";
 import Log from "../debugLogger";
 import StudentMenu from "../components/StudentMenu";
 import { useNavigate } from "react-router-dom";
+import { toEpochMs } from "../GlobalFunctions";
 const { Title, Text } = Typography;
 
 export default function Student() {
@@ -22,6 +23,8 @@ export default function Student() {
 
 	const [textResponse, setTextResponse] = useState<string>("");
 	const [selectedResponses, setSelectedResponses] = useState<string[]>([]);
+    const [timerLerpPercent, setTimerLerpPercent] = useState<number>(0);
+    const [timerRemainingSeconds, setTimerRemainingSeconds] = useState(0);
 	const lastPollDataRef = useRef<any>(null);
 
 	const [pollWidth, setPollWidth] = useState<number>(
@@ -31,19 +34,45 @@ export default function Student() {
 	);
 
 	function Respond(response: string | string[]) {
-		if (!socket || !socket.connected) {
-			Log({
-				message: "Socket not connected, cannot send response",
-				level: "warn",
-			});
-			return;
-		}
-		let resTextResponse = classData?.poll.allowTextResponses
+		let resTextResponse = classData?.poll?.allowTextResponses
 			? textResponse.trim()
 			: "";
-		socket.emit("pollResp", response, resTextResponse);
+
+        if (!classData || !classData.id) {
+            Log({
+                message: "Attempted to respond to poll before classData was available.",
+                level: "warn",
+            });
+            return;
+        }
+		
+        fetch(`${formbarUrl}/api/v1/class/${classData.id}/polls/response`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                response: response,
+                textRes: resTextResponse,
+            })
+        })
+        .then((res) => {
+            if (!res.ok) {
+                throw new Error("Failed to send poll response");
+            }
+            return res.json();
+        })
+        .then((res) => {
+            Log({ message: "Poll response sent successfully.", data: res });
+        })
+        .catch((err) => {
+            Log({ message: "Error sending poll response:", data: err, level: "error" });
+        });
+        
+
 		Log({ message: `Responded with: ${response}`, level: "info" });
-		socket.emit("classUpdate", ""); // Request updated class data after responding
+		// socket.emit("classUpdate", ""); // Request updated class data after responding
 	}
 
 	useEffect(() => {
@@ -106,7 +135,7 @@ export default function Student() {
 			fetch(`${formbarUrl}/api/v1/user/me`, {
 				method: "GET",
 				headers: {
-					Authorization: `${accessToken}`,
+					Authorization: `Bearer ${accessToken}`,
 				},
 			})
 				.then((res) => res.json())
@@ -150,6 +179,50 @@ export default function Student() {
 		}
 
 	}, [userData, navigate]);
+    
+    useEffect(() => {
+        if (!classData?.timer?.startTime || classData.timer.startTime <= 0) return;
+
+        const timerActive = !!classData?.timer?.active;
+
+        const startMs = toEpochMs(classData.timer.startTime);
+        const endMs = toEpochMs(classData.timer.endTime);
+
+        if (startMs === null || endMs === null || endMs <= startMs) {
+            return;
+        }
+
+		const totalMs = endMs - startMs;
+
+		const updateTimerState = () => {
+            const now = Date.now();
+			const clampedNow = Math.min(Math.max(now, startMs), endMs);
+			const percent = ((clampedNow - startMs) / totalMs) * 100;
+            const remainingSeconds = Math.max(0, Math.ceil((endMs - clampedNow) / 1000));
+
+			setTimerLerpPercent((prev) => (Math.abs(prev - percent) >= 0.5 ? percent : prev));
+            setTimerRemainingSeconds((prev) => (prev !== remainingSeconds ? remainingSeconds : prev));
+        };
+
+		updateTimerState();
+
+		if (!timerActive) {
+			return;
+		}
+
+		const intervalId = window.setInterval(updateTimerState, 250);
+
+        return () => {
+			window.clearInterval(intervalId);
+        };
+    }, [classData?.timer?.startTime, classData?.timer?.endTime, classData?.timer?.active]);
+
+	const timerStartMs = toEpochMs(classData?.timer?.startTime);
+	const timerEndMs = toEpochMs(classData?.timer?.endTime);
+	const timerDurationMs =
+		timerStartMs !== null && timerEndMs !== null && timerEndMs > timerStartMs
+			? timerEndMs - timerStartMs
+			: 0;
 
 	return (
 		<>
@@ -182,7 +255,7 @@ export default function Student() {
 						align="center"
 						vertical={isMobileView || !classData?.poll.status}
 					>
-						{classData?.poll.responses.length > 0 ? (
+						{classData?.poll.responses.length > 0 || classData?.timer.startTime > 0 ? (
 							<Flex
 								justify="center"
 								align="center"
@@ -202,10 +275,17 @@ export default function Student() {
 											}
 								}
 							>
-                                <FullCircularPoll
-                                    poll={classData.poll}
-                                    size={pollWidth}
-                                />
+								<FullCircularPoll
+									poll={classData.poll}
+									size={pollWidth}
+									timer={{
+										active: classData?.timer?.active ?? false,
+										current: timerLerpPercent,
+										duration: timerDurationMs,
+                                        remainingSeconds: timerRemainingSeconds,
+									}}
+                                    onlyTimer={!!classData?.timer?.startTime && (!classData?.poll?.status && classData.poll.responses.length === 0)}
+								/>
 							</Flex>
 						) : null}
 
@@ -291,14 +371,14 @@ export default function Student() {
 								) : null}
                                 </Flex>
 							</Flex>
-						) : !classData?.poll.prompt  ? (
-							<Title>There is no current poll.</Title>
+						) : !classData?.poll.prompt && !classData?.timer?.startTime ? (
+							<Title style={{textAlign:'center'}}>There is no current poll.</Title>
 						) : (
                             null
 						)}
 
 						{!classData?.isActive ? (
-							<Title>Class is not active.</Title>
+							<Title style={{textAlign:'center'}}>Class is not active.</Title>
 						) : null}
 					</Flex>
 
