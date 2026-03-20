@@ -16,10 +16,10 @@ import {
 const { Text, Link } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { Activity, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUserData, useSettings, useMobileDetect } from "../main";
-import { accessToken, formbarUrl } from "../socket";
+import { accessToken } from "../socket";
 import CountUp from 'react-countup';
 import { getUser, regenerateUserApiKey, requestUserPinReset, updateUserPin, verifyUserPin } from "../api/userApi";
 

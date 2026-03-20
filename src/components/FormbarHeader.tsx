@@ -7,7 +7,7 @@ import Log from "../debugLogger";
 import { isDev, useMobileDetect, useTheme, useUserData } from "../main";
 import { themeColors } from "../../themes/ThemeConfig";
 
-import { accessToken, formbarUrl, socket } from "../socket";
+import { socket } from "../socket";
 import { useState } from "react";
 import SettingsModal from "./SettingsModal";
 import { leaveClassSession } from "../api/classApi";

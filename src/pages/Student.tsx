@@ -1,4 +1,4 @@
-import { accessToken, formbarUrl, socket } from "../socket";
+import { socket } from "../socket";
 
 import FormbarHeader from "../components/FormbarHeader";
 import FullCircularPoll from "../components/CircularPoll";

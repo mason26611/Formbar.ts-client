@@ -2,7 +2,6 @@ import { Button, Card, Flex, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import FormbarHeader from "../components/FormbarHeader";
-import { formbarUrl } from "../socket";
 import { verifyUserEmail } from "../api/userApi";
 
 const { Text, Title } = Typography;

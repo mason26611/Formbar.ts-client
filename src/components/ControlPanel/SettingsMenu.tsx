@@ -18,7 +18,6 @@ import * as IonIcons from "ionicons/icons";
 const { Title, Text } = Typography;
 import { useClassData, useMobileDetect, useTheme } from "../../main";
 import { useEffect, useState } from "react";
-import { accessToken, formbarUrl } from "../../socket";
 import Log from "../../debugLogger";
 import { createRoomLink, deleteRoom, deleteRoomLink, getRoomLinks, getRoomTags } from "../../api/roomApi";
 

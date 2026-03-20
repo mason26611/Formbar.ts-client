@@ -5,7 +5,6 @@ import Log from "../debugLogger";
 import { useUserData, useSettings, getAppearAnimation } from "../main";
 import type { CardStylesType } from "antd/es/card/Card";
 import { useMobileDetect } from "../main";
-import { accessToken, formbarUrl } from "../socket";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMe, getUserClasses } from "../api/userApi";

@@ -20,7 +20,6 @@ import LoadingScreen from "./components/LoadingScreen";
 import {
 	socket,
 	registerSocketEventHandlers,
-	formbarUrl,
 	socketLogin,
 	accessToken,
 } from "./socket";

@@ -5,7 +5,7 @@ import { PermissionLevels, type Student } from "../types";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useClassData } from "../main";
-import { accessToken, formbarUrl, socket } from "../socket";
+import { socket } from "../socket";
 
 import { awardDigipogs as awardDigipogAPICall }  from "../api/digipogApi";
 import { deleteHelpRequest } from "../api/classApi";

@@ -7,7 +7,6 @@ import TransactionItem from "../components/TransactionItem";
 import type { Transaction } from "../types";
 import { useMobileDetect, useUserData } from "../main";
 import { useEffect, useState } from "react";
-import { accessToken, formbarUrl } from "../socket";
 import { useParams } from "react-router-dom";
 import { getUserTransactions } from "../api/userApi";
 

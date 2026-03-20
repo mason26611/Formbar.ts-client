@@ -21,7 +21,7 @@ const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { Activity, useEffect, useState } from "react";
-import { accessToken, formbarUrl } from "../socket";
+import { accessToken } from "../socket";
 import { useSettings, getAppearAnimation, useMobileDetect } from "../main";
 import { banUser, deleteUser, unbanUser, verifyUser } from "../api/userApi";
 import { getManagerData } from "../api/managerApi";

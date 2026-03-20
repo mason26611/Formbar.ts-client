@@ -4,7 +4,6 @@ import {
 import { useClassData, useMobileDetect } from '../../main';
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { accessToken, formbarUrl } from '../../socket';
 import { useState } from 'react';
 import Log from '../../debugLogger';
 import { startTimer as startTimerAPI } from '../../api/timerApi';

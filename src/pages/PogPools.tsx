@@ -6,7 +6,6 @@ import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useUserData } from "../main";
 import { useEffect, useState } from "react";
-import { accessToken, formbarUrl } from "../socket";
 import { getUserPools } from "../api/userApi";
 
 type Pool = {

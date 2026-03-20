@@ -24,7 +24,7 @@ import SettingsMenu from "../components/ControlPanel/SettingsMenu";
 import PermissionsMenu from "../components/ControlPanel/PermissionsMenu";
 import PollEditorMenu from "../components/ControlPanel/PollEditorMenu";
 
-import { accessToken, formbarUrl, socket } from "../socket";
+import { socket } from "../socket";
 import Log from "../debugLogger";
 import ControlPanelPoll from "../components/BarPoll";
 import Statistics from "../components/ControlPanel/StatisticsPage";
@@ -133,9 +133,6 @@ export default function ControlPanel() {
     const [timerPercent, setTimerPercent] = useState(0);
     const [timerRemainingSeconds, setTimerRemainingSeconds] = useState(0);
 
-	const [classActive, setClassActive] = useState<boolean>(
-		() => !!classData?.isActive,
-	);
 	//const [allStudents, setAllStudents] = useState<Student[]>(students);
 
 	function startClass() {
@@ -145,13 +142,7 @@ export default function ControlPanel() {
 
 	function endClass() {
 		socket?.emit("endClass");
-		setClassActive(false);
 	}
-
-	// Keep `classActive` synced with incoming `classData.isActive` updates
-	useEffect(() => {
-		setClassActive(!!classData?.isActive);
-	}, [classData?.isActive]);
 
 	function openMenu(key: string) {
 		if (key === currentMenu) return;

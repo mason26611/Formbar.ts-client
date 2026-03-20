@@ -72,7 +72,7 @@ export function socketLogin(token?: string) {
 					throw new Error("Login failed", { cause: loginResponse.error });
 				}
 				const { data } = loginResponse;
-				let { accessToken, refreshToken } = data;
+				let { refreshToken } = data;
 				Log({ message: "Login successful", data: loginResponse });
 
 				// Delegate to a fresh socketLogin call and stop this chain
@@ -117,7 +117,7 @@ export function socketLogin(token?: string) {
 
 }
 
-let tokenRefreshInterval = setInterval(() => {
+setInterval(() => {
     if (refreshToken) {
         socketLogin(refreshToken);
     }

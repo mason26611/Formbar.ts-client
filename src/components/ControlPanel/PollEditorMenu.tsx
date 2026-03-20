@@ -26,7 +26,7 @@ type PollProperties = {
     allowMultipleResponses: boolean;
 };
 
-import { accessToken, formbarUrl, socket } from "../../socket";
+import { socket } from "../../socket";
 import { createPoll } from "../../api/classApi";
 
 function randomColor() {
