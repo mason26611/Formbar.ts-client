@@ -17,6 +17,7 @@ const { Title, Text } = Typography;
 export default function Student() {
 	const navigate = useNavigate();
 	const { userData: initialUserData } = useUserData();
+    const [lastAnswer, setLastAnswer] = useState<string | string[] | null>(null);
 	const [userData, setUserData] = useState<any>(null);
 	const [classData, setClassData] = useState<any>(null);
 	// const [answerState, setAnswerState] = useState<any>([]);
@@ -64,6 +65,7 @@ export default function Student() {
         
 
 		Log({ message: `Responded with: ${response}`, level: "info" });
+        setLastAnswer(response);
 		// socket.emit("classUpdate", ""); // Request updated class data after responding
 	}
 
@@ -111,6 +113,7 @@ export default function Student() {
 			if (
 				classData.poll.startTime !== lastPollDataRef.current?.startTime
 			) {
+                setLastAnswer(null);
 				setTextResponse("");
 				setSelectedResponses([]);
 			}
@@ -311,6 +314,7 @@ export default function Student() {
 									{classData?.poll.responses.map(
 										(resp: any, index: number) => (
 											<PollButton
+                                                wasLastAnswer={lastAnswer !== null && (typeof lastAnswer === "string" ? lastAnswer === resp.answer : Array.isArray(lastAnswer) && lastAnswer.includes(resp.answer))}
 												key={index}
 												answerData={{
 													answer: resp.answer,

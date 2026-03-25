@@ -12,12 +12,14 @@ type answer = {
 };
 
 export default function PollButton({
+    wasLastAnswer = false,
 	answerData,
 	Respond,
 	allowMultipleResponses = false,
 	selected,
 	onSelectToggle,
 }: {
+    wasLastAnswer?: boolean;
 	answerData: answer;
 	Respond: (response: string) => void;
 	allowMultipleResponses?: boolean;
@@ -29,8 +31,8 @@ export default function PollButton({
 	const isSelected = selected ?? localSelected;
 
 	useEffect(() => {
-		setAnswerStyleState(createButtonStyles(answerData.color));
-	}, [answerData.color]);
+		setAnswerStyleState(createButtonStyles(answerData.color, wasLastAnswer));
+	}, [answerData.color, wasLastAnswer]);
 
 	return (
 		<Button
@@ -39,6 +41,7 @@ export default function PollButton({
                 opacity: isSelected ? 1 : 0.5,
                 transform: isSelected ? "scale(1)" : "scale(0.95)",
                 transition: "all 0.3s ease-in-out",
+                
             } : {}}
 			onClick={() => {
 				if (
@@ -91,7 +94,7 @@ export default function PollButton({
 	);
 }
 
-function createButtonStyles(buttonColor: string) {
+function createButtonStyles(buttonColor: string, wasLastAnswer: boolean) {
 	return {
 		default: {
 			root: {
@@ -101,6 +104,7 @@ function createButtonStyles(buttonColor: string) {
 				padding: "5px 20px",
 				fontSize: "28px",
 				height: "auto",
+                boxShadow: wasLastAnswer ? `0 0 10px ${darkenButtonColor(buttonColor, 50)}` : "none",
 			},
 		},
 		hover: {
@@ -111,6 +115,7 @@ function createButtonStyles(buttonColor: string) {
 				padding: "5px 20px",
 				fontSize: "28px",
 				height: "auto",
+                boxShadow: wasLastAnswer ? `0 0 10px ${darkenButtonColor(buttonColor, 50)}` : "none",
 			},
 		},
 		active: {
@@ -121,6 +126,7 @@ function createButtonStyles(buttonColor: string) {
 				padding: "5px 20px",
 				fontSize: "28px",
 				height: "auto",
+                boxShadow: wasLastAnswer ? `0 0 10px ${darkenButtonColor(buttonColor, 50)}` : "none",
 			},
 		},
 		current: "default",
