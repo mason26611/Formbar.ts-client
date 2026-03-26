@@ -148,7 +148,7 @@ export function Testing() {
                         return acc;
                     }, {})).map(([category, tests], index) => (
                         <div key={category} style={{ marginBottom: 12, 
-                                                    ...getAppearAnimation(settings.disableAnimations, index) }}>
+                                                    ...getAppearAnimation(settings.accessibility.disableAnimations, index) }}>
                             <h3 style={{ margin: '6px 0' }}>{category}</h3>
                             <Flex vertical align="start" style={{ background: '#000a', padding: 8, borderRadius: 10 }} wrap gap={8}>
                                 {tests.map((test: any, index: number) => (
@@ -158,7 +158,7 @@ export function Testing() {
                                                 key={test.name}
                                                 onClick={() => test.hasArgs ? test.func(inputValue, bodyValue) : test.func()}
                                                 style={{ margin: 4,
-                                                    ...getAppearAnimation(settings.disableAnimations, index)
+                                                    ...getAppearAnimation(settings.accessibility.disableAnimations, index)
                                                  }}
                                                 type='default'
                                                 variant="solid"

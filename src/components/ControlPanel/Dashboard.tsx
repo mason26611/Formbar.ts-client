@@ -19,6 +19,7 @@ import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 
 import { useTheme } from "../../main";
+import type { Student } from "../../types";
 
 export default function Dashboard({
 	openModalId,
@@ -67,7 +68,7 @@ export default function Dashboard({
 
 	const students =
 		classData && classData.students
-			? (Object.values(classData.students) as any[])
+			? (Object.values(classData.students) as Student[])
 			: [];
 
 	if (!classData || !classData.students) {
@@ -82,7 +83,7 @@ export default function Dashboard({
 		);
 	}
 
-    function sortStudents(students: any[]) {
+    function sortStudents(students: Student[]) {
 		const sorted = [...students];
 		switch (sortType) {
 			case "Name":
@@ -140,8 +141,8 @@ export default function Dashboard({
                 });
                 break;
             case "Help Time":
-                if(sortDirection === "▲") sorted.sort((a, b) => (a.helpReqTime || 0) - (b.helpReqTime || 0));
-                else sorted.sort((a, b) => (b.helpReqTime || 0) - (a.helpReqTime || 0));
+                if(sortDirection === "▲") sorted.sort((a, b) => (a.help || 0) - (b.help || 0));
+                else sorted.sort((a, b) => (b.help || 0) - (a.help || 0));
                 break;
         }
         return sorted;
@@ -479,7 +480,7 @@ export default function Dashboard({
                             .map((student: any, index: number) =>
                                 student.id !== userData?.id ? (
                                     <StudentObject
-                                        style={getAppearAnimation(settings.disableAnimations, index)}
+                                        style={getAppearAnimation(settings.accessibility.disableAnimations, index)}
                                         key={student.id}
                                         student={student}
                                         openModalId={openModalId}

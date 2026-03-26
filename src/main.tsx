@@ -58,7 +58,15 @@ type ClassDataContextType = {
 };
 
 export type AppSettings = {
-	disableAnimations: boolean;
+	general: {
+        sfxVolume: number;
+    };
+	appearance: {
+        theme: "light" | "dark";
+    };
+	accessibility: {
+		disableAnimations: boolean;
+	};
 };
 
 type SettingsContextType = {
@@ -67,7 +75,15 @@ type SettingsContextType = {
 };
 
 const defaultSettings: AppSettings = {
-	disableAnimations: false,
+	general: {
+        sfxVolume: 50,
+    },
+	appearance: {
+        theme: "light",
+    },
+	accessibility: {
+		disableAnimations: false,
+	},
 };
 
 type ServerConfig = {
@@ -167,19 +183,10 @@ export const getAppearAnimation = (
 };
 
 const ThemeProvider = ({ children }: { children: ReactNode }) => {
-	const [isDark, setIsDark] = useState(() => {
-		const saved = document.cookie
-			.split("; ")
-			.find((row) => row.startsWith("theme="))
-			?.split("=")[1];
-		return saved ? saved === "dark" : false;
-	});
+	const { settings, updateSettings } = useSettings();
+	const isDark = settings.appearance.theme === "dark";
 
 	useEffect(() => {
-		const expires = new Date();
-		expires.setFullYear(expires.getFullYear() + 1);
-		document.cookie = `theme=${isDark ? "dark" : "light"}; expires=${expires.toUTCString()}; path=/`;
-
 		const bodyColor = isDark
 			? themeColors.dark.body.background
 			: themeColors.light.body.background;
@@ -190,7 +197,14 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
 		document.body.style.color = bodyTextColor;
 	}, [isDark]);
 
-	const toggleTheme = () => setIsDark(!isDark);
+	const toggleTheme = () => {
+		updateSettings({
+			appearance: {
+				...settings.appearance,
+				theme: isDark ? "light" : "dark",
+			},
+		});
+	};
 
 	return (
 		<ThemeContext.Provider value={{ isDark, toggleTheme }}>
@@ -199,7 +213,7 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
 			</ConfigProvider>
 		</ThemeContext.Provider>
 	);
-};
+}
 
 const UserDataProvider = ({ children }: { children: ReactNode }) => {
 	const [userData, setUserData] = useState<CurrentUserData | null>(null);

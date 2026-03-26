@@ -38,7 +38,7 @@ export default function ClassesPage() {
 	}
 
 	const cardStyles = {
-		root: getAppearAnimation(settings.disableAnimations),
+		root: getAppearAnimation(settings.accessibility.disableAnimations),
 		title: {
 			width: "100%",
 			textAlign: "center",

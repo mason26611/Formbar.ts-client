@@ -20,7 +20,8 @@
 		"react-countup": "^6.5.3",
 		"react-dom": "^19.2.0",
 		"react-router-dom": "^7.9.6",
-		"socket.io-client": "^4.8.1"
+		"socket.io-client": "^4.8.1",
+		"use-sound": "^5.0.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.1",

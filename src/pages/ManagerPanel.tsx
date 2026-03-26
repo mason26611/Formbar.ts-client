@@ -294,7 +294,7 @@ export default function ManagerPanel() {
 	function renderUserCard(user: ManagerPanelUser, index: number, mobileCard: boolean) {
 		const colStyle =
 			initialLoad && !isLoading
-				? getAppearAnimation(settings.disableAnimations, index)
+				? getAppearAnimation(settings.accessibility.disableAnimations, index)
 				: {};
 
 		const card = (

@@ -1,6 +1,6 @@
 import { http } from "./HTTPApi";
 
-export function getManagerData(offset: number = 0, limit: number = 20, sortBy: string) {
+export function getManagerData(offset: number = 0, limit: number = 20, sortBy: string = "name") {
     return http(`/manager${limit > -1 && offset > -1 && sortBy ? `?limit=${limit}&offset=${offset}&sortBy=${sortBy}` : ''}`);
 }
 

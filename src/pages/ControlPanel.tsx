@@ -16,7 +16,7 @@ import FormbarHeader from "../components/FormbarHeader";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useClassData, useSettings, useTheme, useUserData } from "../main";
-import { Activity, useEffect, useState } from "react";
+import { Activity, useEffect, useState, useRef } from "react";
 
 import Dashboard from "../components/ControlPanel/Dashboard";
 import PollsMenu from "../components/ControlPanel/PollsMenu";
@@ -35,6 +35,17 @@ import TimerPage from "../components/ControlPanel/TimerPage";
 import { formatTime, textColorForBackground, toEpochMs } from "../GlobalFunctions";
 import { clearCurrentPoll, endPoll } from "../api/classApi";
 import { clearTimer, pauseTimer, resumeTimer } from "../api/timerApi";
+
+import useSound from 'use-sound'
+import alarmSFX from '../assets/sfx/alarmClock.mp3';
+import breakSFX from '../assets/sfx/break.wav';
+import helpSFX from '../assets/sfx/help.wav';
+import joinSFX from '../assets/sfx/join.wav';
+import leaveSFX from '../assets/sfx/leave.wav';
+import removeSFX from '../assets/sfx/remove.wav';
+import tutdSFX from '../assets/sfx/TUTD.wav';
+import { Permissions, type ClassData } from "../types";
+
 
 const items = [
 	{
@@ -90,25 +101,65 @@ const items = [
 
 export default function ControlPanel() {
 	const { classData, setClassData } = useClassData();
+	const prevClassDataRef = useRef<ClassData | null>(null);
+	const timerAlarmPlayedRef = useRef(false);
 	const isMobileDevice = isMobile();
 
     const [showPollDetails, setShowPollDetails] = useState(false);
 
     const { settings } = useSettings();
 
+    const [playAlarm, alarmData] = useSound(alarmSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playBreak] = useSound(breakSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playHelp] = useSound(helpSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playJoin] = useSound(joinSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playLeave] = useSound(leaveSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playRemove] = useSound(removeSFX, { volume: settings.general.sfxVolume / 100 });
+    const [playTUTD] = useSound(tutdSFX, { volume: settings.general.sfxVolume / 100 });
+
+
 	useEffect(() => {
 		if (!socket) return; // Don't set up listener if socket isn't ready
 
-		function classUpdate(classData: any) {
-			setClassData(classData);
+		function classUpdate(newClassData: ClassData) {
+
+            // Get online students before and after update to compare
+            const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline") && student.classPermissions <= Permissions.STUDENT);
+            const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline") && student.classPermissions <= Permissions.STUDENT);
+
+            const oldResponses = Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses);
+            const newResponses = Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses);
+
+            const oldResponsesTotal = oldResponses.reduce((sum: number, count: number) => sum + count, 0);
+            const newResponsesTotal = newResponses.reduce((sum: number, count: number) => sum + count, 0);
+            const responsesChanged = JSON.stringify(oldResponses) !== JSON.stringify(newResponses);
+
+            const oldHelpCount = oldStudents.filter(student => student.help).length;
+            const newHelpCount = newStudents.filter(student => student.help).length;
+
+            const oldBreakCount = oldStudents.filter(student => student.break).length;
+            const newBreakCount = newStudents.filter(student => student.break).length;
+
+            oldStudents.length < newStudents.length ? playJoin() : null;
+            oldStudents.length > newStudents.length ? playLeave() : null;
+
+            responsesChanged && newResponsesTotal >= oldResponsesTotal ? playTUTD() : null;
+            oldResponsesTotal > newResponsesTotal ? playRemove() : null;
+
+            oldHelpCount < newHelpCount ? playHelp() : null;
+            oldBreakCount < newBreakCount ? playBreak() : null;
+            
+			setClassData(newClassData);
+			prevClassDataRef.current = newClassData;
+
 			Log({
 				message: "Class Update received.",
-				data: classData,
+				data: newClassData,
 				level: "info",
 			});
 
 			Log({
-				message: "Total Voters: " + classData.poll.totalResponders,
+				message: "Total Voters: " + newClassData.poll.totalResponders,
 				level: "info",
 			});
 		}
@@ -119,7 +170,16 @@ export default function ControlPanel() {
 		return () => {
 			socket.off("classUpdate", classUpdate);
 		};
-	}, [socket, setClassData]);
+	}, [
+        socket,
+        setClassData,
+        playTUTD,
+        playHelp,
+        playBreak,
+        playRemove,
+        playJoin,
+        playLeave
+    ]);
 
 	const { isDark } = useTheme();
 
@@ -216,6 +276,55 @@ export default function ControlPanel() {
         };
     }, [classData?.timer?.startTime, classData?.timer?.endTime, classData?.timer?.active]);
 
+    // Play alarm when timer ends
+    useEffect(() => {
+        // Reset alarm played flag when timer is cleared or restarted
+        if (!classData?.timer?.startTime || classData.timer.startTime <= 0) {
+            timerAlarmPlayedRef.current = false;
+            return;
+        }
+
+        const checkTimer = () => {
+            const timerEndMs = toEpochMs(classData.timer.endTime);
+            const now = Date.now();
+            const timerActive = classData?.timer?.active;
+            const alarmAlreadyPlayed = timerAlarmPlayedRef.current;
+
+            Log({
+                message: "Timer check",
+                data: {
+                    timerEndMs,
+                    now,
+                    timerActive,
+                    alarmAlreadyPlayed,
+                    shouldPlay: timerActive && timerEndMs !== null && now >= timerEndMs && !alarmAlreadyPlayed,
+                    timeUntilAlarm: timerEndMs !== null ? timerEndMs - now : null,
+                },
+                level: "info",
+            });
+
+            // Play alarm when current time reaches or exceeds end time, and timer is active
+            if (timerActive && timerEndMs !== null && now >= timerEndMs && !alarmAlreadyPlayed) {
+                Log({
+                    message: "🔔 PLAYING ALARM NOW!",
+                    data: { timerEndMs, now },
+                    level: "info",
+                });
+                timerAlarmPlayedRef.current = true;
+                playAlarm();
+            }
+        };
+
+        checkTimer();
+
+        // Check every 250ms (same as timer update interval)
+        const intervalId = window.setInterval(checkTimer, 250);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [classData?.timer?.startTime, classData?.timer?.endTime, classData?.timer?.active, playAlarm]);
+
     const timerStartMs = toEpochMs(classData?.timer?.startTime);
     const timerEndMs = toEpochMs(classData?.timer?.endTime);
     const timerDurationSeconds =
@@ -248,7 +357,7 @@ export default function ControlPanel() {
 						padding: "0 10px",
 						paddingTop: "15px",
 					}}
-                    className={settings.disableAnimations ? "" : "animMenu"}
+                    className={settings.accessibility.disableAnimations ? "" : "animMenu"}
 					styles={{
 						itemIcon: {
 							marginRight: "18px",
@@ -329,6 +438,7 @@ export default function ControlPanel() {
                                         onClick={() => {
                                             if (!classData) return;
                                             // Clear timer
+                                            alarmData.stop();
                                             clearTimer(classData.id)
                                             .then((res) => {
                                                 if (!res.ok) {

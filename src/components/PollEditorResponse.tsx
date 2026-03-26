@@ -18,7 +18,7 @@ export default function PollEditorResponse({
 
 
     return (
-        <Flex align="center" justify="center" style={{ height: "40px", ...getAppearAnimation(settings.disableAnimations) }} gap={10}>
+        <Flex align="center" justify="center" style={{ height: "40px", ...getAppearAnimation(settings.accessibility.disableAnimations) }} gap={10}>
             <ColorPicker disabledAlpha value={answer.color} styles={{
                 root: {
                     height: '100%',  

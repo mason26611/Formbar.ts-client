@@ -4,7 +4,7 @@ import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
 import Log from "../debugLogger";
 
-import { isDev, useMobileDetect, useTheme, useUserData } from "../main";
+import { isDev, isMobile, useMobileDetect, useTheme, useUserData } from "../main";
 import { themeColors } from "../../themes/ThemeConfig";
 
 import { socket } from "../socket";
@@ -372,13 +372,15 @@ export default function FormbarHeader() {
             <Modal
                 children={<SettingsModal />}
                 open={settingsOpen}
-                centered
                 closable={false}
                 onCancel={() => {setSettingsOpen(false)}}
                 footer={null}
-                height={700}
-                width={window.innerWidth / 1.5}
+                height={'90%'}
+                width={'90%'}
                 styles={{
+                    wrapper: {
+                        overflow: "hidden",
+                    },
                     container: {
                         padding: 0,
                         overflow: "hidden",

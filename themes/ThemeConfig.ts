@@ -38,13 +38,29 @@ export const themeColors = {
 	},
 };
 
+const consistentValues = {
+    token: {
+        fontFamily: "Outfit, sans-serif",
+        fontSize: 20,
+        fontSizeLG: 24,
+    },
+    components: {
+        Segmented: {
+            controlHeight: 48,
+            controlPaddingHorizontal: 16,
+        },
+        Input: {
+            controlHeight: 42,
+        },
+        Select: {
+            controlHeight: 42,
+        },
+    },
+};
+
 export const darkMode = {
 	algorithm: theme.darkAlgorithm,
-	token: {
-		fontFamily: "Outfit, sans-serif",
-		fontSize: 20,
-		fontSizeLG: 24,
-	},
+	token: consistentValues.token,
 	components: {
 		Card: {
 			colorBorderSecondary: "#070a2786",
@@ -53,16 +69,16 @@ export const darkMode = {
 		Segmented: {
 			trackBg: "#000a",
 			itemSelectedBg: "#1769dc",
-			controlHeight: 48,
-			controlPaddingHorizontal: 16,
+			controlHeight: consistentValues.components.Segmented.controlHeight,
+			controlPaddingHorizontal: consistentValues.components.Segmented.controlPaddingHorizontal,
 		},
 		Input: {
-			controlHeight: 42,
+			controlHeight: consistentValues.components.Input.controlHeight,
 			colorBgContainer: "#01091fab",
 			colorBorder: "#02031186",
 		},
 		Select: {
-			controlHeight: 42,
+			controlHeight: consistentValues.components.Select.controlHeight,
 			colorBgContainer: "#01091fab",
 			colorBorder: "#02031186",
 		},
@@ -74,11 +90,7 @@ export const darkMode = {
 
 export const lightMode = {
 	algorithm: theme.defaultAlgorithm,
-	token: {
-		fontFamily: "Outfit, sans-serif",
-		fontSize: 20,
-		fontSizeLG: 24,
-	},
+	token: consistentValues.token,
 	components: {
 		Menu: {
 			colorBgContainer: "rgba(255, 255, 255, 0.47)",
@@ -91,13 +103,16 @@ export const lightMode = {
 		Segmented: {
 			trackBg: "#fffa",
 			itemSelectedBg: "#1c67cf49",
-			controlHeight: 48,
-			controlPaddingHorizontal: 16,
+			controlHeight: consistentValues.components.Segmented.controlHeight,
+			controlPaddingHorizontal: consistentValues.components.Segmented.controlPaddingHorizontal,
 		},
 		Input: {
-			controlHeight: 42,
+			controlHeight: consistentValues.components.Input.controlHeight,
 			colorBgContainer: "#fffa",
 			colorBorder: "#00000020",
+		},
+		Select: {
+			controlHeight: consistentValues.components.Select.controlHeight,
 		},
 	},
 };

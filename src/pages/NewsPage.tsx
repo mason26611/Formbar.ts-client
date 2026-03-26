@@ -44,7 +44,7 @@ export default function NewsPage() {
 							Version 3.0.0
 						</Title>
 					}
-                    style={getAppearAnimation(settings.disableAnimations, 0)}
+                    style={getAppearAnimation(settings.accessibility.disableAnimations, 0)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>
@@ -74,7 +74,7 @@ export default function NewsPage() {
 							Version 2.0.0
 						</Title>
 					}
-                    style={getAppearAnimation(settings.disableAnimations, 1)}
+                    style={getAppearAnimation(settings.accessibility.disableAnimations, 1)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>
@@ -104,7 +104,7 @@ export default function NewsPage() {
 							Version 1.1.0
 						</Title>
 					}
-                    style={getAppearAnimation(settings.disableAnimations, 2)}
+                    style={getAppearAnimation(settings.accessibility.disableAnimations, 2)}
 				>
 					<ul style={{ marginBottom: 0, listStyle: "none" }}>
 						<li>

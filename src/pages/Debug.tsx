@@ -2272,7 +2272,7 @@ export function Debug() {
 				<Card
 					style={{
 						background: "#000a",
-						...getAppearAnimation(settings.disableAnimations, 0),
+						...getAppearAnimation(settings.accessibility.disableAnimations, 0),
 					}}
 				>
 					<Flex justify="space-between" align="center" wrap gap={16}>
@@ -2305,7 +2305,7 @@ export function Debug() {
 				<Space
 					wrap
 					size={[12, 12]}
-					style={getAppearAnimation(settings.disableAnimations, 1)}
+					style={getAppearAnimation(settings.accessibility.disableAnimations, 1)}
 				>
 					<Tag color="green">Passed: {passedCount}</Tag>
 					<Tag color="red">Failed: {failedCount}</Tag>
@@ -2325,7 +2325,7 @@ export function Debug() {
 						message="Suite bootstrap failed"
 						description={fatalError}
 						style={getAppearAnimation(
-							settings.disableAnimations,
+							settings.accessibility.disableAnimations,
 							2,
 						)}
 					/>
@@ -2338,7 +2338,7 @@ export function Debug() {
 						message="Swagger docs unavailable"
 						description={swaggerError}
 						style={getAppearAnimation(
-							settings.disableAnimations,
+							settings.accessibility.disableAnimations,
 							3,
 						)}
 					/>
@@ -2358,7 +2358,7 @@ export function Debug() {
 					showIcon
 					message="Suite scope"
 					description="The suite is generated from /docs/openapi.json at runtime. Setup operations run first in a fixed order (register temp user → verify → login → create class → join → start → join by room code) so later tests have real user and class context. DELETE endpoints are excluded unless they are part of managed teardown, and password-management endpoints remain excluded."
-					style={getAppearAnimation(settings.disableAnimations, 4)}
+style={getAppearAnimation(settings.accessibility.disableAnimations, 4)}
 				/>
 
 				{setupResults.length > 0 && (
@@ -2368,7 +2368,7 @@ export function Debug() {
 							background: "#000a",
 							overflow: "hidden",
 							...getAppearAnimation(
-								settings.disableAnimations,
+								settings.accessibility.disableAnimations,
 								5,
 							),
 						}}
@@ -2388,7 +2388,7 @@ export function Debug() {
 					style={{
 						background: "#000a",
 						overflow: "hidden",
-						...getAppearAnimation(settings.disableAnimations, 6),
+						...getAppearAnimation(settings.accessibility.disableAnimations, 6),
 					}}
 				>
 					<Table<TestResult>
@@ -2407,7 +2407,7 @@ export function Debug() {
 							background: "#000a",
 							overflow: "hidden",
 							...getAppearAnimation(
-								settings.disableAnimations,
+								settings.accessibility.disableAnimations,
 								7,
 							),
 						}}
@@ -2427,7 +2427,7 @@ export function Debug() {
 					style={{
 						background: "#000a",
 						overflow: "hidden",
-						...getAppearAnimation(settings.disableAnimations, 8),
+						...getAppearAnimation(settings.accessibility.disableAnimations, 8),
 					}}
 				>
 					<Table<StaticIssue>

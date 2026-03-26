@@ -6,7 +6,7 @@ export type CurrentUserData = {
 	displayName: string;
 	email: string;
 	help: boolean;
-	id: number;
+	id: string;
 	isGuest: boolean;
 	ownedPolls: any[];
 	permissions: number;
@@ -73,7 +73,7 @@ export type ClassData = {
 			teachers: boolean;
 		};
 	};
-	students: Student[];
+	students: Record<string, Student>;
 };
 
 export type PollAnswer = {
@@ -140,7 +140,8 @@ export type Student = {
 	help: any;
 	break: boolean;
 	pollRes: any;
-	tags: any;
+	tags: Array<string>;
+    isGuest: boolean;
 	id: string;
 	email: string;
 	displayName: string;

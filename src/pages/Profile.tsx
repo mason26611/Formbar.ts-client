@@ -459,7 +459,7 @@ export default function Profile() {
                             {!error &&
                                 Object.entries(profileProps).map(([key, value]) =>
                                     key == "Pog Meter" || value == "N/A" ? 
-                                    null : key == "Digipogs" && settings.disableAnimations === false ? (
+                                    null : key == "Digipogs" && settings.accessibility.disableAnimations === false ? (
                                         <p key={key} style={infoStyle}>
                                             <strong>{key}:</strong>
                                             {<CountUp end={Number(value)} separator={''} duration={1} />}
