@@ -28,7 +28,7 @@ export async function http(
 
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");
-		throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+		throw new Error(`${text || res.statusText}`);
 	}
 
 	// Handles 204 No Content

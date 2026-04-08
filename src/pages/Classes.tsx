@@ -8,7 +8,8 @@ import { useMobileDetect } from "../main";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMe, getUserClasses } from "../api/userApi";
-import { joinClassSession, createClass as createClassAPI, deleteClass, joinClassByCode } from "../api/classApi";
+import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "../api/classApi";
+import type { CurrentUserData } from "../types";
 
 export default function ClassesPage() {
 	const navigate = useNavigate();
@@ -52,6 +53,18 @@ export default function ClassesPage() {
 		getClasses();
 	}, [userData]);
 
+	// Handle joining class from URL
+	useEffect(() => {
+		if (location.href.includes("joinClass")) {
+			const urlParams = new URLSearchParams(window.location.search);
+			const classCode = urlParams.get("code");
+			if (classCode) {
+				Log({ message: "Joining class from URL code", data: { classCode } });
+				joinClassByCode(classCode);
+			}
+		}
+	}, []);
+
     function getClasses() {
         if (!userData) return;
 
@@ -86,7 +99,7 @@ export default function ClassesPage() {
             content: 'This action is irreversible, and you will not be able to recover this class.',
             okCancel: true,
             onOk: () => {
-                deleteClass(selectedClass)
+                deleteClassAPI(selectedClass)
                 .then(async (res) => {
                     if (!res.ok) {
                         const message = (res && (res.detail || res.message)) || "Failed to delete class.";
@@ -154,14 +167,10 @@ export default function ClassesPage() {
 			.then((response) => {
 				const { data } = response;
 				Log({ message: "Created class", data });
-				// Handle successful class creation (e.g., update ownedClasses state)
                 if (response.success) {
 					setOwnedClasses((prev) => [...prev, { id: data.classId, name: data.className }]);
 					setCreateClassName("");
-					// Call enterClass with the new classId directly to avoid race condition
 					enterClassWithId(data.classId);
-					// Helper to enter a class by id directly (avoids relying on async setSelectedClass)
-					
                 }
 			})
 			.catch((err) => {
@@ -173,19 +182,25 @@ export default function ClassesPage() {
 			});
 	}
 
-	function joinClass() {
-		if (joinClassCode.trim() === "") {
+	function joinClassByCode(code: string) {
+		if (code.trim() === "") {
 			Log({ message: "Class code cannot be empty", level: "error" });
 			return;
 		}
-		joinClassByCode(joinClassCode)
+		enrollInClass(code)
 			.then((response) => {
 				const { data } = response;
 				Log({ message: "Joined class with code", data });
-				// Handle successful class join (e.g., navigate to class page)
 				if (response.success) {
-                    setJoinedClasses((prev) => [...prev, { id: data.classId, name: data.className }]);
                     setJoinClassCode("");
+                    getClasses();
+					setUserData(
+						{
+							...userData,
+							activeClass: data.roomId,
+						} as CurrentUserData
+					);
+					navigate("/student");
 				}
 			})
 			.catch((err) => {
@@ -196,33 +211,6 @@ export default function ClassesPage() {
 				});
 			});
 	}
-
-    if(location.href.includes("joinClass")) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const classCode = urlParams.get("code");
-        if (classCode) {
-            Log({ message: "Joining class from URL code", data: { classCode } });
-            joinClassWithCode(classCode);
-        }
-    }
-
-    function joinClassWithCode(code: string) {
-        joinClassByCode(code)
-        .then((response) => {
-            const { data } = response;
-            Log({ message: "Joined class with code (URL)", data });
-            if (response.success) {
-                enterClassWithId(data.classId);
-            }
-        })
-        .catch((err) => {
-            Log({
-                message: "Error joining class with code (URL)",
-                data: err,
-                level: "error",
-            });
-        });
-    }
 
 	return (
 		<>
@@ -395,7 +383,7 @@ export default function ClassesPage() {
 							<Button
 								type="primary"
 								style={{ width: "100%" }}
-								onClick={joinClass}
+								onClick={() => joinClassByCode(joinClassCode)}
 							>
 								Join{isMobileView ? "" : " Class"}
 							</Button>

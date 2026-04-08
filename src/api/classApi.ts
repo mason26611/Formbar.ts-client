@@ -126,8 +126,12 @@ export function setClassTags(classId: number, tags: string[]) {
 
 // --- Class - Enrollment ---
 
-export function joinClassByCode(code: string) {
+export function enrollInClass(code: string) {
     return http(`/class/enroll/${code}`, "POST");
+}
+
+export function unenrollFromClass(classId: number) {
+	return http(`/class/${classId}/unenroll`, "POST");
 }
 
 export function deleteClass(classId: number) {

@@ -71,5 +71,5 @@ export function refreshAuthToken(refreshToken: string) {
 }
 
 export function registerUser(body : {email: string, password: string, displayName: string}) {
-	return http( "/auth/register", "POST", {}, body	);
+	return http("/auth/register", "POST", {}, body	);
 }

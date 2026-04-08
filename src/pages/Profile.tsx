@@ -165,27 +165,26 @@ export default function Profile() {
 		setPinVerifyLoading(true);
 		try {
             const data = await verifyUserPin(String(userData.id), { pin: enteredPin });
-			if (!data.ok || data?.error) {
-				const errorMessage = getErrorMessage(data, "Incorrect PIN.");
-				if (errorMessage.toLowerCase().includes("no pin is set")) {
-					setHasPin(false);
-					setSensModalOpen(false);
-					setEnteredPin("");
-					setShowSensitiveInfo(false);
-					setSensitiveActiveKeys([]);
-					setFirstPinModalOpen(true);
-					return;
-				}
-				throw new Error(errorMessage);
-			}
 
 			setShowSensitiveInfo(true);
 			setSensitiveActiveKeys(["1"]);
 			setSensModalOpen(false);
 			setEnteredPin("");
 		} catch (err) {
+			const message = err instanceof Error ? JSON.parse(err.message).error?.message : "Failed to verify PIN.";
+			
+			if (message.toLowerCase().includes("no pin is set")) {
+				setHasPin(false);
+				setSensModalOpen(false);
+				setEnteredPin("");
+				setShowSensitiveInfo(false);
+				setSensitiveActiveKeys([]);
+				setFirstPinModalOpen(true);
+				return;
+			}
+
 			messageApi.error(
-				err instanceof Error ? err.message : "Failed to verify PIN.",
+				message
 			);
 		} finally {
 			setPinVerifyLoading(false);
@@ -394,8 +393,8 @@ export default function Profile() {
                                     )
                                 }
 								{
-                                    <span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{(id && Number(id) == userData?.id) || !isMobile ? "Your Profile" : "Profile"}</span>
-                                }
+									<span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{(id && String(id) === String(userData?.id)) || !isMobile ? "Your Profile" : "Profile"}</span>
+								}
                                 {
                                     !isMobile && (
                                         <Button

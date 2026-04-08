@@ -599,7 +599,7 @@ async function joinClassByCode(inputValue: string) {
         const parsed = JSON.parse(inputValue); if (parsed.code) code = parsed.code;
     } catch {}
     try {
-        const data = await classApi.joinClassByCode(code);
+        const data = await classApi.enrollInClass(code);
         Log({ message: 'Join Class By Code:', data });
     } catch (err) { Log({ message: 'Error joining class by code:', data: err, level: "error" }); }
 }

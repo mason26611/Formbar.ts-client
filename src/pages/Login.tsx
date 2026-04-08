@@ -106,10 +106,10 @@ export default function LoginPage() {
 					data: { displayName, email, password, confirmPassword },
 				});
 
-				if (displayName.length < 4)
+				if (displayName.length < 5)
 					return Log({
 						message:
-							"displayName must be at least 4 characters long",
+							"displayName must be at least 5 characters long",
 						level: "error",
 					});
 				if (!emailRegex.test(email))
@@ -151,7 +151,7 @@ export default function LoginPage() {
 			Log({ message: "Form submission error", data: err, level: "error" });
 			if (!(err instanceof Error && err.message === "Login failed") &&
 				!(err instanceof Error && err.message === "Signup failed")) {
-				showErrorNotification("Something went wrong. Please try again.");
+				showErrorNotification(err instanceof Error ? JSON.parse(err.message).error.message : "Something went wrong. Please try again.");
 			}
 		} finally {
 			setIsSubmitting(false);
@@ -278,7 +278,7 @@ export default function LoginPage() {
 											style={{
 												marginBottom: "10px",
 												color:
-													displayName.length > 3
+													displayName.length > 4
 														? isDark
 															? "white"
 															: "black"

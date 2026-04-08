@@ -18,7 +18,7 @@ import { Activity, useEffect, useState, useRef } from "react";
 import Dashboard from "../components/ControlPanel/Dashboard";
 import PollsMenu from "../components/ControlPanel/PollsMenu";
 import SettingsMenu from "../components/ControlPanel/SettingsMenu";
-import PermissionsMenu from "../components/ControlPanel/PermissionsMenu";
+import RolesMenu from "../components/ControlPanel/RolesMenu";
 import PollEditorMenu from "../components/ControlPanel/PollEditorMenu";
 
 import { socket } from "../socket";
@@ -86,7 +86,7 @@ const items = [
 		icon: <IonIcon icon={IonIcons.lockClosedOutline} />,
 		deselectedicon: <IonIcon icon={IonIcons.lockClosedOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.lockClosed} />,
-		label: "Permissions",
+		label: "Roles",
 	},
 	{
 		key: "6",
@@ -582,7 +582,7 @@ export default function ControlPanel() {
 
 				<div
 					style={{
-						padding: "20px",
+						padding: 20,
 						height: "100%",
 						width: isMobileDevice ? "calc(100% - 80px)" : "calc(100% - 250px)",
 					}}
@@ -606,7 +606,7 @@ export default function ControlPanel() {
 						<Statistics />
 					</Activity>
 					<Activity mode={currentMenu == "5" ? "visible" : "hidden"}>
-						<PermissionsMenu />
+						<RolesMenu />
 					</Activity>
 					<Activity mode={currentMenu == "6" ? "visible" : "hidden"}>
 						<SettingsMenu />
