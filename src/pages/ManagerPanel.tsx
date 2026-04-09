@@ -28,11 +28,13 @@ import { useSettings, getAppearAnimation, useMobileDetect } from "../main";
 import { banUser, deleteUser, unbanUser, verifyUser } from "../api/userApi";
 import { addIpToList, deleteIpFromList, getIpAccessList, getManagerData, toggleIpList, updateIpFromList } from "../api/managerApi";
 import { deleteClass } from "../api/classApi";
+import { SCOPES } from "../types";
 
 type ManagerPanelUser = {
 	id: number | string;
 	email: string;
 	permissions: number;
+    scopes?: string[];
 	displayName?: string;
 	verified: number | boolean;
 };
@@ -41,6 +43,10 @@ const DEFAULT_PAGE_SIZE = 24;
 
 function isUnverifiedUser(user: ManagerPanelUser): boolean {
 	return Number(user.verified) === 0;
+}
+
+function isBannedUser(user: ManagerPanelUser): boolean {
+    return Number(user.permissions) === 0 || (user.scopes || []).includes(SCOPES.GLOBAL.SYSTEM.actions.BLOCKED.key);
 }
 
 export default function ManagerPanel() {
@@ -101,8 +107,8 @@ export default function ManagerPanel() {
 
 				const userItems = Array.isArray(data?.users) ? data.users : [];
 
-                const unbannedUsers = userItems.filter((user: ManagerPanelUser) => user.permissions > 0);
-                const bannedUserItems  = userItems.filter((user: ManagerPanelUser) => user.permissions === 0);
+                const unbannedUsers = userItems.filter((user: ManagerPanelUser) => !isBannedUser(user));
+                const bannedUserItems  = userItems.filter((user: ManagerPanelUser) => isBannedUser(user));
 
 
                 setClassrooms(data?.classrooms || []);
@@ -335,14 +341,14 @@ export default function ManagerPanel() {
 				</Flex>
                 {
                     !isMobile && (
-                        <Select style={{ width: "100%" }} defaultValue={user.permissions} disabled={isUnverifiedUser(user) || user.permissions === 0} >
+                        <Select style={{ width: "100%" }} defaultValue={user.permissions} disabled={isUnverifiedUser(user) || isBannedUser(user)} >
                             <Select.Option value={5}>Manager</Select.Option>
                             <Select.Option value={4}>Teacher</Select.Option>
                             <Select.Option value={3}>Mod</Select.Option>
                             <Select.Option value={2}>Student</Select.Option>
                             <Select.Option value={1}>Guest</Select.Option>
                             {
-                                user.permissions === 0 && (
+                                isBannedUser(user) && (
                                     <Select.Option value={0}>Banned</Select.Option>
                                 )
                             }
@@ -366,7 +372,7 @@ export default function ManagerPanel() {
 						</Tooltip>
 					) : null}
                     {
-                        user.permissions > 0 ? (
+                        !isBannedUser(user) ? (
                             <Tooltip mouseEnterDelay={0.5} title={"Ban User"} color="red">
                                 <Button
                                     variant="solid"
@@ -405,7 +411,7 @@ export default function ManagerPanel() {
                                 <Select.Option value={2}>Student</Select.Option>
                                 <Select.Option value={1}>Guest</Select.Option>
                                 {
-                                    user.permissions === 0 && (
+                                    isBannedUser(user) && (
                                         <Select.Option value={0}>Banned</Select.Option>
                                     )
                                 }

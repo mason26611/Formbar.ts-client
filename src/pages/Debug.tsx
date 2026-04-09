@@ -12,7 +12,8 @@ import { useEffect, useState } from "react";
 import FormbarHeader from "../components/FormbarHeader";
 import { getAppearAnimation, useSettings } from "../main";
 import { accessToken, formbarUrl, refreshToken } from "../socket";
-import { type CurrentUserData } from "../types";
+import { SCOPES, type CurrentUserData } from "../types";
+import { hasGlobalScope } from "../utils/scopeUtils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1697,7 +1698,10 @@ function getRuntimeOperationBlocker(
 	operation: SwaggerOperation,
 	context: TestingContext,
 ): string | null {
-	const canCreateTemporaryClass = (context.me.permissions ?? 0) >= 4;
+	const canCreateTemporaryClass = hasGlobalScope(
+		context.me as CurrentUserData,
+		SCOPES.GLOBAL.CLASS.actions.CREATE.key,
+	);
 	const hasClassContext = Boolean(
 		findInPool(context.valuePool, ["classid", "roomid"]),
 	);

@@ -4,19 +4,26 @@ import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
 import Log from "../debugLogger";
 
-import { isDev, isMobile, useMobileDetect, useTheme, useUserData } from "../main";
+import { isDev, useClassData, useMobileDetect, useTheme, useUserData } from "../main";
 import { themeColors } from "../../themes/ThemeConfig";
 
 import { socket } from "../socket";
 import { useState } from "react";
 import SettingsModal from "./SettingsModal";
 import { leaveClassSession } from "../api/classApi";
+import { SCOPES } from "../types";
+import { canAccessTeacherPanel, hasGlobalScope } from "../utils/scopeUtils";
 
 export default function FormbarHeader() {
 	const { isDark } = useTheme();
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
 	const { userData, setUserData } = useUserData();
+	const { classData } = useClassData();
+	const canTeacherPanel = canAccessTeacherPanel(userData, classData);
+	const canStudentPanel = Boolean(userData?.activeClass) && !canTeacherPanel;
+	const canOpenDebug = hasGlobalScope(userData, SCOPES.GLOBAL.SYSTEM.actions.ADMIN.key);
+	const canOpenManagerPanel = hasGlobalScope(userData, SCOPES.GLOBAL.USERS.actions.MANAGE.key);
 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [leaveClassModalOpen, setLeaveClassModalOpen] = useState(false);
@@ -152,7 +159,7 @@ export default function FormbarHeader() {
                     </Tooltip>
                     </>
                 )}
-                { !isMobileView && isDev && userData && userData.permissions >= 5 && (<>
+				{ !isMobileView && isDev && userData && canOpenDebug && (<>
                     <Tooltip
                         mouseEnterDelay={0.5}
                         placement="bottomRight"
@@ -183,8 +190,7 @@ export default function FormbarHeader() {
 
 				{userData &&
 				userData.activeClass &&
-				userData.classPermissions &&
-				userData.classPermissions < 4 ? (
+				canStudentPanel ? (
 					<Tooltip
                         mouseEnterDelay={0.5}
 						placement="bottomRight"
@@ -205,8 +211,7 @@ export default function FormbarHeader() {
 					</Tooltip>
 				) : userData &&
 				  userData.activeClass &&
-				  userData.classPermissions &&
-				  userData.classPermissions >= 4 ? (
+				  canTeacherPanel ? (
 					<Tooltip
                         mouseEnterDelay={0.5}
 						placement="bottomRight"
@@ -228,8 +233,7 @@ export default function FormbarHeader() {
 				) : null}
 
 				{userData &&
-					userData.permissions &&
-					userData.permissions >= 4 && (
+					canOpenManagerPanel && (
 						<Tooltip
                             mouseEnterDelay={0.5}
 							placement="bottomRight"

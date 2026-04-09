@@ -10,6 +10,7 @@ export type CurrentUserData = {
 	isGuest: boolean;
 	ownedPolls: any[];
 	permissions: number;
+	scopes?: string[];
 	pogMeter: number;
 	pollRes: { buttonRes: string; textRes: string; time: number | null };
 	sharedPolls: any[];
@@ -61,6 +62,12 @@ export type ClassData = {
 		seePoll: number;
 		votePoll: number;
 	};
+	roles: Array<{
+		id: number;
+		color: string;
+		name: string;
+		scopes: string[];
+	}>
 	key: string;
 	tags: string[];
 	settings: {
@@ -103,24 +110,6 @@ export type Transaction = {
 	pool?: number | null;
 };
 
-export enum Permissions {
-	MANAGER = 5,
-	TEACHER = 4,
-	MOD = 3,
-	STUDENT = 2,
-	GUEST = 1,
-	BANNED = 0,
-}
-
-export const PermissionLevels: { [key: number]: string } = {
-	[Permissions.BANNED]: "Banned",
-	[Permissions.GUEST]: "Guest",
-	[Permissions.STUDENT]: "Student",
-	[Permissions.MOD]: "Mod",
-	[Permissions.TEACHER]: "Teacher",
-	[Permissions.MANAGER]: "Manager",
-};
-
 export type Class = {
 	id: string;
 	name: string;
@@ -146,7 +135,12 @@ export type Student = {
 	email: string;
 	displayName: string;
 	permissions: number;
+	scopes?: string[];
 	digipogs: number;
+	classRoles: Array<{
+		id: number;
+		name: string;
+	}>;
 	classPermissions: number;
 };
 
@@ -162,3 +156,133 @@ export type Poll = {
     totalResponders: number;
     totalResponses: number;
 };
+
+export const SCOPES = {
+	GLOBAL: {
+		CLASS: {
+			title: "Class",
+			actions: {
+				CREATE: { key: "global.class.create", label: "Create", description: "Create classes" },
+				DELETE: { key: "global.class.delete", label: "Delete", description: "Delete classes" },
+			},
+		},
+		USERS: {
+			title: "Users",
+			actions: {
+				MANAGE: { key: "global.users.manage", label: "Manage", description: "Manage users" },
+			},
+		},
+		DIGIPOGS: {
+			title: "Digipogs",
+			actions: {
+				AWARD: { key: "global.digipogs.award", label: "Award", description: "Award digipogs globally" },
+				TRANSFER: { key: "global.digipogs.transfer", label: "Transfer", description: "Transfer digipogs globally" },
+			},
+		},
+		POOLS: {
+			title: "Pools",
+			actions: {
+				MANAGE: { key: "global.pools.manage", label: "Manage", description: "Manage pools" },
+			},
+		},
+		SYSTEM: {
+			title: "System",
+			actions: {
+				ADMIN: { key: "global.system.admin", label: "Admin", description: "Full system administration" },
+				MODERATE: { key: "global.system.moderate", label: "Moderate", description: "Moderate system features" },
+				BLOCKED: { key: "global.system.blocked", label: "Blocked", description: "Blocked from system usage" },
+			},
+		},
+	},
+	CLASS: {
+		POLL: {
+			title: "Polls",
+			actions: {
+				READ: { key: "class.poll.read", label: "Read", description: "View and see polls" },
+				VOTE: { key: "class.poll.vote", label: "Vote", description: "Submit poll responses" },
+				CREATE: { key: "class.poll.create", label: "Create", description: "Create new polls" },
+				END: { key: "class.poll.end", label: "End", description: "End active polls" },
+				DELETE: { key: "class.poll.delete", label: "Delete", description: "Delete polls" },
+				SHARE: { key: "class.poll.share", label: "Share", description: "Share polls with others" },
+			},
+		},
+		STUDENTS: {
+			title: "Students",
+			actions: {
+				READ: { key: "class.students.read", label: "Read", description: "View student information" },
+				KICK: { key: "class.students.kick", label: "Kick", description: "Remove students from class" },
+				BAN: { key: "class.students.ban", label: "Ban", description: "Ban students from class" },
+				PERM_CHANGE: { key: "class.students.perm_change", label: "Change Permissions", description: "Modify student permissions" },
+			},
+		},
+		SESSION: {
+			title: "Session",
+			actions: {
+				START: { key: "class.session.start", label: "Start", description: "Start a class session" },
+				END: { key: "class.session.end", label: "End", description: "End a class session" },
+				RENAME: { key: "class.session.rename", label: "Rename", description: "Rename the session" },
+				SETTINGS: { key: "class.session.settings", label: "Settings", description: "Modify session settings" },
+				REGENERATE_CODE: { key: "class.session.regenerate_code", label: "Regenerate Code", description: "Generate a new join code" },
+			},
+		},
+		BREAK: {
+			title: "Break",
+			actions: {
+				REQUEST: { key: "class.break.request", label: "Request", description: "Request a break" },
+				APPROVE: { key: "class.break.approve", label: "Approve", description: "Approve break requests" },
+			},
+		},
+		HELP: {
+			title: "Help",
+			actions: {
+				REQUEST: { key: "class.help.request", label: "Request", description: "Request help" },
+				APPROVE: { key: "class.help.approve", label: "Approve", description: "Approve help requests" },
+			},
+		},
+		TIMER: {
+			title: "Timer",
+			actions: {
+				CONTROL: { key: "class.timer.control", label: "Control", description: "Control the class timer" },
+			},
+		},
+		AUXILIARY: {
+			title: "Auxiliary",
+			actions: {
+				CONTROL: { key: "class.auxiliary.control", label: "Control", description: "Control auxiliary features" },
+			},
+		},
+		GAMES: {
+			title: "Games",
+			actions: {
+				ACCESS: { key: "class.games.access", label: "Access", description: "Access classroom games" },
+			},
+		},
+		TAGS: {
+			title: "Tags",
+			actions: {
+				MANAGE: { key: "class.tags.manage", label: "Manage", description: "Create and manage tags" },
+			},
+		},
+		DIGIPOGS: {
+			title: "Digipogs",
+			actions: {
+				AWARD: { key: "class.digipogs.award", label: "Award Digipogs", description: "Award digipogs to students" },
+			},
+		},
+		LINKS: {
+			title: "Links",
+			actions: {
+				READ: { key: "class.links.read", label: "Read", description: "View class links" },
+				MANAGE: { key: "class.links.manage", label: "Manage", description: "Create and manage links" },
+			},
+		},
+	},
+} as const;
+
+type ExtractScopeKey<T> = T extends { key: infer K extends string }
+	? K
+	: T extends object
+		? { [P in keyof T]: ExtractScopeKey<T[P]> }[keyof T]
+		: never;
+
+export type ScopeKey = ExtractScopeKey<typeof SCOPES>;

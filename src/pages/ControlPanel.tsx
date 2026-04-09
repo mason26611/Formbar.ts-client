@@ -33,6 +33,7 @@ import TimerPage from "../components/ControlPanel/TimerPage";
 import { formatTime, toEpochMs } from "../GlobalFunctions";
 import { clearCurrentPoll, endPoll } from "../api/classApi";
 import { clearTimer, pauseTimer, resumeTimer } from "../api/timerApi";
+import { canAccessTeacherPanel, isLearnerStudent } from "../utils/scopeUtils";
 
 import useSound from 'use-sound'
 import alarmSFX from '../assets/sfx/alarmClock.mp3';
@@ -42,7 +43,7 @@ import joinSFX from '../assets/sfx/join.wav';
 import leaveSFX from '../assets/sfx/leave.wav';
 import removeSFX from '../assets/sfx/remove.wav';
 import tutdSFX from '../assets/sfx/TUTD.wav';
-import { Permissions, type ClassData } from "../types";
+import { type ClassData } from "../types";
 
 
 const items = [
@@ -122,8 +123,8 @@ export default function ControlPanel() {
 		function classUpdate(newClassData: ClassData) {
 
             // Get online students before and after update to compare
-            const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline") && student.classPermissions <= Permissions.STUDENT);
-            const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline") && student.classPermissions <= Permissions.STUDENT);
+        const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline") && isLearnerStudent(student, prevClassDataRef.current));
+        const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline") && isLearnerStudent(student, newClassData));
 
             const oldResponses = Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses);
             const newResponses = Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses);
@@ -226,11 +227,11 @@ export default function ControlPanel() {
 			navigate("/classes");
 		}
 
-		if (userData.classPermissions && userData.classPermissions <= 2) {
+        if (!canAccessTeacherPanel(userData, classData)) {
 			navigate("/student");
 		}
 
-	}, [userData, navigate]);
+    }, [userData, classData, navigate]);
 
     useEffect(() => {
         if (!classData?.timer?.startTime || classData.timer.startTime <= 0) {

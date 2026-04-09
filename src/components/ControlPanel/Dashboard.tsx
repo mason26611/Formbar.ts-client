@@ -20,6 +20,7 @@ import { IonIcon } from "@ionic/react";
 
 import { useTheme } from "../../main";
 import type { Student } from "../../types";
+import { getStudentClassScopeCount } from "../../utils/scopeUtils";
 
 export default function Dashboard({
 	openModalId,
@@ -93,11 +94,14 @@ export default function Dashboard({
 				break;
 			case "Permissions":
 				sorted.sort((a, b) => {
-					if (a.classPermissions === b.classPermissions) {
+                    const aScopeCount = getStudentClassScopeCount(a, classData);
+                    const bScopeCount = getStudentClassScopeCount(b, classData);
+
+                    if (aScopeCount === bScopeCount) {
 						return a.displayName.localeCompare(b.displayName);
 					}
-					if (sortDirection === "▲") return a.classPermissions > b.classPermissions ? 1 : -1;
-					else return a.classPermissions < b.classPermissions ? 1 : -1;
+                    if (sortDirection === "▲") return aScopeCount > bScopeCount ? 1 : -1;
+                    else return aScopeCount < bScopeCount ? 1 : -1;
 				});
 				break;
             case "Response Order":

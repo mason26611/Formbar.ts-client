@@ -1,7 +1,7 @@
-import { Button, Flex, InputNumber, Modal, Select, Tooltip, notification } from "antd";
+import { Button, Flex, InputNumber, Modal, Select, Tag, Tooltip, notification } from "antd";
 import { Activity, useState, useEffect } from "react";
 import { textColorForBackground } from "../GlobalFunctions";
-import { PermissionLevels, type Student } from "../types";
+import { type Student } from "../types";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useClassData } from "../main";
@@ -9,6 +9,7 @@ import { socket } from "../socket";
 
 import { awardDigipogs as awardDigipogAPICall }  from "../api/digipogApi";
 import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "../api/classApi";
+import { addRoleToStudent, removeRoleFromStudent } from "../api/rolesApi";
 
 type AccordionCategory = {
 	name: string;
@@ -259,6 +260,8 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const { classData } = useClassData();
 
 	const [awardDigipogs, setAwardDigipogs] = useState<number>(0);
+	const [studentRoleIds, setStudentRoleIds] = useState<number[]>([]);
+	const [isUpdatingRoles, setIsUpdatingRoles] = useState<boolean>(false);
 
 	const [api, contextHolder] = notification.useNotification();
     const [modal, contextHolderModal] = Modal.useModal();
@@ -279,6 +282,48 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		});
 	};
 
+	useEffect(() => {
+		setStudentRoleIds((studentData.classRoles || []).map((role) => role.id));
+	}, [studentData]);
+
+	async function handleStudentRolesChange(nextRoleIds: number[]) {
+		if (!classData) return;
+
+		const previousRoleIds = studentRoleIds;
+		const rolesToAdd = nextRoleIds.filter((id) => !previousRoleIds.includes(id));
+		const rolesToRemove = previousRoleIds.filter((id) => !nextRoleIds.includes(id));
+
+		setStudentRoleIds(nextRoleIds);
+		setIsUpdatingRoles(true);
+
+		try {
+			await Promise.all([
+				...rolesToAdd.map((roleId) =>
+					addRoleToStudent(classData.id, roleId, studentData.id),
+				),
+				...rolesToRemove.map((roleId) =>
+					removeRoleFromStudent(classData.id, roleId, studentData.id),
+				),
+			]);
+
+			studentData.classRoles = nextRoleIds
+				.map((roleId) => {
+					const classRole = classData.roles.find((role) => role.id === roleId);
+					if (!classRole) return null;
+					return {
+						id: classRole.id,
+						name: classRole.name,
+					};
+				})
+				.filter((role): role is { id: number; name: string } => role !== null);
+		} catch {
+			setStudentRoleIds(previousRoleIds);
+			showErrorNotification("Failed to update student roles.");
+		} finally {
+			setIsUpdatingRoles(false);
+		}
+	}
+
     function awardDigipogsAPI(studentId: string, amount: number) {
         
         awardDigipogAPICall({
@@ -296,6 +341,13 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
             showErrorNotification("Failed to award digipogs.");
         });        
     }
+
+	const availableRoles = classData?.roles || [];
+	const roleOptions = availableRoles.map((role) => ({
+		value: role.id,
+		label: role.name,
+		color: role.color,
+	}));
 
 	return (
         <>{contextHolder}
@@ -398,40 +450,6 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 					enabled: studentData.pollRes.textRes !== "",
 				},
 				{
-					name: "Permissions",
-					icon: IonIcons.lockClosedOutline,
-					content: (
-						<Flex
-							justify="center"
-							align="center"
-							style={{ width: "100%", height: "100%" }}
-							gap={10}
-						>
-							<Select
-								defaultValue={
-									PermissionLevels[
-										studentData.classPermissions
-									]
-								}
-								style={{ width: 120 }}
-								onChange={(e) => {
-									socket.emit(
-										"classPermChange",
-										studentData.id,
-										parseInt(e),
-									);
-								}}
-							>
-								<Select.Option value="4">Teacher</Select.Option>
-								<Select.Option value="3">Mod</Select.Option>
-								<Select.Option value="2">Student</Select.Option>
-								<Select.Option value="1">Guest</Select.Option>
-							</Select>
-						</Flex>
-					),
-					enabled: true,
-				},
-				{
 					name: "Digipogs",
 					icon: IonIcons.cashOutline,
 					content: (
@@ -461,6 +479,68 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							>
 								Award
 							</Button>
+						</Flex>
+					),
+					enabled: true,
+				},
+				{
+					name: "Roles",
+					icon: IonIcons.lockClosedOutline,
+					content: (
+						<Flex
+							justify="center"
+							align="center"
+							style={{ width: "100%", height: "100%" }}
+							gap={10}
+						>
+							<Select
+								mode="multiple"
+								showSearch
+								style={{ width: "100%", maxWidth: "420px" }}
+								placeholder="Add or remove roles"
+								value={studentRoleIds}
+								loading={isUpdatingRoles}
+								disabled={isUpdatingRoles || availableRoles.length === 0}
+								optionFilterProp="label"
+								onChange={handleStudentRolesChange}
+								options={roleOptions}
+								tagRender={(props) => {
+									const role = availableRoles.find(
+										(availableRole) => availableRole.id === Number(props.value),
+									);
+									const roleColor = role?.color || "#666666";
+									return (
+										<Tag
+											color={roleColor}
+											closable={props.closable}
+											onClose={props.onClose}
+											style={{ marginInlineEnd: 4, color: roleColor, borderColor: "transparent" }}
+											onMouseDown={(event) => {
+												event.preventDefault();
+												event.stopPropagation();
+											}}
+										>
+											{props.label}
+										</Tag>
+									);
+								}}
+								optionRender={(option) => (
+									<Flex align="center" gap={8}>
+										<span
+											style={{
+												width: 10,
+												height: 10,
+												borderRadius: "50%",
+												display: "inline-block",
+												backgroundColor: option.data.color,
+											}}
+										/>
+										<span style={{ color: option.data.color, fontWeight: 500 }}>
+											{option.data.label}
+										</span>
+									</Flex>
+								)}
+							/>
 						</Flex>
 					),
 					enabled: true,

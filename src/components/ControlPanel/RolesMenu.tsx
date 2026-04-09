@@ -1,4 +1,4 @@
-import { useClassData, useMobileDetect, useSettings } from "../../main";
+import { useClassData, useSettings } from "../../main";
 import { Button, Card, ColorPicker, Divider, Flex, Input, Menu, Switch, Typography } from "antd";
 const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
@@ -6,104 +6,17 @@ import * as IonIcons from "ionicons/icons";
 import { getClassRoles, updateRole, createRole, deleteRole } from "../../api/rolesApi";
 import { useEffect, useState } from "react";
 import { darkMode, lightMode } from "../../../themes/ThemeConfig";
+import { SCOPES } from "../../types";
 
-const SCOPE_CATEGORIES = {
-	CLASS: {
-		POLL: {
-			title: "Polls",
-			actions: {
-				READ: { key: "class.poll.read", label: "Read", description: "View and see polls" },
-				VOTE: { key: "class.poll.vote", label: "Vote", description: "Submit poll responses" },
-				CREATE: { key: "class.poll.create", label: "Create", description: "Create new polls" },
-				END: { key: "class.poll.end", label: "End", description: "End active polls" },
-				DELETE: { key: "class.poll.delete", label: "Delete", description: "Delete polls" },
-				SHARE: { key: "class.poll.share", label: "Share", description: "Share polls with others" },
-			}
-		},
-		STUDENTS: {
-			title: "Students",
-			actions: {
-				READ: { key: "class.students.read", label: "Read", description: "View student information" },
-				KICK: { key: "class.students.kick", label: "Kick", description: "Remove students from class" },
-				BAN: { key: "class.students.ban", label: "Ban", description: "Ban students from class" },
-				PERM_CHANGE: { key: "class.students.perm_change", label: "Change Permissions", description: "Modify student permissions" },
-			}
-		},
-		SESSION: {
-			title: "Session",
-			actions: {
-				START: { key: "class.session.start", label: "Start", description: "Start a class session" },
-				END: { key: "class.session.end", label: "End", description: "End a class session" },
-				RENAME: { key: "class.session.rename", label: "Rename", description: "Rename the session" },
-				SETTINGS: { key: "class.session.settings", label: "Settings", description: "Modify session settings" },
-				REGENERATE_CODE: { key: "class.session.regenerate_code", label: "Regenerate Code", description: "Generate a new join code" },
-			}
-		},
-		BREAK: {
-			title: "Break",
-			actions: {
-				REQUEST: { key: "class.break.request", label: "Request", description: "Request a break" },
-				APPROVE: { key: "class.break.approve", label: "Approve", description: "Approve break requests" },
-			}
-		},
-		HELP: {
-			title: "Help",
-			actions: {
-				REQUEST: { key: "class.help.request", label: "Request", description: "Request help" },
-				APPROVE: { key: "class.help.approve", label: "Approve", description: "Approve help requests" },
-			}
-		},
-		TIMER: {
-			title: "Timer",
-			actions: {
-				CONTROL: { key: "class.timer.control", label: "Control", description: "Control the class timer" },
-			}
-		},
-		AUXILIARY: {
-			title: "Auxiliary",
-			actions: {
-				CONTROL: { key: "class.auxiliary.control", label: "Control", description: "Control auxiliary features" },
-			}
-		},
-		GAMES: {
-			title: "Games",
-			actions: {
-				ACCESS: { key: "class.games.access", label: "Access", description: "Access classroom games" },
-			}
-		},
-		TAGS: {
-			title: "Tags",
-			actions: {
-				MANAGE: { key: "class.tags.manage", label: "Manage", description: "Create and manage tags" },
-			}
-		},
-		DIGIPOGS: {
-			title: "Digipogs",
-			actions: {
-				AWARD: { key: "class.digipogs.award", label: "Award Digipogs", description: "Award digipogs to students" },
-			}
-		},
-		LINKS: {
-			title: "Links",
-			actions: {
-				READ: { key: "class.links.read", label: "Read", description: "View class links" },
-				MANAGE: { key: "class.links.manage", label: "Manage", description: "Create and manage links" },
-			}
-		},
-	}
-};
-
-type CategoryKey = keyof typeof SCOPE_CATEGORIES.CLASS;
+type CategoryKey = keyof typeof SCOPES.CLASS;
 
 export default function RolesMenu() {
 	const {settings} = useSettings();
-    const isMobile = useMobileDetect();
 	const { classData } = useClassData();
 
 	const [roles, setRoles] = useState<any[]>([]);
 	const [originalRoles, setOriginalRoles] = useState<any[]>([]);
 	const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-	const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
 	const [editedRoleName, setEditedRoleName] = useState<string>("");
 	const [editedRoleColor, setEditedRoleColor] = useState<string>("#000000");
 
@@ -115,7 +28,6 @@ export default function RolesMenu() {
 
 	useEffect(() => {
 		const selectedRole = roles.find((r) => r.id === selectedRoleId);
-		setAllowedScopes(selectedRole?.scopes || []);
 		setEditedRoleName(selectedRole?.name || "");
 		setEditedRoleColor(selectedRole?.color || "#000000");
 	}, [selectedRoleId, roles]);
@@ -246,10 +158,10 @@ export default function RolesMenu() {
 						<Title level={4} style={{margin: 0}}>Roles</Title>
 						<Button type="primary" variant="solid" color="blue" onClick={handleCreateRole} style={{display:'flex',justifyContent:'center',alignItems:'center'}}><IonIcon icon={IonIcons.addCircle}/></Button>
 					</Flex>
-					<Menu style={{width:'100%', borderRadius: 6, background: 'none'}}>
+					<Menu style={{width:'100%', borderRadius: 6, background: 'none', overflowY: 'scroll'}}>
 						{
 							roles.map((role) => (
-								<Menu.Item key={role.id} style={{border: '2px solid red'}} onClick={() => setSelectedRoleId(role.id)}>
+								<Menu.Item key={role.id} style={{border: '2px solid red', color: role.color}} onClick={() => setSelectedRoleId(role.id)}>
 									{role.name}
 								</Menu.Item>
 							))
@@ -292,8 +204,8 @@ export default function RolesMenu() {
 							</Button>
 						</Flex>
 						{
-							(Object.keys(SCOPE_CATEGORIES.CLASS) as CategoryKey[]).map((category) => {
-								const categoryData = SCOPE_CATEGORIES.CLASS[category];
+							(Object.keys(SCOPES.CLASS) as CategoryKey[]).map((category) => {
+								const categoryData = SCOPES.CLASS[category];
 								return (
 									<div key={category} style={{marginTop: 20, width: '100%'}}>
 										<Title level={4} style={{marginBottom: 10, fontSize: 16, fontWeight: 'bolder'}}>{categoryData.title}</Title>

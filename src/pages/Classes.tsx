@@ -9,7 +9,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMe, getUserClasses } from "../api/userApi";
 import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "../api/classApi";
-import type { CurrentUserData } from "../types";
+import { SCOPES, type CurrentUserData } from "../types";
+import { canAccessTeacherPanel, hasGlobalScope } from "../utils/scopeUtils";
 
 export default function ClassesPage() {
 	const navigate = useNavigate();
@@ -31,6 +32,8 @@ export default function ClassesPage() {
 	const [selectedClass, setSelectedClass] = useState<number | null>(null);
 
 	const [createClassName, setCreateClassName] = useState<string>("");
+	const canCreateClasses = hasGlobalScope(userData, SCOPES.GLOBAL.CLASS.actions.CREATE.key);
+	const canDeleteClasses = hasGlobalScope(userData, SCOPES.GLOBAL.CLASS.actions.DELETE.key);
 
 	let cardStyle = { width: "350px", height: "230px" };
 	if (isMobileView) {
@@ -136,7 +139,7 @@ export default function ClassesPage() {
                                 level: "info",
                             });
                             setUserData(userData);
-                            if (userData.classPermissions >= 4)
+							if (canAccessTeacherPanel(userData, null))
                                 navigate("/panel");
                             else navigate("/student");
                         })
@@ -228,7 +231,7 @@ export default function ClassesPage() {
 					<Title level={isMobileView ? 3 : 1}>{!isMobileView ? "Manage Your " : ""}Classes</Title>
 					<Text style={isMobileView ? {fontSize: 20} : {}}>
 						Enter
-						{userData?.permissions && userData.permissions >= 4
+						{canCreateClasses
 							? ", create,"
 							: ""}{" "}
 						or join a class quickly
@@ -302,7 +305,7 @@ export default function ClassesPage() {
 									Enter{isMobileView ? "" : " Class"}
 								</Button>
                                 {
-                                    userData && userData.permissions >= 4 && (
+                                    userData && canDeleteClasses && (
                                         <Button
                                             type="default"
                                             color="danger"
@@ -323,15 +326,13 @@ export default function ClassesPage() {
 						loading={
 							!(
 								userData &&
-								userData.permissions &&
-								userData.permissions >= 4
+								canCreateClasses
 							)
 						}
 						hidden={
 							!(
 								userData &&
-								userData.permissions &&
-								userData.permissions >= 4
+								canCreateClasses
 							)
 						}
 					>

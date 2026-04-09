@@ -33,5 +33,5 @@ export function createRole(classId: number, body: {
 }
 
 export function addRoleToStudent(classId: number, roleId: number, studentId: string) {
-	return http(`/class/${classId}/students/${studentId}/roles/${roleId}`, "POST");
+	return http(`/class/${classId}/students/${studentId}/roles/`, "POST", {}, { roleId });
 }
