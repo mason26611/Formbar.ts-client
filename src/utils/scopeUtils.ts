@@ -31,17 +31,6 @@ export function getStudentClassScopeCount(student: Student | null | undefined, c
 	return Number(student.classPermissions ?? 0);
 }
 
-function getStudentByUser(userData: CurrentUserData | null | undefined, classData: ClassData | null | undefined): Student | null {
-	if (!userData || !classData?.students) return null;
-
-	if (classData.students[userData.id]) {
-		return classData.students[userData.id];
-	}
-
-	const students = Object.values(classData.students);
-	return students.find((student) => student.id === userData.id || student.email === userData.email) || null;
-}
-
 function fallbackHasGlobalScope(permissionLevel: number | undefined, scopeKey: ScopeKey): boolean {
 	const level = permissionLevel ?? 0;
 
@@ -80,7 +69,7 @@ function fallbackHasClassScope(classPermissionLevel: number | undefined | null, 
 export function hasGlobalScope(userData: CurrentUserData | null | undefined, scopeKey: ScopeKey): boolean {
 	if (!userData) return false;
 
-	if (userData.scopes?.includes(scopeKey)) {
+	if (userData.globalScopes?.includes(scopeKey)) {
 		return true;
 	}
 
@@ -98,21 +87,18 @@ export function hasClassScopeForStudent(student: Student | null | undefined, cla
 	return fallbackHasClassScope(student.classPermissions, scopeKey);
 }
 
-export function hasCurrentUserClassScope(userData: CurrentUserData | null | undefined, classData: ClassData | null | undefined, scopeKey: ScopeKey): boolean {
-	const student = getStudentByUser(userData, classData);
-	if (student && hasClassScopeForStudent(student, classData, scopeKey)) {
-		return true;
-	}
+export function hasCurrentUserClassScope(userData: CurrentUserData | null | undefined, scopeKey: ScopeKey): boolean {
+	if (!userData) return false;
 
-	return fallbackHasClassScope(userData?.classPermissions, scopeKey);
+	return userData.classScopes?.includes(scopeKey) ?? false;
 }
 
-export function canAccessTeacherPanel(userData: CurrentUserData | null | undefined, classData: ClassData | null | undefined): boolean {
-	return hasCurrentUserClassScope(userData, classData, SCOPES.CLASS.SESSION.actions.SETTINGS.key);
+export function canAccessTeacherPanel(userData: CurrentUserData | null | undefined): boolean {
+	return hasCurrentUserClassScope(userData, SCOPES.CLASS.SESSION.actions.SETTINGS.key);
 }
 
-export function canAccessStudentView(userData: CurrentUserData | null | undefined, classData: ClassData | null | undefined): boolean {
-	return hasCurrentUserClassScope(userData, classData, SCOPES.CLASS.POLL.actions.VOTE.key);
+export function canAccessStudentView(userData: CurrentUserData | null | undefined): boolean {
+	return hasCurrentUserClassScope(userData, SCOPES.CLASS.POLL.actions.VOTE.key);
 }
 
 export function isLearnerStudent(student: Student, classData: ClassData | null | undefined): boolean {

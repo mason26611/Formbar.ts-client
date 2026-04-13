@@ -180,9 +180,19 @@ export default function ControlPanel() {
         playLeave
     ]);
 
+	const { userData } = useUserData();
+
+	useEffect(() => {
+		if (!userData || !classData) return;
+
+		// if (canAccessStudentView(userData, classData)) {
+		// 	navigate("/student");
+		// }
+
+	}, [userData, classData]);
+
 	const { isDark } = useTheme();
 
-	const { userData } = useUserData();
 	const navigate = useNavigate();
 
 	const [currentMenu, setCurrentMenu] = useState("1");
@@ -227,7 +237,7 @@ export default function ControlPanel() {
 			navigate("/classes");
 		}
 
-        if (!canAccessTeacherPanel(userData, classData)) {
+        if (!canAccessTeacherPanel(userData)) {
 			navigate("/student");
 		}
 

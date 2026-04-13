@@ -4,7 +4,7 @@ import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
 import Log from "../debugLogger";
 
-import { isDev, useClassData, useMobileDetect, useTheme, useUserData } from "../main";
+import { isDev, useMobileDetect, useTheme, useUserData } from "../main";
 import { themeColors } from "../../themes/ThemeConfig";
 
 import { socket } from "../socket";
@@ -19,8 +19,7 @@ export default function FormbarHeader() {
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
 	const { userData, setUserData } = useUserData();
-	const { classData } = useClassData();
-	const canTeacherPanel = canAccessTeacherPanel(userData, classData);
+	const canTeacherPanel = canAccessTeacherPanel(userData);
 	const canStudentPanel = Boolean(userData?.activeClass) && !canTeacherPanel;
 	const canOpenDebug = hasGlobalScope(userData, SCOPES.GLOBAL.SYSTEM.actions.ADMIN.key);
 	const canOpenManagerPanel = hasGlobalScope(userData, SCOPES.GLOBAL.USERS.actions.MANAGE.key);

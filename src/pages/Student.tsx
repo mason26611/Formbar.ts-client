@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { toEpochMs } from "../GlobalFunctions";
 import { getMe } from "../api/userApi";
 import { submitPollResponse } from "../api/classApi";
-import { canAccessTeacherPanel } from "../utils/scopeUtils";
+import { canAccessTeacherPanel, canAccessStudentView } from "../utils/scopeUtils";
 const { Title, Text } = Typography;
 
 export default function Student() {
@@ -164,11 +164,9 @@ export default function Student() {
 			navigate("/classes");
 		}
 
-		if (canAccessTeacherPanel(userData, classData)) {
-			navigate("/panel");
-		}
-
-	}, [userData, classData, navigate]);
+				if (canAccessTeacherPanel(userData)) {
+					navigate("/panel");
+				}	}, [userData, classData, navigate]);
     
     useEffect(() => {
         if (!classData?.timer?.startTime || classData.timer.startTime <= 0) return;
@@ -279,7 +277,7 @@ export default function Student() {
 							</Flex>
 						) : null}
 
-						{classData?.poll.status ? (
+						{classData?.poll.status && canAccessStudentView(userData) ? (
 							<Flex
 								justify="center"
 								align="center"

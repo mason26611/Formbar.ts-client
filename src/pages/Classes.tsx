@@ -139,7 +139,7 @@ export default function ClassesPage() {
                                 level: "info",
                             });
                             setUserData(userData);
-							if (canAccessTeacherPanel(userData, null))
+							if (canAccessTeacherPanel(userData))
                                 navigate("/panel");
                             else navigate("/student");
                         })

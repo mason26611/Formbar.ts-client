@@ -3,6 +3,12 @@ export type CurrentUserData = {
 	activeClass: number | null;
 	break: boolean;
 	classPermissions: number | null;
+	classScopes?: string[];
+	classRoles: Array<{
+		id: number;
+		name: string;
+	}>;
+	digipogs: number;
 	displayName: string;
 	email: string;
 	help: boolean;
@@ -10,7 +16,7 @@ export type CurrentUserData = {
 	isGuest: boolean;
 	ownedPolls: any[];
 	permissions: number;
-	scopes?: string[];
+	globalScopes?: string[];
 	pogMeter: number;
 	pollRes: { buttonRes: string; textRes: string; time: number | null };
 	sharedPolls: any[];
