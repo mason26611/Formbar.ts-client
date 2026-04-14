@@ -13,7 +13,7 @@ import FormbarHeader from "../components/FormbarHeader";
 import { getAppearAnimation, useSettings } from "../main";
 import { accessToken, formbarUrl, refreshToken } from "../socket";
 import { SCOPES, type CurrentUserData } from "../types";
-import { hasGlobalScope } from "../utils/scopeUtils";
+import { currentUserHasScope } from "../utils/scopeUtils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1698,9 +1698,9 @@ function getRuntimeOperationBlocker(
 	operation: SwaggerOperation,
 	context: TestingContext,
 ): string | null {
-	const canCreateTemporaryClass = hasGlobalScope(
+	const canCreateTemporaryClass = currentUserHasScope(
 		context.me as CurrentUserData,
-		SCOPES.GLOBAL.CLASS.actions.CREATE.key,
+		'global.class.create',
 	);
 	const hasClassContext = Boolean(
 		findInPool(context.valuePool, ["classid", "roomid"]),

@@ -12,7 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { toEpochMs } from "../GlobalFunctions";
 import { getMe } from "../api/userApi";
 import { submitPollResponse } from "../api/classApi";
-import { canAccessTeacherPanel, canAccessStudentView } from "../utils/scopeUtils";
+import { currentUserHasScope } from "../utils/scopeUtils";
+import { SCOPES } from "../types";
 const { Title, Text } = Typography;
 
 export default function Student() {
@@ -99,7 +100,7 @@ export default function Student() {
 	useEffect(() => {
 		if (!initialUserData) return;
 
-		// if(initialUserData.activeClass === null) navigate('/classes');
+		if(initialUserData.activeClass === null) navigate('/classes');
 	}, [initialUserData]);
 
 	useEffect(() => {
@@ -164,9 +165,10 @@ export default function Student() {
 			navigate("/classes");
 		}
 
-				if (canAccessTeacherPanel(userData)) {
-					navigate("/panel");
-				}	}, [userData, classData, navigate]);
+		if (currentUserHasScope(userData, "class.system.admin")) {
+			navigate("/panel");
+		}
+	}, [userData, classData, navigate]);
     
     useEffect(() => {
         if (!classData?.timer?.startTime || classData.timer.startTime <= 0) return;
@@ -277,7 +279,7 @@ export default function Student() {
 							</Flex>
 						) : null}
 
-						{classData?.poll.status && canAccessStudentView(userData) ? (
+						{classData?.poll.status && currentUserHasScope(userData, 'class.poll.vote') ? (
 							<Flex
 								justify="center"
 								align="center"

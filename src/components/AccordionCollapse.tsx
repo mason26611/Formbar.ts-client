@@ -447,7 +447,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 					name: "Text Response",
 					icon: IonIcons.textOutline,
 					content: <p>{studentData.pollRes.textRes}</p>,
-					enabled: studentData.pollRes.textRes !== "",
+					enabled: studentData.pollRes.textRes && classData?.poll.allowTextResponses,
 				},
 				{
 					name: "Digipogs",
@@ -554,6 +554,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							align="center"
 							style={{ width: "100%", height: "100%" }}
 							gap={10}
+							wrap
 						>
 							{classData?.tags.map(
 								(tag, index) =>

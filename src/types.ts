@@ -201,6 +201,13 @@ export const SCOPES = {
 		},
 	},
 	CLASS: {
+        SYSTEM: {
+			title: 'System',
+			actions: {
+				ADMIN: { key: "class.system.admin", label: "Admin", description: "Overrides all other permissions." },
+				// BLOCKED: { key: "class.system.blocked", label: "Blocked", description: "Blocked from system usage" },
+			}
+        },
 		POLL: {
 			title: "Polls",
 			actions: {

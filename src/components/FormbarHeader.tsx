@@ -11,18 +11,17 @@ import { socket } from "../socket";
 import { useState } from "react";
 import SettingsModal from "./SettingsModal";
 import { leaveClassSession } from "../api/classApi";
-import { SCOPES } from "../types";
-import { canAccessTeacherPanel, hasGlobalScope } from "../utils/scopeUtils";
+import { currentUserHasScope } from "../utils/scopeUtils";
 
 export default function FormbarHeader() {
 	const { isDark } = useTheme();
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
 	const { userData, setUserData } = useUserData();
-	const canTeacherPanel = canAccessTeacherPanel(userData);
+	const canTeacherPanel = currentUserHasScope(userData, "class.system.admin");
 	const canStudentPanel = Boolean(userData?.activeClass) && !canTeacherPanel;
-	const canOpenDebug = hasGlobalScope(userData, SCOPES.GLOBAL.SYSTEM.actions.ADMIN.key);
-	const canOpenManagerPanel = hasGlobalScope(userData, SCOPES.GLOBAL.USERS.actions.MANAGE.key);
+	const canOpenDebug = currentUserHasScope(userData, 'global.system.admin');
+	const canOpenManagerPanel = currentUserHasScope(userData, 'global.users.manage');
 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [leaveClassModalOpen, setLeaveClassModalOpen] = useState(false);

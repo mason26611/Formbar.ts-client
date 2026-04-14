@@ -33,7 +33,6 @@ import TimerPage from "../components/ControlPanel/TimerPage";
 import { formatTime, toEpochMs } from "../GlobalFunctions";
 import { clearCurrentPoll, endPoll } from "../api/classApi";
 import { clearTimer, pauseTimer, resumeTimer } from "../api/timerApi";
-import { canAccessTeacherPanel, isLearnerStudent } from "../utils/scopeUtils";
 
 import useSound from 'use-sound'
 import alarmSFX from '../assets/sfx/alarmClock.mp3';
@@ -44,6 +43,8 @@ import leaveSFX from '../assets/sfx/leave.wav';
 import removeSFX from '../assets/sfx/remove.wav';
 import tutdSFX from '../assets/sfx/TUTD.wav';
 import { type ClassData } from "../types";
+import { currentUserHasScope } from "../utils/scopeUtils";
+import { getMe } from "../api/userApi";
 
 
 const items = [
@@ -116,15 +117,53 @@ export default function ControlPanel() {
     const [playRemove] = useSound(removeSFX, { volume: settings.general.sfxVolume / 100 });
     const [playTUTD] = useSound(tutdSFX, { volume: settings.general.sfxVolume / 100 });
 
+	const { setUserData, userData } = useUserData();
+
+	const { isDark } = useTheme();
+
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (!userData) return;
+
+		if (!userData.activeClass) {
+			navigate("/classes");
+		}
+
+        if (!currentUserHasScope(userData, "class.system.admin")) {
+			navigate("/student");
+		}
+
+    }, [userData, classData, navigate]);
+
 
 	useEffect(() => {
 		if (!socket) return; // Don't set up listener if socket isn't ready
 
 		function classUpdate(newClassData: ClassData) {
+			getMe()
+				.then((response) => {
+					const { data } = response;
+					Log({
+						message: "User data fetched successfully.",
+						data,
+						level: "info",
+					});
+					setUserData(data);
+				})
+				.catch((err) => {
+					Log({
+						message: "Error fetching user data:",
+						data: err,
+						level: "error",
+					});
+				});
+
+			if(!newClassData.students) return;
 
             // Get online students before and after update to compare
-        const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline") && isLearnerStudent(student, prevClassDataRef.current));
-        const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline") && isLearnerStudent(student, newClassData));
+			const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline"));
+			const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline"));
 
             const oldResponses = Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses);
             const newResponses = Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses);
@@ -160,7 +199,7 @@ export default function ControlPanel() {
 			Log({
 				message: "Total Voters: " + newClassData.poll.totalResponders,
 				level: "info",
-			});
+			});	
 		}
 
 		socket.on("classUpdate", classUpdate);
@@ -179,21 +218,6 @@ export default function ControlPanel() {
         playJoin,
         playLeave
     ]);
-
-	const { userData } = useUserData();
-
-	useEffect(() => {
-		if (!userData || !classData) return;
-
-		// if (canAccessStudentView(userData, classData)) {
-		// 	navigate("/student");
-		// }
-
-	}, [userData, classData]);
-
-	const { isDark } = useTheme();
-
-	const navigate = useNavigate();
 
 	const [currentMenu, setCurrentMenu] = useState("1");
 	const [menuItems, setMenuItems] = useState(items);
@@ -229,19 +253,6 @@ export default function ControlPanel() {
 		});
 		setMenuItems(updatedItems);
 	}
-
-	useEffect(() => {
-		if (!userData) return;
-
-		if (!userData.activeClass) {
-			navigate("/classes");
-		}
-
-        if (!canAccessTeacherPanel(userData)) {
-			navigate("/student");
-		}
-
-    }, [userData, classData, navigate]);
 
     useEffect(() => {
         if (!classData?.timer?.startTime || classData.timer.startTime <= 0) {

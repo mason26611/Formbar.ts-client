@@ -110,7 +110,7 @@ export default function PollModal({
 						}}
 					>
 						{readOnly ? (
-							<Text strong>
+							<Text strong style={{ color: textColorForBackground(answer.color)}}>
 								{answer.answer}
 								{answer.responses !== undefined &&
 									` - ${answer.responses} vote${answer.responses !== 1 ? "s" : ""}`}

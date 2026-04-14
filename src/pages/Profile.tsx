@@ -13,7 +13,7 @@ import {
 	Modal,
     Space,
 } from "antd";
-const { Text, Link } = Typography;
+const { Title, Text, Link } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useEffect, useState } from "react";
@@ -277,67 +277,36 @@ export default function Profile() {
 			{contextHolder}
 			<FormbarHeader />
 
+			{
+				Number(profileProps["Pog Meter"]) > 0 &&(
+					<div style={{
+						position: 'fixed',
+						bottom: -10,
+						width: '100%',
+						height: `calc(${Number(profileProps["Pog Meter"]) / 100 * 88}% + 10px)`,
+						animation: '1s pogMeterBop forwards infinite',
+						background: 'linear-gradient(180deg, rgba(16, 143, 233, 0.5) 0%, rgba(170, 104, 208, 0.5) 100%)',
+						pointerEvents: 'none',
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'start',
+						justifyContent: 'end',
+					}}>
+						<Title
+							style={{marginLeft: '20px', fontStyle: 'italic', opacity: 0.5, color: settings.appearance.theme == 'dark' ? 'black' : 'white'}}
+						>Pog Meter</Title>
+						<div className="pogMeterWave"
+							style={{height:'50px'}}
+						></div>
+					</div>
+				)
+			}
+
 			<Flex
 				align="center"
 				justify="center"
 				style={{ padding: "20px", height: "100%", width: "100%" }}
 			>
-				{!error && (
-					<Card
-						style={{
-							width: "300px",
-							position: "absolute",
-							top: "80px",
-							left: "50%",
-							transform: "translateX(-50%)",
-						}}
-						loading={profileProps["Pog Meter"] === undefined}
-					>
-						{profileProps["Pog Meter"] !== undefined && (
-							<Flex
-								vertical
-								gap={10}
-								style={{ textAlign: "center" as "center" }}
-							>
-								<strong>Pog Meter:</strong>
-								<div style={infoStyle}>
-									<Tooltip
-                                        mouseEnterDelay={0.5}
-										title={`${profileProps["Pog Meter"]}%`}
-										placement="top"
-										color="#aa68d0"
-									>
-										<Progress
-											percent={
-												profileProps[
-													"Pog Meter"
-												] as number
-											}
-											strokeColor={{
-												"0%": "#108ee9",
-												"100%": "#aa68d0",
-											}}
-											size={["", 40]}
-											styles={{
-												rail: {
-													borderRadius: "10px",
-													padding: "3px",
-												},
-												track: {
-													position: "relative",
-													height: "100%",
-													borderRadius: "7px",
-												},
-											}}
-											showInfo={false}
-										/>
-									</Tooltip>
-								</div>
-							</Flex>
-						)}
-					</Card>
-				)}
-
 				<Card
 					style={{ margin: "20px", width: "600px" }}
 					loading={error === null && !profileProps["Display Name"]}

@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { getMe, getUserClasses } from "../api/userApi";
 import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "../api/classApi";
 import { SCOPES, type CurrentUserData } from "../types";
-import { canAccessTeacherPanel, hasGlobalScope } from "../utils/scopeUtils";
+import { currentUserHasScope } from "../utils/scopeUtils";
 
 export default function ClassesPage() {
 	const navigate = useNavigate();
@@ -32,8 +32,8 @@ export default function ClassesPage() {
 	const [selectedClass, setSelectedClass] = useState<number | null>(null);
 
 	const [createClassName, setCreateClassName] = useState<string>("");
-	const canCreateClasses = hasGlobalScope(userData, SCOPES.GLOBAL.CLASS.actions.CREATE.key);
-	const canDeleteClasses = hasGlobalScope(userData, SCOPES.GLOBAL.CLASS.actions.DELETE.key);
+	const canCreateClasses = currentUserHasScope(userData, 'global.class.create');
+	const canDeleteClasses = currentUserHasScope(userData, 'global.class.delete');
 
 	let cardStyle = { width: "350px", height: "230px" };
 	if (isMobileView) {
@@ -139,7 +139,7 @@ export default function ClassesPage() {
                                 level: "info",
                             });
                             setUserData(userData);
-							if (canAccessTeacherPanel(userData))
+							if (currentUserHasScope(userData, 'class.system.admin'))
                                 navigate("/panel");
                             else navigate("/student");
                         })
@@ -305,7 +305,7 @@ export default function ClassesPage() {
 									Enter{isMobileView ? "" : " Class"}
 								</Button>
                                 {
-                                    userData && canDeleteClasses && (
+                                    userData && currentUserHasScope(userData, 'global.class.delete') && (
                                         <Button
                                             type="default"
                                             color="danger"
@@ -326,13 +326,13 @@ export default function ClassesPage() {
 						loading={
 							!(
 								userData &&
-								canCreateClasses
+								currentUserHasScope(userData, 'global.class.create')
 							)
 						}
 						hidden={
 							!(
 								userData &&
-								canCreateClasses
+								currentUserHasScope(userData, 'global.class.create')
 							)
 						}
 					>

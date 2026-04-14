@@ -1,5 +1,5 @@
 import { useClassData, useSettings } from "../../main";
-import { Button, Card, ColorPicker, Divider, Flex, Input, Menu, Switch, Typography } from "antd";
+import { Button, Card, ColorPicker, Divider, Flex, Input, List, Switch, Typography } from "antd";
 const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
@@ -7,8 +7,91 @@ import { getClassRoles, updateRole, createRole, deleteRole } from "../../api/rol
 import { useEffect, useState } from "react";
 import { darkMode, lightMode } from "../../../themes/ThemeConfig";
 import { SCOPES } from "../../types";
+import {
+	DndContext,
+	closestCenter,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+	type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	verticalListSortingStrategy,
+	useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 type CategoryKey = keyof typeof SCOPES.CLASS;
+
+interface SortableRoleItemProps {
+	role: any;
+	isSelected: boolean;
+	onSelect: (id: number) => void;
+}
+
+function SortableRoleItem({ role, isSelected, onSelect }: SortableRoleItemProps) {
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging,
+	} = useSortable({ id: role.id });
+
+	const style = {
+		padding: 0,
+		transform: CSS.Transform.toString(transform),
+		transition,
+		opacity: isDragging ? 0.5 : 1,
+	};
+
+	return (
+		<List.Item
+			ref={setNodeRef}
+			style={style}
+			onClick={() => onSelect(role.id)}
+			className="sortable-role-item"
+		>
+			<Flex align="center" gap={8} style={{ width: "100%", cursor: "pointer" }}>
+				<span
+					style={{
+						padding: "8px",
+						flex: 1,
+						backgroundColor: isSelected ? "rgba(0, 0, 0, 0.1)" : "transparent",
+						borderLeft: isSelected ? `3px solid ${role.color}` : "3px solid transparent",
+						borderRadius: "4px",
+						color: role.color,
+						fontWeight: isSelected ? 600 : 400,
+						transition: "all 0.2s ease",
+						display: 'flex',
+						justifyContent: 'start',
+						alignItems: 'center'
+					}}
+				>
+					<div
+						{...attributes}
+						{...listeners}
+						style={{
+							padding: "4px 8px",
+							cursor: "grab",
+							display: "inline-flex",
+							alignItems: "center",
+						}}
+					>
+						<IonIcon icon={IonIcons.reorderFour} style={{ fontSize: 18 }} />
+					</div>
+					{role.name}
+				</span>
+			</Flex>
+		</List.Item>
+	);
+}
 
 export default function RolesMenu() {
 	const {settings} = useSettings();
@@ -19,6 +102,17 @@ export default function RolesMenu() {
 	const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
 	const [editedRoleName, setEditedRoleName] = useState<string>("");
 	const [editedRoleColor, setEditedRoleColor] = useState<string>("#000000");
+
+	const sensors = useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: {
+				distance: 8,
+			},
+		}),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		})
+	);
 
 	useEffect(() => {
 		if(!classData) return;
@@ -150,6 +244,21 @@ export default function RolesMenu() {
 		setSelectedRoleId(null);
 	}
 
+	function handleDragEnd(event: DragEndEvent) {
+		const { active, over } = event;
+
+		if (!over) return;
+
+		if (active.id !== over.id) {
+			setRoles((prevRoles) => {
+				const oldIndex = prevRoles.findIndex((r) => r.id === active.id);
+				const newIndex = prevRoles.findIndex((r) => r.id === over.id);
+
+				return arrayMove(prevRoles, oldIndex, newIndex);
+			});
+		}
+	}
+
 	return (
 		<>
 			<Flex style={{width: '100%', height: '100%'}} gap={10}>
@@ -158,15 +267,30 @@ export default function RolesMenu() {
 						<Title level={4} style={{margin: 0}}>Roles</Title>
 						<Button type="primary" variant="solid" color="blue" onClick={handleCreateRole} style={{display:'flex',justifyContent:'center',alignItems:'center'}}><IonIcon icon={IonIcons.addCircle}/></Button>
 					</Flex>
-					<Menu style={{width:'100%', borderRadius: 6, background: 'none', overflowY: 'scroll'}}>
-						{
-							roles.map((role) => (
-								<Menu.Item key={role.id} style={{border: '2px solid red', color: role.color}} onClick={() => setSelectedRoleId(role.id)}>
-									{role.name}
-								</Menu.Item>
-							))
-						}
-					</Menu>
+					<DndContext
+						sensors={sensors}
+						collisionDetection={closestCenter}
+						onDragEnd={handleDragEnd}
+						modifiers={[restrictToVerticalAxis]}
+					>
+						<SortableContext
+							items={roles.map((r) => r.id)}
+							strategy={verticalListSortingStrategy}
+						>
+							<List
+								style={{width:'100%', borderRadius: 6, background: 'none', paddingInline: 0, overflowY: 'scroll', overflowX: 'hidden', flex: 1}}
+								dataSource={roles}
+								renderItem={(role) => (
+									<SortableRoleItem
+										key={role.id}
+										role={role}
+										isSelected={selectedRoleId === role.id}
+										onSelect={setSelectedRoleId}
+									/>
+								)}
+							/>
+						</SortableContext>
+					</DndContext>
 				</Flex>
 				<Card style={{flex:"1 1 auto", display: 'flex', flexDirection: 'column'}} styles={{body:{height:'100%', display: 'flex', flexDirection: 'column'}}}>
 					<Flex vertical justify="start" align="center" style={{height:'100%', overflowY:'auto', flex: 1}}>
