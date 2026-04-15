@@ -604,7 +604,6 @@ export default function ControlPanel() {
 
 				<div
 					style={{
-						padding: 20,
 						height: "100%",
 						width: isMobileDevice ? "calc(100% - 80px)" : "calc(100% - 250px)",
 					}}

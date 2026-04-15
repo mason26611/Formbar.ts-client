@@ -139,7 +139,7 @@ export default function Statistics() {
 
 	return (
 		<>
-			<Flex style={{height: '100%', maxHeight: '100%'}} vertical justify="start" align="center" gap={20}>
+			<Flex style={{height: '100%', maxHeight: '100%', padding: 20, paddingBottom: 0}} vertical justify="start" align="center" gap={20}>
 				<Title level={isMobile ? 3 : 1} style={{ marginBottom: 0, flexShrink: 0 }}>Statistics</Title>
 				<Flex gap={20} wrap="wrap" justify="center" align="center" style={{flex: '1 1 0', overflowY:'auto', width: '100%', paddingBottom: '20px'}}>
                     {statistics.map((card, cardIndex) => (

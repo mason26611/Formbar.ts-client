@@ -13,6 +13,7 @@ import { Testing } from "./pages/Testing.tsx";
 import { Debug } from "./pages/Debug.tsx";
 import PinResetPage from "./pages/PinReset.tsx";
 import EmailVerifyPage from "./pages/EmailVerify.tsx";
+import AuthorizeApp from "./pages/oauthAuthorizeApp.tsx";
 type Page = {
 	pageName: string;
 	routePath: string;
@@ -107,6 +108,11 @@ const pages: Page[] = [
         pageName: "Classes",
         routePath: "/joinClass",
         page: ClassesPage,
+    },
+    {
+        pageName: "Authorize App",
+        routePath: "/oauth/authorize",
+        page: AuthorizeApp,
     }
 ];
 

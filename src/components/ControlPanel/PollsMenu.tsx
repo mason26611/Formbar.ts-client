@@ -177,15 +177,15 @@ export default function PollsMenu({
 
 	return (
         <>{contextHolder}
-		<Flex align="center" justify="space-between" gap={40} style={{ height: "100%" }} vertical={isMobile}>
-			<Flex vertical align="center" justify="start" style={{ height: isMobile ? "min-content" : "100%" }}>
+		<Flex align="center" justify="space-between" gap={30} style={{ height: "100%", padding: 20, paddingBottom: 0 }} vertical={isMobile}>
+			<Flex vertical align="center" justify="start" style={{ height: isMobile ? "min-content" : "100%", width: isMobile ? '100%' : '300px' }}>
 				<Title level={isMobile ? 3 : 2}>Default Polls</Title>
 				{defaultPolls.map((poll) => {
 					return (
                         <>
                             <div
                                 key={poll.id}
-                                style={{ marginTop: "10px", width: "300px" }}
+                                style={{ marginTop: "10px", width: "100%" }}
                             >
                                 <Button
                                     type="primary"
@@ -228,7 +228,7 @@ export default function PollsMenu({
 					);
 				})}
 			</Flex>
-			<Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1, ...(isMobile ? {
+			<Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1, width: '100%', paddingBottom: 20, ...(isMobile ? {
                 borderTop: `2px solid ${isDark ? '#0002' : '#fff2'}`, paddingTop: "20px", overflowY:'scroll'} : {borderLeft: `2px solid ${isDark ? '#0002' : '#fff2'}`, paddingLeft: "20px", paddingRight: "20px",overflowY:'scroll'}) }}>
 				<Title level={isMobile ? 3 : 2}>Previous Polls</Title>
 			{isPreviousPollsLoading ? (
