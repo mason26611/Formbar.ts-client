@@ -133,7 +133,7 @@ export default function PollsEditorMenu() {
 
     return (
         <>{contextHolder}
-        <Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1 }}>
+        <Flex vertical align="center" justify="start" style={{ height: "100%", flex: 1, padding: 20, paddingBottom: 0 }}>
             <Title level={isMobile ? 3 : 2}>Poll Editor</Title>
             
             <Flex gap={20} vertical={isMobile} style={isMobile ? {width: '100%'} : {}}>

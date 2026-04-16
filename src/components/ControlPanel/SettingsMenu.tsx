@@ -154,7 +154,7 @@ export default function SettingsMenu() {
         {contextHolderModal}
 			<Flex
 				gap={50}
-				style={{ height: "100%", width: "100%", overflowY: "auto" }}
+				style={{ height: "100%", width: "100%", overflowY: "auto", padding: 20, paddingBottom: 0 }}
 			>
 				<Flex
 					vertical

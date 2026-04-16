@@ -36,5 +36,5 @@ export function currentUserHasScope(userData: CurrentUserData | null | undefined
 	const isGlobalScope = userData.globalScopes?.includes(scopeKey);
 	const isClassScope = userData.classScopes?.includes(scopeKey);
 
-	return isClassScope ?? isGlobalScope ?? false;
+	return (isClassScope || isGlobalScope) ?? false;
 }

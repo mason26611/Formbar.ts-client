@@ -1,4 +1,4 @@
-import { useClassData, useSettings } from "../../main";
+import { isMobile, useClassData, useMobileDetect, useSettings } from "../../main";
 import { Button, Card, ColorPicker, Divider, Flex, Input, List, Switch, Typography } from "antd";
 const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
@@ -94,6 +94,7 @@ function SortableRoleItem({ role, isSelected, onSelect }: SortableRoleItemProps)
 }
 
 export default function RolesMenu() {
+	const isMobile = useMobileDetect();
 	const {settings} = useSettings();
 	const { classData } = useClassData();
 
@@ -261,8 +262,8 @@ export default function RolesMenu() {
 
 	return (
 		<>
-			<Flex style={{width: '100%', height: '100%'}} gap={10}>
-				<Flex vertical style={{width:'300px', borderRadius: 6, background: settings.appearance.theme === 'dark' ? darkMode.components.Card.colorBgContainer : lightMode.components.Card.colorBgContainer, padding: '15px 0'}} gap={10}>
+			<Flex style={{width: '100%', height: '100%', padding: 20, overflow:'scroll'}} gap={10} vertical={isMobile}>
+				<Flex vertical style={{width:isMobile ? '100%' : '300px', borderRadius: 6, background: settings.appearance.theme === 'dark' ? darkMode.components.Card.colorBgContainer : lightMode.components.Card.colorBgContainer, padding: '15px 0'}} gap={10}>
 					<Flex align="center" justify="space-between" style={{padding: '0 15px'}}>
 						<Title level={4} style={{margin: 0}}>Roles</Title>
 						<Button type="primary" variant="solid" color="blue" onClick={handleCreateRole} style={{display:'flex',justifyContent:'center',alignItems:'center'}}><IonIcon icon={IonIcons.addCircle}/></Button>

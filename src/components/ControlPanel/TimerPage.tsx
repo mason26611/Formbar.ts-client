@@ -118,7 +118,7 @@ export default function TimerPage() {
         }
     }
     return (
-        <>
+        <Flex style={{padding: 20, paddingBottom: 0}} vertical>
             <Title style={{ marginBottom: "10px" }} level={isMobile ? 3 : 1}>Timers</Title>
             <Flex gap={20} vertical={isMobile}>
                 <Row gutter={isMobile ? [8, 0] : [16, 16]} style={{width: '100%', marginInline: isMobile ? 0 : 'auto'}}>
@@ -179,6 +179,6 @@ export default function TimerPage() {
                     </Card>
                 </Flex>
             </Flex>
-        </>
+        </Flex>
     )
 }
