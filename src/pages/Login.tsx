@@ -423,6 +423,26 @@ export default function LoginPage() {
 							</Button>
 						</>
 					)}
+
+					{oidcProviders?.includes("microsoft") && (
+						<>
+							<Button
+								style={{ width: "100%" }}
+								icon={
+									<img 
+										src="https://www.microsoft.com/favicon.ico" 
+										alt="Microsoft" 
+										style={{ width: 16, height: 16, verticalAlign: "middle" }} 
+									/>
+								}
+								onClick={() => {
+									window.location.href = `${formbarUrl}/api/v1/auth/oidc/microsoft?origin=${encodeURIComponent(window.location.href)}`;
+								}}
+							>
+								Sign in with Microsoft
+							</Button>
+						</>
+					)}
 				</Flex>
 			</Flex>
 		</>
