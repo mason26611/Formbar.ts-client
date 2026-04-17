@@ -158,37 +158,46 @@ export default function RolesMenu() {
 			(role) => !originalRoles.find((r) => r.id === role.id)
 		);
 
-		// Find updated roles (in both but with changes)
-		const updatedRoles = roles.filter((role) => {
-			const original = originalRoles.find((r) => r.id === role.id);
-			return original && JSON.stringify(original) !== JSON.stringify(role);
-		});
-
 		// Delete roles
 		deletedRoles.forEach((role) => {
 			savePromises.push(deleteRole(classData.id, role.id));
 		});
 
 		// Create new roles
-		newRoles.forEach((role) => {
+		newRoles.forEach((role, index) => {
 			savePromises.push(
 				createRole(classData.id, {
 					name: role.name,
 					scopes: role.scopes,
 					color: role.color,
+					orderIndex: index,
 				})
 			);
 		});
 
-		// Update existing roles
-		updatedRoles.forEach((role) => {
-			savePromises.push(
-				updateRole(classData.id, role.id, {
-					name: role.name,
-					scopes: role.scopes,
-					color: role.color,
-				})
-			);
+		// Update existing roles (with orderIndex)
+		roles.forEach((role, index) => {
+			const original = originalRoles.find((r) => r.id === role.id);
+			if (original && JSON.stringify(original) !== JSON.stringify(role)) {
+				savePromises.push(
+					updateRole(classData.id, role.id, {
+						name: role.name,
+						scopes: role.scopes,
+						color: role.color,
+						orderIndex: index,
+					})
+				);
+			} else if (original && original !== role) {
+				// Even if only order changed, update with new orderIndex
+				savePromises.push(
+					updateRole(classData.id, role.id, {
+						name: role.name,
+						scopes: role.scopes,
+						color: role.color,
+						orderIndex: index,
+					})
+				);
+			}
 		});
 
 		Promise.all(savePromises)

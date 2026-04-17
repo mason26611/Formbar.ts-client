@@ -69,7 +69,7 @@ export type ClassData = {
 		votePoll: number;
 	};
 	roles: Array<{
-		id: number;
+		id: string;
 		color: string;
 		name: string;
 		scopes: string[];
@@ -144,7 +144,7 @@ export type Student = {
 	scopes?: string[];
 	digipogs: number;
 	classRoles: Array<{
-		id: number;
+		id: string;
 		name: string;
 	}>;
 	classPermissions: number;

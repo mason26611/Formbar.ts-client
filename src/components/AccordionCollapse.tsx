@@ -262,7 +262,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const { userData } = useUserData();
 
 	const [awardDigipogs, setAwardDigipogs] = useState<number>(0);
-	const [studentRoleIds, setStudentRoleIds] = useState<number[]>([]);
+	const [studentRoleIds, setStudentRoleIds] = useState<string[]>([]);
 	const [isUpdatingRoles, setIsUpdatingRoles] = useState<boolean>(false);
 
 	const [api, contextHolder] = notification.useNotification();
@@ -288,7 +288,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		setStudentRoleIds((studentData.classRoles || []).map((role) => role.id));
 	}, [studentData]);
 
-	async function handleStudentRolesChange(nextRoleIds: number[]) {
+	async function handleStudentRolesChange(nextRoleIds: string[]) {
 		if (!classData) return;
 
 		const previousRoleIds = studentRoleIds;
@@ -317,7 +317,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 						name: classRole.name,
 					};
 				})
-				.filter((role): role is { id: number; name: string } => role !== null);
+				.filter((role): role is { id: string; name: string } => role !== null);
 		} catch {
 			setStudentRoleIds(previousRoleIds);
 			showErrorNotification("Failed to update student roles.");
@@ -346,7 +346,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 
 	const availableRoles = classData?.roles || [];
 	const roleOptions = availableRoles.map((role) => ({
-		value: role.id,
+		value: Number(role.id),
 		label: role.name,
 		color: role.color,
 	}));
@@ -514,14 +514,12 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								options={roleOptions}
 								tagRender={(props) => {
 									const role = availableRoles.find(
-										(availableRole) => availableRole.id === Number(props.value),
+										(availableRole) => availableRole.id === String(props.value),
 									);
 									const roleColor = role?.color || "#666666";
 									return (
 										<Tag
 											color={roleColor}
-											closable={props.closable}
-											onClose={props.onClose}
 											style={{ marginInlineEnd: 4, color: roleColor, borderColor: "transparent" }}
 											onMouseDown={(event) => {
 												event.preventDefault();

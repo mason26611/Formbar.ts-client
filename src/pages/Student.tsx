@@ -231,7 +231,7 @@ export default function Student() {
 				{classData?.poll.prompt}
 			</Title>
 
-			{userData?.break !== true ? (
+			{userData?.break !== true || currentUserHasScope(userData, 'class.poll.read') ? (
 				<>
 					<Flex
 						style={

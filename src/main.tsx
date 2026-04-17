@@ -519,6 +519,7 @@ const AppContent = () => {
 				message: "All auth attempts failed – clearing tokens and redirecting to login",
 				level: "warn",
 			});
+			/* Comment these to fix reload bug */
 			clearAuthTokens();
 			sessionStorage.removeItem("formbarLoginCreds");
 			setIsConnected(true); // dismiss the loading screen
