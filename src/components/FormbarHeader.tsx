@@ -18,7 +18,7 @@ export default function FormbarHeader() {
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
 	const { userData, setUserData } = useUserData();
-	const canTeacherPanel = currentUserHasScope(userData, "class.system.admin");
+	const canTeacherPanel = currentUserHasScope(userData, "class.system.panel_access");
 	const canStudentPanel = Boolean(userData?.activeClass) && !canTeacherPanel;
 	const canOpenDebug = currentUserHasScope(userData, 'global.system.admin');
 	const canOpenManagerPanel = currentUserHasScope(userData, 'global.users.manage');

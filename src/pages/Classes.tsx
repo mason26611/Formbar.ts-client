@@ -139,7 +139,7 @@ export default function ClassesPage() {
                                 level: "info",
                             });
                             setUserData(userData);
-							if (currentUserHasScope(userData, 'class.system.admin'))
+							if (currentUserHasScope(userData, 'class.system.panel_access'))
                                 navigate("/panel");
                             else navigate("/student");
                         })

@@ -32,9 +32,20 @@ export function getStudentClassScopeCount(student: Student | null | undefined, c
 
 export function currentUserHasScope(userData: CurrentUserData | null | undefined, scopeKey: ScopeKey): boolean {
 	if (!userData) return false;
+	if (userData.globalScopes?.includes("global.system.admin")) return true; // Admin override for all scopes.
 
 	const isGlobalScope = userData.globalScopes?.includes(scopeKey);
 	const isClassScope = userData.classScopes?.includes(scopeKey);
 
 	return (isClassScope || isGlobalScope) ?? false;
+}
+
+export function userHasAllScopes(userData: CurrentUserData | null | undefined, scopeKeys: ScopeKey[]): boolean {
+	if (!userData) return false;
+	return scopeKeys.every((scopeKey) => currentUserHasScope(userData, scopeKey));
+}
+
+export function userHasAnyScope(userData: CurrentUserData | null | undefined, scopeKeys: ScopeKey[]): boolean {
+	if (!userData) return false;
+	return scopeKeys.some((scopeKey) => currentUserHasScope(userData, scopeKey));
 }

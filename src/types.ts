@@ -205,6 +205,7 @@ export const SCOPES = {
 			title: 'System',
 			actions: {
 				ADMIN: { key: "class.system.admin", label: "Admin", description: "Overrides all other permissions." },
+				PANEL_ACCESS: { key: "class.system.panel_access", label: "Panel Access", description: "Access to the teacher control panel." },
 				// BLOCKED: { key: "class.system.blocked", label: "Blocked", description: "Blocked from system usage" },
 			}
         },
@@ -217,6 +218,14 @@ export const SCOPES = {
 				END: { key: "class.poll.end", label: "End", description: "End active polls" },
 				DELETE: { key: "class.poll.delete", label: "Delete", description: "Delete polls" },
 				SHARE: { key: "class.poll.share", label: "Share", description: "Share polls with others" },
+			},
+		},
+		ROLES: {
+			title: "Roles",
+			actions: {
+				ASSIGN: { key: "class.roles.assign", label: "Assign", description: "Assign roles to students" },
+				READ: { key: "class.roles.read", label: "Read", description: "View roles and their permissions" },
+				MANAGE: { key: "class.roles.manage", label: "Manage", description: "Create and manage roles" },
 			},
 		},
 		STUDENTS: {

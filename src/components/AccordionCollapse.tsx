@@ -4,12 +4,13 @@ import { textColorForBackground } from "../GlobalFunctions";
 import { type Student } from "../types";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useClassData } from "../main";
+import { useClassData, useUserData } from "../main";
 import { socket } from "../socket";
 
 import { awardDigipogs as awardDigipogAPICall }  from "../api/digipogApi";
 import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "../api/classApi";
 import { addRoleToStudent, removeRoleFromStudent } from "../api/rolesApi";
+import { currentUserHasScope } from "../utils/scopeUtils";
 
 type AccordionCategory = {
 	name: string;
@@ -258,6 +259,7 @@ export default function AccordionCollapse({
 
 export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const { classData } = useClassData();
+	const { userData } = useUserData();
 
 	const [awardDigipogs, setAwardDigipogs] = useState<number>(0);
 	const [studentRoleIds, setStudentRoleIds] = useState<number[]>([]);
@@ -348,6 +350,12 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		label: role.name,
 		color: role.color,
 	}));
+
+	const canAssignRoles = currentUserHasScope(userData, "class.roles.assign");
+	const canAssignTags = currentUserHasScope(userData, "class.tags.manage");
+
+	const canKick = currentUserHasScope(userData, "class.students.kick");
+	const canBan = currentUserHasScope(userData, "class.students.ban");
 
 	return (
         <>{contextHolder}
@@ -543,7 +551,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							/>
 						</Flex>
 					),
-					enabled: true,
+					enabled: canAssignRoles,
 				},
 				{
 					name: "Tags",
@@ -589,7 +597,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							)}
 						</Flex>
 					),
-					enabled: true,
+					enabled: canAssignTags,
 				},
 				{
 					name: "Miscellaneous",
@@ -606,6 +614,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								color="red"
 								style={{ width: "120px" }}
                                 onClick={() => {
+									if(!canBan) return;
                                     modal.warning({
                                         title: "Ban User",
                                         content: "Are you sure you want to ban this user?",
@@ -616,6 +625,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
                                         }
                                     });
                                 }}
+								disabled={!canBan}
 							>
 								Ban User
 							</Button>
@@ -623,6 +633,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								variant="solid"
 								color="red"
 								style={{ width: "120px" }}
+								disabled={!canKick}
 							>
 								Kick User
 							</Button>

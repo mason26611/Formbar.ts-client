@@ -165,7 +165,7 @@ export default function Student() {
 			navigate("/classes");
 		}
 
-		if (currentUserHasScope(userData, "class.system.admin")) {
+		if (currentUserHasScope(userData, "class.system.panel_access")) {
 			navigate("/panel");
 		}
 	}, [userData, classData, navigate]);
