@@ -283,7 +283,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	};
 
 	useEffect(() => {
-		setStudentRoleIds((studentData.classRoles || []).map((role) => role.id));
+		setStudentRoleIds((studentData.roles?.class || []).map((role) => role.id));
 	}, [studentData]);
 
 	async function handleStudentRolesChange(nextRoleIds: number[]) {
@@ -306,7 +306,8 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 				),
 			]);
 
-			studentData.classRoles = nextRoleIds
+			studentData.roles = studentData.roles || { global: [], class: [] };
+			studentData.roles.class = nextRoleIds
 				.map((roleId) => {
 					const classRole = classData.roles.find((role) => role.id === roleId);
 					if (!classRole) return null;
