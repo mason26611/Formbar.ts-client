@@ -4,12 +4,13 @@ import { textColorForBackground } from "../GlobalFunctions";
 import { type Student } from "../types";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useClassData } from "../main";
+import { useClassData, useUserData } from "../main";
 import { socket } from "../socket";
 
 import { awardDigipogs as awardDigipogAPICall }  from "../api/digipogApi";
 import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "../api/classApi";
 import { addRoleToStudent, removeRoleFromStudent } from "../api/rolesApi";
+import { currentUserHasScope } from "../utils/scopeUtils";
 
 type AccordionCategory = {
 	name: string;
@@ -258,9 +259,10 @@ export default function AccordionCollapse({
 
 export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const { classData } = useClassData();
+	const { userData } = useUserData();
 
 	const [awardDigipogs, setAwardDigipogs] = useState<number>(0);
-	const [studentRoleIds, setStudentRoleIds] = useState<number[]>([]);
+	const [studentRoleIds, setStudentRoleIds] = useState<string[]>([]);
 	const [isUpdatingRoles, setIsUpdatingRoles] = useState<boolean>(false);
 
 	const [api, contextHolder] = notification.useNotification();
@@ -286,7 +288,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		setStudentRoleIds((studentData.roles?.class || []).map((role) => role.id));
 	}, [studentData]);
 
-	async function handleStudentRolesChange(nextRoleIds: number[]) {
+	async function handleStudentRolesChange(nextRoleIds: string[]) {
 		if (!classData) return;
 
 		const previousRoleIds = studentRoleIds;
@@ -316,7 +318,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 						name: classRole.name,
 					};
 				})
-				.filter((role): role is { id: number; name: string } => role !== null);
+				.filter((role): role is { id: string; name: string } => role !== null);
 		} catch {
 			setStudentRoleIds(previousRoleIds);
 			showErrorNotification("Failed to update student roles.");
@@ -345,10 +347,16 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 
 	const availableRoles = classData?.roles || [];
 	const roleOptions = availableRoles.map((role) => ({
-		value: role.id,
+		value: Number(role.id),
 		label: role.name,
 		color: role.color,
 	}));
+
+	const canAssignRoles = currentUserHasScope(userData, "class.roles.assign");
+	const canAssignTags = currentUserHasScope(userData, "class.tags.manage");
+
+	const canKick = currentUserHasScope(userData, "class.students.kick");
+	const canBan = currentUserHasScope(userData, "class.students.ban");
 
 	return (
         <>{contextHolder}
@@ -507,14 +515,12 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								options={roleOptions}
 								tagRender={(props) => {
 									const role = availableRoles.find(
-										(availableRole) => availableRole.id === Number(props.value),
+										(availableRole) => availableRole.id === String(props.value),
 									);
 									const roleColor = role?.color || "#666666";
 									return (
 										<Tag
 											color={roleColor}
-											closable={props.closable}
-											onClose={props.onClose}
 											style={{ marginInlineEnd: 4, color: roleColor, borderColor: "transparent" }}
 											onMouseDown={(event) => {
 												event.preventDefault();
@@ -544,7 +550,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							/>
 						</Flex>
 					),
-					enabled: true,
+					enabled: canAssignRoles,
 				},
 				{
 					name: "Tags",
@@ -590,7 +596,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							)}
 						</Flex>
 					),
-					enabled: true,
+					enabled: canAssignTags,
 				},
 				{
 					name: "Miscellaneous",
@@ -607,6 +613,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								color="red"
 								style={{ width: "120px" }}
                                 onClick={() => {
+									if(!canBan) return;
                                     modal.warning({
                                         title: "Ban User",
                                         content: "Are you sure you want to ban this user?",
@@ -617,6 +624,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
                                         }
                                     });
                                 }}
+								disabled={!canBan}
 							>
 								Ban User
 							</Button>
@@ -624,6 +632,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								variant="solid"
 								color="red"
 								style={{ width: "120px" }}
+								disabled={!canKick}
 							>
 								Kick User
 							</Button>

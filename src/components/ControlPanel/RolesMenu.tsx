@@ -1,4 +1,4 @@
-import { isMobile, useClassData, useMobileDetect, useSettings } from "../../main";
+import { isMobile, useClassData, useMobileDetect, useSettings, useUserData } from "../../main";
 import { Button, Card, ColorPicker, Divider, Flex, Input, List, Switch, Typography } from "antd";
 const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
@@ -25,6 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { currentUserHasScope } from "../../utils/scopeUtils";
 
 type CategoryKey = keyof typeof SCOPES.CLASS;
 
@@ -97,6 +98,7 @@ export default function RolesMenu() {
 	const isMobile = useMobileDetect();
 	const {settings} = useSettings();
 	const { classData } = useClassData();
+	const { userData } = useUserData();
 
 	const [roles, setRoles] = useState<any[]>([]);
 	const [originalRoles, setOriginalRoles] = useState<any[]>([]);
@@ -156,37 +158,46 @@ export default function RolesMenu() {
 			(role) => !originalRoles.find((r) => r.id === role.id)
 		);
 
-		// Find updated roles (in both but with changes)
-		const updatedRoles = roles.filter((role) => {
-			const original = originalRoles.find((r) => r.id === role.id);
-			return original && JSON.stringify(original) !== JSON.stringify(role);
-		});
-
 		// Delete roles
 		deletedRoles.forEach((role) => {
 			savePromises.push(deleteRole(classData.id, role.id));
 		});
 
 		// Create new roles
-		newRoles.forEach((role) => {
+		newRoles.forEach((role, index) => {
 			savePromises.push(
 				createRole(classData.id, {
 					name: role.name,
 					scopes: role.scopes,
 					color: role.color,
+					orderIndex: index,
 				})
 			);
 		});
 
-		// Update existing roles
-		updatedRoles.forEach((role) => {
-			savePromises.push(
-				updateRole(classData.id, role.id, {
-					name: role.name,
-					scopes: role.scopes,
-					color: role.color,
-				})
-			);
+		// Update existing roles (with orderIndex)
+		roles.forEach((role, index) => {
+			const original = originalRoles.find((r) => r.id === role.id);
+			if (original && JSON.stringify(original) !== JSON.stringify(role)) {
+				savePromises.push(
+					updateRole(classData.id, role.id, {
+						name: role.name,
+						scopes: role.scopes,
+						color: role.color,
+						orderIndex: index,
+					})
+				);
+			} else if (original && original !== role) {
+				// Even if only order changed, update with new orderIndex
+				savePromises.push(
+					updateRole(classData.id, role.id, {
+						name: role.name,
+						scopes: role.scopes,
+						color: role.color,
+						orderIndex: index,
+					})
+				);
+			}
 		});
 
 		Promise.all(savePromises)
@@ -260,6 +271,8 @@ export default function RolesMenu() {
 		}
 	}
 
+	const canEditRoles = currentUserHasScope(userData, "class.roles.manage");
+
 	return (
 		<>
 			<Flex style={{width: '100%', height: '100%', padding: 20, overflow:'scroll'}} gap={10} vertical={isMobile}>
@@ -269,10 +282,10 @@ export default function RolesMenu() {
 						<Button type="primary" variant="solid" color="blue" onClick={handleCreateRole} style={{display:'flex',justifyContent:'center',alignItems:'center'}}><IonIcon icon={IonIcons.addCircle}/></Button>
 					</Flex>
 					<DndContext
-						sensors={sensors}
-						collisionDetection={closestCenter}
-						onDragEnd={handleDragEnd}
-						modifiers={[restrictToVerticalAxis]}
+						sensors={canEditRoles ? sensors : []}
+						collisionDetection={canEditRoles ? closestCenter : undefined}
+						onDragEnd={canEditRoles ? handleDragEnd : undefined}
+						modifiers={canEditRoles ? [restrictToVerticalAxis] : []}
 					>
 						<SortableContext
 							items={roles.map((r) => r.id)}
@@ -296,7 +309,7 @@ export default function RolesMenu() {
 				<Card style={{flex:"1 1 auto", display: 'flex', flexDirection: 'column'}} styles={{body:{height:'100%', display: 'flex', flexDirection: 'column'}}}>
 					<Flex vertical justify="start" align="center" style={{height:'100%', overflowY:'auto', flex: 1}}>
 						<Flex align="center" justify="space-between" gap={10} style={{width:'100%', marginBottom: 20}}>
-							<Input style={{flex: '1 1 auto'}} placeholder="Role Name" value={editedRoleName} onChange={(e) => {
+							<Input style={{flex: '1 1 auto'}} placeholder="Role Name" value={editedRoleName} disabled={!canEditRoles} onChange={(e) => {
 								setEditedRoleName(e.target.value);
 								if(!selectedRoleId) return;
 								setRoles((prevRoles) =>
@@ -306,7 +319,9 @@ export default function RolesMenu() {
 									})
 								);
 							}} />
-							<ColorPicker disabledAlpha value={editedRoleColor} styles={{
+							<ColorPicker disabledAlpha value={editedRoleColor} 
+							disabled={!canEditRoles}
+							styles={{
 								root: {
 									height: '100%',
 									minWidth: 'unset',
@@ -324,7 +339,7 @@ export default function RolesMenu() {
 									})
 								);
 							}}/>
-							<Button variant="solid" type="primary" color="red" style={{aspectRatio: 1, height: '42px'}} onClick={handleDeleteRole} disabled={!selectedRoleId}>
+							<Button variant="solid" type="primary" color="red" style={{aspectRatio: 1, height: '42px'}} onClick={handleDeleteRole} disabled={!selectedRoleId || !canEditRoles}>
 								<IonIcon icon={IonIcons.trash} />
 							</Button>
 						</Flex>
@@ -352,7 +367,7 @@ export default function RolesMenu() {
 																style={{ marginLeft: "auto" }}
 																checked={hasPermission}
 																onChange={(checked) => handlePermissionToggle(actionData.key, checked)}
-																disabled={!selectedRoleId}
+																disabled={!selectedRoleId || !canEditRoles}
 															/>
 														</Flex>
 													);

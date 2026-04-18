@@ -13,7 +13,7 @@ import FormbarHeader from "../components/FormbarHeader";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useClassData, useSettings, useTheme, useUserData } from "../main";
-import { Activity, useEffect, useState, useRef } from "react";
+import { Activity, useEffect, useState, useRef, useMemo } from "react";
 
 import Dashboard from "../components/ControlPanel/Dashboard";
 import PollsMenu from "../components/ControlPanel/PollsMenu";
@@ -42,18 +42,36 @@ import joinSFX from '../assets/sfx/join.wav';
 import leaveSFX from '../assets/sfx/leave.wav';
 import removeSFX from '../assets/sfx/remove.wav';
 import tutdSFX from '../assets/sfx/TUTD.wav';
-import { type ClassData } from "../types";
-import { currentUserHasScope } from "../utils/scopeUtils";
+import { type ClassData, type ScopeKey } from "../types";
+import { currentUserHasScope, userHasAllScopes, userHasAnyScope } from "../utils/scopeUtils";
 import { getMe } from "../api/userApi";
 
+interface MenuItem {
+	key: string;
+	icon: React.ReactNode;
+	deselectedicon: React.ReactNode;
+	selectedicon: React.ReactNode;
+	label: string;
+	requiredscopes?: {
+		requireAll: boolean;
+        scopes: string[];
+	};
+}
 
-const items = [
+
+const items: MenuItem[] = [
 	{
 		key: "1",
 		icon: <IonIcon icon={IonIcons.pieChart} />,
 		deselectedicon: <IonIcon icon={IonIcons.pieChartOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.pieChart} />,
 		label: "Dashboard",
+		requiredscopes: {
+			requireAll: true,
+			scopes: [
+				'class.students.read'
+			]
+		}
 	},
 	{
 		key: "2",
@@ -61,6 +79,15 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.barChartOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.barChart} />,
 		label: "Polls",
+		requiredscopes: {
+			requireAll: false,
+			scopes: [
+				'class.poll.create',
+				'class.poll.delete',
+				'class.poll.end',
+				'class.poll.share'
+			]
+		}
 	},
 	{
 		key: "7",
@@ -68,6 +95,12 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.pencilOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.pencil} />,
 		label: "Poll Editor",
+		requiredscopes: {
+			requireAll: true,
+			scopes: [
+				'class.poll.create',
+			]
+		}
 	},
 	{
 		key: "3",
@@ -75,6 +108,12 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.timerOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.timer} />,
 		label: "Timer",
+		requiredscopes: {
+			requireAll: true,
+			scopes: [
+				'class.timer.control',
+			]
+		}
 	},
 	{
 		key: "4",
@@ -82,6 +121,10 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.statsChartOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.statsChart} />,
 		label: "Statistics",
+		requiredscopes: {
+			requireAll: false,
+			scopes: []
+		}
 	},
 	{
 		key: "5",
@@ -89,6 +132,12 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.lockClosedOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.lockClosed} />,
 		label: "Roles",
+		requiredscopes: {
+			requireAll: false,
+			scopes: [
+				'class.roles.read',
+			]
+		}
 	},
 	{
 		key: "6",
@@ -96,14 +145,31 @@ const items = [
 		deselectedicon: <IonIcon icon={IonIcons.settingsOutline} />,
 		selectedicon: <IonIcon icon={IonIcons.settings} />,
 		label: "Settings",
+		requiredscopes: {
+			requireAll: true,
+			scopes: [
+				'class.session.settings'
+			]
+		}
 	}
 ];
+
+function canViewMenuItem(userData: Parameters<typeof currentUserHasScope>[0], item: MenuItem): boolean {
+    if (!item.requiredscopes) return true;
+
+    if (!item.requiredscopes.scopes.length) return true;
+
+    return item.requiredscopes.requireAll
+        ? userHasAllScopes(userData, item.requiredscopes.scopes as ScopeKey[])
+        : userHasAnyScope(userData, item.requiredscopes.scopes as ScopeKey[]);
+}
 
 export default function ControlPanel() {
 	const { classData, setClassData } = useClassData();
 	const prevClassDataRef = useRef<ClassData | null>(null);
 	const timerAlarmPlayedRef = useRef(false);
 	const isMobileDevice = isMobile();
+	const [currentMenu, setCurrentMenu] = useState("1");
 
     const [showPollDetails, setShowPollDetails] = useState(false);
 
@@ -122,6 +188,10 @@ export default function ControlPanel() {
 	const { isDark } = useTheme();
 
 	const navigate = useNavigate();
+    const visibleMenuItems = useMemo(
+        () => items.filter((item) => canViewMenuItem(userData, item)),
+        [userData]
+    );
 
 	useEffect(() => {
 		if (!userData) return;
@@ -130,11 +200,19 @@ export default function ControlPanel() {
 			navigate("/classes");
 		}
 
-        if (!currentUserHasScope(userData, "class.system.admin")) {
+        if (!currentUserHasScope(userData, "class.system.panel_access")) {
 			navigate("/student");
 		}
 
     }, [userData, classData, navigate]);
+
+    useEffect(() => {
+        if (!visibleMenuItems.length) return;
+
+        if (!visibleMenuItems.some((item: MenuItem) => item.key === currentMenu)) {
+            setCurrentMenu(visibleMenuItems[0].key);
+        }
+    }, [currentMenu, visibleMenuItems]);
 
 
 	useEffect(() => {
@@ -145,10 +223,11 @@ export default function ControlPanel() {
 				.then((response) => {
 					const { data } = response;
 					Log({
-						message: "User data fetched successfully.",
+						message: "User data fetched successfully!!!.",
 						data,
 						level: "info",
 					});
+			console.log(newClassData)
 					setUserData(data);
 				})
 				.catch((err) => {
@@ -159,8 +238,7 @@ export default function ControlPanel() {
 					});
 				});
 
-			if(!newClassData.students) return;
-
+				
             // Get online students before and after update to compare
 			const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline"));
 			const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline"));
@@ -219,8 +297,6 @@ export default function ControlPanel() {
         playLeave
     ]);
 
-	const [currentMenu, setCurrentMenu] = useState("1");
-	const [menuItems, setMenuItems] = useState(items);
 	const [openModalId, setOpenModalId] = useState<number | null>(null);
 
     const [timerPercent, setTimerPercent] = useState(0);
@@ -240,18 +316,6 @@ export default function ControlPanel() {
 	function openMenu(key: string) {
 		if (key === currentMenu) return;
 		setCurrentMenu(key);
-
-		const updatedItems = menuItems.map((item) => {
-			if (item && item.key === key && "icon" in item) {
-				// Set selected icon
-				return { ...item, icon: item.selectedicon };
-			} else if (item && "icon" in item) {
-				// Set deselected icon
-				return { ...item, icon: item.deselectedicon };
-			}
-			return item;
-		});
-		setMenuItems(updatedItems);
 	}
 
     useEffect(() => {
@@ -352,6 +416,14 @@ export default function ControlPanel() {
             ? Math.round((timerEndMs - timerStartMs) / 1000)
             : 0;
 
+	const canStartClassSession = currentUserHasScope(userData, "class.session.start");
+	const canEndClassSession = currentUserHasScope(userData, "class.session.end");
+	const canToggleClassSession = classData?.isActive ? canEndClassSession : canStartClassSession;
+
+	const canEndPoll = currentUserHasScope(userData, "class.poll.end");
+	// const canSharePoll = currentUserHasScope(userData, "class.poll.share");
+	const canClearPoll = currentUserHasScope(userData, "class.poll.delete");
+
 	return (
 		<>
 			<FormbarHeader />
@@ -364,11 +436,14 @@ export default function ControlPanel() {
 				}}
 			>
 				<Menu
-					defaultSelectedKeys={["1"]}
+                    selectedKeys={[currentMenu]}
 					defaultOpenKeys={["sub1"]}
 					mode="inline"
 					inlineCollapsed={isMobileDevice}
-					items={menuItems}
+                    items={visibleMenuItems.map((item: MenuItem) => ({
+                        ...item,
+                        icon: item.key === currentMenu ? item.selectedicon : item.deselectedicon,
+                    }))}
 					theme={isDark ? "dark" : "light"}
 					style={{
 						height: "100%",
@@ -517,7 +592,7 @@ export default function ControlPanel() {
 							</Col>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
                                 <Button
-                                    disabled={!classData || !classData.poll.status}
+                                    disabled={!classData || !classData.poll.status || !canEndPoll}
                                     color="pink"
                                     variant="solid"
                                     style={buttonStyle}
@@ -548,7 +623,7 @@ export default function ControlPanel() {
 							</Col>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
                                 <Button
-                                    disabled={!classData || classData.poll.responses.length === 0}
+                                    disabled={!classData || classData.poll.responses.length === 0 || !canClearPoll}
                                     color="orange"
                                     variant="solid"
                                     style={buttonStyle}
@@ -578,23 +653,24 @@ export default function ControlPanel() {
                                 </Button>
                             </Col>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
-                                <Button
-                                    color={classData?.isActive ? "red" : "green"}
-                                    variant="solid"
-                                    style={buttonStyle}
-                                    styles={{
-                                        content: {
-                                            width: '100%',
-                                            whiteSpace: 'break-spaces',
-                                            overflow: 'hidden',
-                                            textOverflow: 'clip',
-                                            fontSize: isMobileDevice ? '18px' : undefined,
-                                        }
-                                    }}
-                                    onClick={() => {classData?.isActive ? endClass() : startClass()}}
-                                >
-                                    {classData?.isActive ? "End Class" : "Start Class"}
-                                </Button>
+								<Button
+									color={classData?.isActive ? "red" : "green"}
+									variant="solid"
+									style={buttonStyle}
+									styles={{
+										content: {
+											width: '100%',
+											whiteSpace: 'break-spaces',
+											overflow: 'hidden',
+											textOverflow: 'clip',
+											fontSize: isMobileDevice ? '18px' : undefined,
+										}
+									}}
+									disabled={!canToggleClassSession}
+									onClick={() => {classData?.isActive ? endClass() : startClass()}}
+								>
+									{classData?.isActive ? "End Class" : "Start Class"}
+								</Button>
 							</Col>
 						</Row>
 					</div>
