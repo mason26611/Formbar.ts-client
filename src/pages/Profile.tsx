@@ -259,9 +259,9 @@ export default function Profile() {
 				"Display Name": data.displayName || "N/A",
 				Email: isGuestProfile ? "N/A" : data.email || "N/A",
 				"Digipogs":
-					data.digipogs || data.digipogs == 0
+					!isGuestProfile ? data.digipogs || data.digipogs == 0
 						? data.digipogs
-						: "N/A",
+						: "N/A" : "N/A",
 				ID: data.id || "N/A",
 
 				"Pog Meter":
