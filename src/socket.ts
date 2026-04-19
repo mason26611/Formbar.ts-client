@@ -1,17 +1,25 @@
 import { io, Socket } from "socket.io-client";
 import Log from "./debugLogger";
-import { authLogin, refreshAuthToken, setRefreshToken, getRefreshToken, clearAuthTokens } from "./api/authApi";
+import {
+	authLogin,
+	refreshAuthToken,
+	setRefreshToken,
+	getRefreshToken,
+	clearAuthTokens,
+	getGuestAccessToken,
+	setGuestAccessToken,
+} from "./api/authApi";
 
 //! ONLY UNTIL LOGIN IS IMPLEMENTED
 export const formbarUrl = import.meta.env.VITE_FORMBAR_API_URL || "http://localhost:420";
 
 export let refreshToken: string = getRefreshToken() || "";
-export let accessToken: string = "";
+export let accessToken: string = getGuestAccessToken() || "";
 export let socket: Socket;
 
 type SocketEventHandlers = {
 	onConnect?: () => void;
-	onConnectError?: (err: any) => void;
+	onConnectError?: (err: unknown) => void;
 	onDisconnect?: (reason: string) => void;
 	onSetClass?: (classID: number) => void;
 };
@@ -43,10 +51,55 @@ function attachEventHandlers() {
 	}
 }
 
-export function socketLogin(token?: string) {
+function clearInMemoryAuth() {
+	refreshToken = "";
+	accessToken = "";
+}
+
+function connectSocketWithAccessToken(nextAccessToken: string) {
+	accessToken = nextAccessToken;
+
+	if (socket) {
+		socket.removeAllListeners();
+		socket.disconnect();
+	}
+
+	socket = io(formbarUrl, {
+		extraHeaders: {
+			authorization: `Bearer ${nextAccessToken}`,
+		},
+		autoConnect: false,
+		reconnectionAttempts: 5,
+		reconnectionDelay: 2000,
+	});
+
+	attachEventHandlers();
+	socket.connect();
+}
+
+export function socketLogin(
+	token?: string,
+	tokenType: "refresh" | "access" = "refresh",
+) {
+	if (tokenType === "access") {
+		const accessTokenToUse = token || getGuestAccessToken() || "";
+		if (!accessTokenToUse) {
+			Log({ message: "No guest access token available", level: "error" });
+			window.dispatchEvent(new CustomEvent("formbar:authfailed"));
+			return;
+		}
+
+		clearAuthTokens();
+		setGuestAccessToken(accessTokenToUse);
+		clearInMemoryAuth();
+		Log({ message: "Starting guest session", level: "info" });
+		connectSocketWithAccessToken(accessTokenToUse);
+		return;
+	}
+
 	// Get the decrypted token from storage, or use the parameter as fallback
 	const tokenToUse = getRefreshToken() || token || "";
-	
+
 	if (!tokenToUse) {
 		Log({ message: "No refresh token available", level: "error" });
 		window.dispatchEvent(new CustomEvent("formbar:authfailed"));
@@ -57,6 +110,7 @@ export function socketLogin(token?: string) {
 		.then(async (res) => {
 			if (!res.ok) {
 				clearAuthTokens();
+				clearInMemoryAuth();
 				Log({ message: "Failed to refresh token", level: "error" });
 
 				// Get cached credentials from sessionStorage (lost on page refresh)
@@ -72,7 +126,7 @@ export function socketLogin(token?: string) {
 					throw new Error("Login failed", { cause: loginResponse.error });
 				}
 				const { data } = loginResponse;
-				let { refreshToken } = data;
+				const { refreshToken } = data;
 				Log({ message: "Login successful", data: loginResponse });
 
 				// Delegate to a fresh socketLogin call and stop this chain
@@ -90,21 +144,10 @@ export function socketLogin(token?: string) {
 
 			setRefreshToken(newRefreshToken);
 			refreshToken = newRefreshToken;
-			accessToken = newAccessToken;
-
-			socket = io(formbarUrl, {
-				extraHeaders: {
-					authorization: `Bearer ${newAccessToken}`,
-				},
-				autoConnect: false,
-				reconnectionAttempts: 5,
-				reconnectionDelay: 2000,
-			});
-
-			attachEventHandlers(); // Attach handlers after socket is created
-			socket.connect();
+			connectSocketWithAccessToken(newAccessToken);
 		})
 		.catch((err) => {
+			clearInMemoryAuth();
 			Log({
 				message: "Error refreshing token",
 				data: err,
@@ -118,7 +161,7 @@ export function socketLogin(token?: string) {
 }
 
 setInterval(() => {
-    if (refreshToken) {
-        socketLogin(refreshToken);
-    }
+	if (refreshToken) {
+		socketLogin(refreshToken);
+	}
 }, 15 * 60 * 1000); // Refresh every 10 minutes
