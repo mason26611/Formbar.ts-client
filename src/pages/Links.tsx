@@ -52,6 +52,9 @@ export default function Links() {
 	);
 }
 
+//! THIS DOES NOT WORK YET.
+//! TRY MORE
+
 function getFaviconForLink(link: any): Promise<string> {
     const iconSize = 32;
     const domain = new URL(link.url).hostname;
