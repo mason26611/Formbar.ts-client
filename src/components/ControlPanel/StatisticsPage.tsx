@@ -32,7 +32,7 @@ export default function Statistics() {
 				).getTime();
 
 				// Poll start time is already in milliseconds
-				const pollStartTimeMs = classData?.poll.startTime;
+				const pollStartTimeMs = classData?.poll ? classData?.poll.startTime : undefined;
 
 				// Calculate difference in seconds (student time - poll start time)
 				const timeDifferenceMs =
@@ -53,7 +53,7 @@ export default function Statistics() {
 					totalResponseTimes.length
 				: 0;
 
-		if (classData?.poll.startTime !== undefined)
+		if (classData?.poll && classData?.poll.startTime !== undefined)
 			setResponseTime(averageResponseTime);
 		else setResponseTime(0);
 
@@ -79,9 +79,10 @@ export default function Statistics() {
             stats: [
                 {
                     title: "Poll Runtime",
-                    value: classData?.poll.startTime == undefined
+                    value: classData?.poll ? classData?.poll.startTime == undefined
                         ? Date.now()
-                        : classData?.poll.startTime,
+                        : classData?.poll?.startTime
+						: Date.now(),
                     type: "timer",
                     format: "H:mm:ss",
                 },

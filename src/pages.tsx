@@ -3,7 +3,6 @@ import ControlPanel from "./pages/ControlPanel.tsx";
 import Profile from "./pages/Profile.tsx";
 import Student from "./pages/Student.tsx";
 import NewsPage from "./pages/NewsPage.tsx";
-import StudentBar from "./pages/StudentBar.tsx";
 import ClassesPage from "./pages/Classes.tsx";
 import PogPools from "./pages/PogPools.tsx";
 import Transactions from "./pages/Transactions.tsx";
@@ -14,6 +13,8 @@ import { Debug } from "./pages/Debug.tsx";
 import PinResetPage from "./pages/PinReset.tsx";
 import EmailVerifyPage from "./pages/EmailVerify.tsx";
 import AuthorizeApp from "./pages/oauth/AuthorizeApp.tsx";
+import Links from "./pages/Links.tsx";
+
 type Page = {
 	pageName: string;
 	routePath: string;
@@ -41,11 +42,6 @@ const pages: Page[] = [
 		pageName: "Student",
 		routePath: "/student",
 		page: Student,
-	},
-	{
-		pageName: "Student Bar",
-		routePath: "/studentbar",
-		page: StudentBar,
 	},
 	{
 		pageName: "Home",
@@ -113,7 +109,12 @@ const pages: Page[] = [
         pageName: "Authorize App",
         routePath: "/oauth/authorize",
         page: AuthorizeApp,
-    }
+    },
+	{
+		pageName: "Links",
+		routePath: "/links",
+		page: Links,
+	}
 ];
 
 export default pages;

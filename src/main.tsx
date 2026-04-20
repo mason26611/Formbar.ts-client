@@ -524,7 +524,7 @@ const AppContent = () => {
 		// so the user isn't permanently stuck on the loading screen.
 		function onAuthFailed() {
 			Log({
-				message: "All auth attempts failed – clearing tokens and redirecting to login",
+				message: "All auth attempts failed - clearing tokens and redirecting to login",
 				level: "warn",
 			});
 			/* Comment these to fix reload bug */

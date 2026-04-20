@@ -1,7 +1,7 @@
 import { Button, Col, Divider, Flex, Pagination, Row, Spin, Typography } from "antd";
 const { Text, Title } = Typography;
 import { socket } from "../../socket";
-import { useClassData, useMobileDetect } from "../../main";
+import { useClassData, useMobileDetect, useUserData } from "../../main";
 import PollModal from "../PollModal";
 
 const defaultPolls = [
@@ -89,6 +89,7 @@ import { useEffect, useState } from "react";
 
 import { notification } from "antd";
 import { getPolls } from "../../api/classApi";
+import { currentUserHasScope } from "../../utils/scopeUtils";
 
 export default function PollsMenu({
 	openModalId,
@@ -97,6 +98,7 @@ export default function PollsMenu({
 	openModalId: number | null;
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
 }) {
+	const { userData } = useUserData();
 	const { classData } = useClassData();
 	const { isDark } = useTheme();
     const isMobile = useMobileDetect();
@@ -119,6 +121,8 @@ export default function PollsMenu({
 	const [previousPollAnswers, setPreviousPollAnswers] = useState<{answer: string, weight: number, color: string}[]>([]);
 
 	const [api, contextHolder] = notification.useNotification();
+
+	const canSeePolls = currentUserHasScope(userData, "class.poll.read");
 
 	const showErrorNotification = (message: string) => {
 		api["error"]({
@@ -150,7 +154,7 @@ export default function PollsMenu({
 	}
 
 	useEffect(() => {
-		if(!classData) return;
+		if(!classData || !canSeePolls) return;
 
 		setIsPreviousPollsLoading(true);
 		const offset = (currentPage - 1) * pageSize;
@@ -166,7 +170,7 @@ export default function PollsMenu({
 			})
 			.catch((err) => {
 				showErrorNotification(
-					err.message || "Failed to fetch previous polls.",
+					JSON.parse(err.message).message || "Failed to fetch previous polls.",
 				);
 				setPreviousPolls([]);
 			})
@@ -233,7 +237,7 @@ export default function PollsMenu({
 				<Title level={isMobile ? 3 : 2}>Previous Polls</Title>
 			{isPreviousPollsLoading ? (
 				<Spin style={{ marginTop: "20px" }} />
-			) : previousPolls.length === 0 ? (
+			) : previousPolls.length === 0 || !canSeePolls ? (
 				<Text type="secondary">No previous polls available</Text>
 			) : (
 				<>

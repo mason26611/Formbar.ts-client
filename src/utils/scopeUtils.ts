@@ -9,9 +9,9 @@ function getStudentClassScopes(student: Student | null | undefined, classData: C
 
 	// Class permissions are legacy data for older integrations; the app uses
 	// explicit role assignments in roles.class as the source of truth.
-	const roleIdSet = new Set((student.roles?.class || []).map((role) => role.id));
+	const roleIdSet = new Set((student.roles?.class || []).map((role) => Number(role.id)));
 	const scopes = (classData.roles || [])
-		.filter((role) => roleIdSet.has(role.id))
+		.filter((role) => roleIdSet.has(Number(role.id)))
 		.flatMap((role) => role.scopes || []);
 
 	if (student.scopes?.class?.length) {

@@ -107,28 +107,6 @@ export default function Student() {
 		if (!socket) return; // Don't set up listener if socket isn't ready
 
 		function classUpdate(classData: any) {
-			Log({ message: "Poll data", data: classData.poll });
-			Log({
-				message: "Last poll data ref",
-				data: lastPollDataRef.current,
-			});
-			if (
-				classData.poll.startTime !== lastPollDataRef.current?.startTime
-			) {
-                setLastAnswer(null);
-				setTextResponse("");
-				setSelectedResponses([]);
-			}
-
-			setClassData(classData);
-			lastPollDataRef.current = classData.poll;
-			// setLastPollData(classData.poll);
-			Log({
-				message: "Class Update received.",
-				data: classData,
-				level: "info",
-			});
-
 			getMe()
 				.then((response) => {
 					const { data } = response;
@@ -138,6 +116,31 @@ export default function Student() {
 						level: "info",
 					});
 					setUserData(data);
+
+					Log({ message: "Poll data", data: classData.poll });
+					Log({
+						message: "Last poll data ref",
+						data: lastPollDataRef.current,
+					});
+					if(Object.hasOwn(classData, 'poll') && currentUserHasScope(userData, 'class.poll.read')) {
+						if (
+							classData.poll.startTime !== lastPollDataRef.current?.startTime
+						) {
+							setLastAnswer(null);
+							setTextResponse("");
+							setSelectedResponses([]);
+						}
+					}
+					
+
+					setClassData(classData);
+					lastPollDataRef.current = classData.poll;
+					// setLastPollData(classData.poll);
+					Log({
+						message: "Class Update received.",
+						data: classData,
+						level: "info",
+					});
 				})
 				.catch((err) => {
 					Log({
@@ -228,10 +231,10 @@ export default function Student() {
 					textAlign: "center",
 				}}
 			>
-				{classData?.poll.prompt}
+				{currentUserHasScope(userData, 'class.poll.read') ? classData?.poll.prompt : null}
 			</Title>
 
-			{userData?.break !== true || currentUserHasScope(userData, 'class.poll.read') ? (
+			{userData?.break !== true && currentUserHasScope(userData, 'class.poll.read') ? (
 				<>
 					<Flex
 						style={
@@ -386,11 +389,20 @@ export default function Student() {
 						textAlign: "center",
 					}}
 				>
-					<Title>You are currently on a break.</Title>
-					<Text>
-						Please wait until your break is over to participate in
-						polls.
-					</Text>
+					<Title>
+						{
+							!currentUserHasScope(userData, 'class.poll.read') ? "You do not have permission to view polls."
+							: userData?.break === true ? "You are currently on a break." : null
+						}
+					</Title>
+					{
+						userData?.break === true && (
+							<Text>
+								Please wait until your break is over to participate in
+								polls.
+							</Text>
+						)
+					}
 				</Flex>
 			)}
 		</>

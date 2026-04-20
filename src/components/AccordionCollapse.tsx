@@ -285,7 +285,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	};
 
 	useEffect(() => {
-		setStudentRoleIds((studentData.roles?.class || []).map((role) => role.id));
+		setStudentRoleIds((studentData.roles?.class || []).map((role) => String(role.id)));
 	}, [studentData]);
 
 	async function handleStudentRolesChange(nextRoleIds: string[]) {
@@ -314,11 +314,11 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 					const classRole = classData.roles.find((role) => role.id === roleId);
 					if (!classRole) return null;
 					return {
-						id: classRole.id,
+						id: Number(classRole.id),
 						name: classRole.name,
 					};
 				})
-				.filter((role): role is { id: string; name: string } => role !== null);
+				.filter((role): role is { id: number; name: string } => role !== null);
 		} catch {
 			setStudentRoleIds(previousRoleIds);
 			showErrorNotification("Failed to update student roles.");
@@ -352,8 +352,13 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		color: role.color,
 	}));
 
+	const canManageHelp = currentUserHasScope(userData, "class.help.approve");
+	const canManageBreak = currentUserHasScope(userData, "class.break.approve");
+
 	const canAssignRoles = currentUserHasScope(userData, "class.roles.assign");
 	const canAssignTags = currentUserHasScope(userData, "class.tags.manage");
+	
+	const canAwardDigipogs = currentUserHasScope(userData, "class.digipogs.award");
 
 	const canKick = currentUserHasScope(userData, "class.students.kick");
 	const canBan = currentUserHasScope(userData, "class.students.ban");
@@ -382,6 +387,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								variant="solid"
 								color="red"
 								onClick={async () => {
+									if (!canManageHelp) return;
                                     await deleteHelpRequest(classData?.id!, studentData.id)
                                     .then((data) => {
                                         if(data.success) {
@@ -397,7 +403,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 						</Flex>
 					),
 					enabled:
-						typeof studentData.help === "object" ? true : false,
+						typeof studentData.help === "object" ? true : false && canManageHelp,
 				},
 				{
 					name: "Break",
@@ -419,6 +425,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 											color="green"
 											style={{ width: "120px" }}
 											onClick={() => {
+												if (!canManageBreak) return;
 												approveStudentBreak(classData?.id!, studentData.id);
 											}}
 										>
@@ -429,6 +436,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 											color="red"
 											style={{ width: "120px" }}
 											onClick={() => {
+												if (!canManageBreak) return;
 												denyStudentBreak(classData?.id!, studentData.id);
 											}}
 										>
@@ -442,6 +450,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 									color="red"
 									style={{ width: "120px" }}
 									onClick={() => {
+										if (!canManageBreak) return;
 										denyStudentBreak(classData?.id!, studentData.id);
 									}}
 								>
@@ -450,7 +459,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							)}
 						</Flex>
 					),
-					enabled: studentData.break !== false,
+					enabled: studentData.break !== false && canManageBreak,
 				},
 				{
 					name: "Text Response",
@@ -490,7 +499,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							</Button>
 						</Flex>
 					),
-					enabled: true,
+					enabled: canAwardDigipogs,
 				},
 				{
 					name: "Roles",
@@ -563,7 +572,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							gap={10}
 							wrap
 						>
-							{classData?.tags.map(
+							{classData?.tags && classData?.tags.map(
 								(tag, index) =>
 									tag !== "Offline" && (
 										<Button
@@ -596,7 +605,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 							)}
 						</Flex>
 					),
-					enabled: canAssignTags,
+					enabled: canAssignTags && classData?.tags,
 				},
 				{
 					name: "Miscellaneous",
@@ -633,12 +642,15 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								color="red"
 								style={{ width: "120px" }}
 								disabled={!canKick}
+								onClick={() => {
+									if(!canKick) return;
+								}}
 							>
 								Kick User
 							</Button>
 						</Flex>
 					),
-					enabled: true,
+					enabled: canBan || canKick,
 				},
 			]}
 		/>

@@ -27,7 +27,7 @@ export default function ControlPanelPoll({
 					overflow: "hidden",
 				}}
 			>
-				{data === null || data?.poll.responses.length === 0 ? (
+				{data === null || !data.poll || data?.poll.responses.length === 0 ? (
 					<Flex
 						style={{
 							width: "100%",
@@ -38,7 +38,7 @@ export default function ControlPanelPoll({
 						align="center"
 					></Flex>
 				) : null}
-				{data &&
+				{data && data.poll &&
 					data?.poll.responses.map((resp: any, index: number) => (
 						<Tooltip
                             mouseEnterDelay={0.5}
@@ -79,47 +79,48 @@ export default function ControlPanelPoll({
 						</Tooltip>
 					))}
 				{
-					// Show unanswered portion if there are unanswered responses
-					data?.poll.totalResponses < data?.poll.totalResponders &&
-					data.poll.responses.length > 0 ? (
-						<Tooltip
-                            mouseEnterDelay={0.5}
-							title={`Unanswered: ${data.poll.totalResponders - data.poll.totalResponses} student${data.poll.totalResponders - data.poll.totalResponses !== 1 ? "s" : ""}`}
-							placement="bottom"
-						>
-							<Flex
-								style={{
-									width: `${((data.poll.totalResponders - data.poll.totalResponses) / data.poll.totalResponders) * 100}%`,
-									height: "100%",
-									background: "rgba(255, 255, 255, 0.2)",
-									transition: "width 0.3s ease",
-									borderLeft:
-										data?.poll.responses.length === 0
-											? "none"
-											: data.poll.totalResponders -
-														data.poll
-															.totalResponses >
-												  0
-												? "2px solid #000"
-												: "none",
-									fontSize: calculateFontSize(
-										((data.poll.totalResponders -
-											data.poll.totalResponses) /
-											data.poll.totalResponders) *
-											100,
-										"Unanswered",
-									),
-									color: textColorForBackground(
-										"rgba(255, 255, 255, 0.2)",
-									),
-								}}
-								justify="center"
-								align="center"
+					data && data.poll && (// Show unanswered portion if there are unanswered responses
+						data?.poll.totalResponses < data?.poll.totalResponders &&
+						data?.poll.responses.length > 0 ? (
+							<Tooltip
+								mouseEnterDelay={0.5}
+								title={`Unanswered: ${data.poll.totalResponders - data.poll.totalResponses} student${data.poll.totalResponders - data.poll.totalResponses !== 1 ? "s" : ""}`}
+								placement="bottom"
 							>
-								Unanswered
-							</Flex>
-						</Tooltip>
-					) : null
+								<Flex
+									style={{
+										width: `${((data.poll.totalResponders - data.poll.totalResponses) / data.poll.totalResponders) * 100}%`,
+										height: "100%",
+										background: "rgba(255, 255, 255, 0.2)",
+										transition: "width 0.3s ease",
+										borderLeft:
+											data?.poll.responses.length === 0
+												? "none"
+												: data.poll.totalResponders -
+															data.poll
+																.totalResponses >
+													0
+													? "2px solid #000"
+													: "none",
+										fontSize: calculateFontSize(
+											((data.poll.totalResponders -
+												data.poll.totalResponses) /
+												data.poll.totalResponders) *
+												100,
+											"Unanswered",
+										),
+										color: textColorForBackground(
+											"rgba(255, 255, 255, 0.2)",
+										),
+									}}
+									justify="center"
+									align="center"
+								>
+									Unanswered
+								</Flex>
+							</Tooltip>
+						) : null
+					)
 				}
 			</Flex>
 		</>

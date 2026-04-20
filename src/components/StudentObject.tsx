@@ -31,71 +31,57 @@ export default function StudentObject({
 	return (
 		<div key={student.id} style={style}>
 			<div>
-				{statusText ? (
-					<Badge.Ribbon
-						color={
-							statusText === "Help Ticket"
-								? "red"
-								: statusText === "On Break"
-									? "yellow"
-									: "gray"
-						}
-						style={{
-							position: "absolute",
-							top: "-20px",
-							opacity: statusText === "Offline" ? 0.5 : 1,
-						}}
-						text={statusText}
-					>
-						<Button
-							type="primary"
-							style={{
-								padding: "5px",
-								height: "auto",
-								width: "100%",
-								opacity: statusText === "Offline" ? 0.5 : 1,
-								fontSize: "clamp(12px, 1.5vw, 16px)",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								display: "block",
-								whiteSpace: "nowrap"
-							}}
-							onClick={() => setOpenModalId(student.id)}
-						>
-							<Text strong style={{
-								fontSize: "clamp(12px, 1.5vw, 16px)",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								display: "block",
-								whiteSpace: "nowrap"}}>
-								{student.displayName}
-								{student.pollRes.buttonRes !== ""
-									? (<> <span>-</span> <span style={{color: classData?.poll.responses.find((r: any) => r.answer === student.pollRes.buttonRes)?.color}}>{student.pollRes.buttonRes}</span></>)
-									: ""}
-							</Text>
-						</Button>
-					</Badge.Ribbon>
-				) : (
+				<Badge.Ribbon
+					color={
+						statusText === "Help Ticket"
+							? "red"
+							: statusText === "On Break"
+								? "yellow"
+								: "gray"
+					}
+					style={{
+						display: statusText ? "block" : "none",
+						position: "absolute",
+						top: "-20px",
+						opacity: statusText === "Offline" ? 0.5 : 1,
+					}}
+					text={statusText}
+					
+				>
 					<Button
 						type="primary"
-						style={{ padding: "5px", height: 'auto', width: "100%" }}
+						style={{
+							padding: "5px",
+							height: "auto",
+							width: "100%",
+							opacity: statusText === "Offline" ? 0.5 : 1,
+							fontSize: "clamp(12px, 1.5vw, 16px)",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							display: "block",
+							whiteSpace: "nowrap"
+						}}
 						onClick={() => setOpenModalId(student.id)}
 					>
 						<Text strong style={{
-								fontSize: "clamp(12px, 1.5vw, 16px)",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								display: "block",
-								whiteSpace: "nowrap"}}>
+							fontSize: "clamp(12px, 1.5vw, 16px)",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							display: "block",
+							whiteSpace: "nowrap"}}>
 							{student.displayName}
-							<span>
-								{student.pollRes.buttonRes !== ""
-									? (<> <span>-</span> <span style={{color: classData?.poll.responses.find((r: any) => r.answer === student.pollRes.buttonRes)?.color}}>{student.pollRes.buttonRes}</span></>)
-									: ""}
-							</span>
+							{
+								classData?.poll && (
+									<span>
+										{student.pollRes.buttonRes !== ""
+											? (<> <span>-</span> <span style={{color: classData?.poll.responses.find((r: any) => r.answer === student.pollRes.buttonRes)?.color}}>{student.pollRes.buttonRes}</span></>)
+											: ""}
+									</span>
+								)
+							}
 						</Text>
 					</Button>
-				)}
+				</Badge.Ribbon>
 				<Modal
 					centered
 					title={

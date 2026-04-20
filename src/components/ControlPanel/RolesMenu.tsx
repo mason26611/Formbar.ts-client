@@ -133,7 +133,6 @@ export default function RolesMenu() {
 		if(!classData) return;
 
 		getClassRoles(classData?.id).then((roles) => {
-			console.log(roles);
 			setRoles(roles.data);
 			setOriginalRoles(JSON.parse(JSON.stringify(roles.data)));
 		});

@@ -227,7 +227,6 @@ export default function ControlPanel() {
 						data,
 						level: "info",
 					});
-			console.log(newClassData)
 					setUserData(data);
 				})
 				.catch((err) => {
@@ -238,13 +237,14 @@ export default function ControlPanel() {
 					});
 				});
 
-				
+			setClassData(newClassData);
+
             // Get online students before and after update to compare
 			const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline"));
 			const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline"));
 
-            const oldResponses = Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses);
-            const newResponses = Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses);
+            const oldResponses = prevClassDataRef.current?.poll ? Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses) : [];
+            const newResponses = newClassData.poll ? Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses) : [];
 
             const oldResponsesTotal = oldResponses.reduce((sum: number, count: number) => sum + count, 0);
             const newResponsesTotal = newResponses.reduce((sum: number, count: number) => sum + count, 0);
@@ -275,7 +275,7 @@ export default function ControlPanel() {
 			});
 
 			Log({
-				message: "Total Voters: " + newClassData.poll.totalResponders,
+				message: "Total Voters: " + (newClassData.poll ? newClassData.poll.totalResponders : 0),
 				level: "info",
 			});	
 		}
@@ -420,6 +420,7 @@ export default function ControlPanel() {
 	const canEndClassSession = currentUserHasScope(userData, "class.session.end");
 	const canToggleClassSession = classData?.isActive ? canEndClassSession : canStartClassSession;
 
+	const canSeePoll = currentUserHasScope(userData, "class.poll.read");
 	const canEndPoll = currentUserHasScope(userData, "class.poll.end");
 	// const canSharePoll = currentUserHasScope(userData, "class.poll.share");
 	const canClearPoll = currentUserHasScope(userData, "class.poll.delete");
@@ -428,11 +429,11 @@ export default function ControlPanel() {
 		<>
 			<FormbarHeader />
 
-			<ControlPanelPoll classData={classData} height="40px" />
+			{ canSeePoll && <ControlPanelPoll classData={classData} height="40px" /> }
 
             <Flex
 				style={{
-					height: "calc(100% - 40px)",
+					height: canSeePoll ? "calc(100% - 40px)" : "100%",
 				}}
 			>
 				<Menu
@@ -572,7 +573,7 @@ export default function ControlPanel() {
 						<Row gutter={[8, 8]}>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
                                 <Button
-                                    disabled={!classData || !classData.poll.status}
+                                    disabled={!classData || classData.poll && !classData.poll.status || !canSeePoll}
                                     color="blue"
                                     variant="solid"
                                     style={buttonStyle}
@@ -592,7 +593,7 @@ export default function ControlPanel() {
 							</Col>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
                                 <Button
-                                    disabled={!classData || !classData.poll.status || !canEndPoll}
+                                    disabled={!classData?.poll || !classData?.poll.status || !canEndPoll}
                                     color="pink"
                                     variant="solid"
                                     style={buttonStyle}
@@ -623,7 +624,7 @@ export default function ControlPanel() {
 							</Col>
 							<Col span={12} style={isMobileDevice ? mobileButtonColStyle : undefined}>
                                 <Button
-                                    disabled={!classData || classData.poll.responses.length === 0 || !canClearPoll}
+                                    disabled={!classData || classData.poll && classData.poll.responses.length === 0 || !canClearPoll}
                                     color="orange"
                                     variant="solid"
                                     style={buttonStyle}
