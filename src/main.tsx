@@ -88,7 +88,7 @@ const defaultSettings: AppSettings = {
 
 type ServerConfig = {
 	emailEnabled: boolean;
-	googleOauthEnabled: boolean;
+	oidcProviders: string[];
 };
 
 const connectionTriesLimit = 5;
@@ -293,9 +293,7 @@ const AppContent = () => {
 			const configResponse = await getServerConfig();
 			const nextConfig: ServerConfig = {
 				emailEnabled: Boolean(configResponse?.data?.emailEnabled),
-				googleOauthEnabled: Boolean(
-					configResponse?.data?.googleOauthEnabled,
-				),
+				oidcProviders: configResponse?.data?.oidcProviders || [],
 			};
 			setConfig(nextConfig);
 			return nextConfig;

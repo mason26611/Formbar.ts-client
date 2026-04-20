@@ -33,7 +33,7 @@ export default function LoginPage() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const isMobileView = useMobileDetect();
 	const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	const [googleOauthEnabled, setGoogleOauthEnabled] = useState(false);
+	const [oidcProviders, setOidcProviders] = useState([] as string[]);
 
 	// If a third-party app (e.g. Jukebar) redirected the user here it will pass
 	// ?redirectURL=<callback>.  After login we redirect back with the access token.
@@ -78,6 +78,7 @@ export default function LoginPage() {
 					);
 					throw new Error("Login failed");
 				}
+
 				const { data } = loginResponse;
 				let { accessToken: loginAccessToken, refreshToken: loginRefreshToken, legacyToken: loginLegacyToken } = data;
 				Log({ message: "Login successful", data: loginResponse });
@@ -162,9 +163,9 @@ export default function LoginPage() {
 	useEffect(() => {
 		getServerConfig()
 			.then((payload) => {
-				setGoogleOauthEnabled(Boolean(payload?.data?.googleOauthEnabled));
-			})
-			.catch(() => {/* config unavailable – hide Google button */});
+				console.log(payload)
+				setOidcProviders(payload?.data?.oidcProviders || []);
+			}).catch(() => {});
 	}, []);
 
 	// Handle the Google OAuth redirect callback.
@@ -173,10 +174,12 @@ export default function LoginPage() {
 		const params = new URLSearchParams(location.search);
 		const oauthRefreshToken = params.get("refreshToken");
 		if (oauthRefreshToken) {
-			Log({ message: "Google OAuth callback – logging in via token", data: {} });
+			Log({ message: "Google OAuth callback - logging in via token", data: {} });
+
 			// Wipe tokens from the URL immediately while staying on the same route
 			params.delete("accessToken");
 			params.delete("refreshToken");
+
 			const cleanedSearch = params.toString();
 			navigate(
 				{
@@ -189,7 +192,7 @@ export default function LoginPage() {
 		}
 	}, [location.pathname, location.search, navigate]);
 
-	//? Check if user is already logged in
+	// Check if user is already logged in
 	useEffect(() => {
 		if (socket?.connected && userData) {
 			// On the /oauth path: if a redirectURL is present, complete the OAuth
@@ -201,6 +204,7 @@ export default function LoginPage() {
 				window.location.href = target.toString();
 				return;
 			}
+
 			// For all other cases (including /oauth without a redirectURL),
 			// only bounce away from /login — stay on /oauth so the user can
 			// still interact with the page.
@@ -399,8 +403,7 @@ export default function LoginPage() {
 						</form>
 					</Card>
 
-					{/* Google OAuth — shown only when the server has it enabled */}
-					{googleOauthEnabled && (
+					{oidcProviders?.includes("google") && (
 						<>
 							<Divider style={{ margin: "0" }}>or</Divider>
 							<Button
@@ -413,10 +416,30 @@ export default function LoginPage() {
 									/>
 								}
 								onClick={() => {
-									window.location.href = `${formbarUrl}/api/v1/auth/google?origin=${encodeURIComponent(window.location.href)}`;
+									window.location.href = `${formbarUrl}/api/v1/auth/oidc/google?origin=${encodeURIComponent(window.location.href)}`;
 								}}
 							>
 								Sign in with Google
+							</Button>
+						</>
+					)}
+
+					{oidcProviders?.includes("microsoft") && (
+						<>
+							<Button
+								style={{ width: "100%" }}
+								icon={
+									<img 
+										src="https://www.microsoft.com/favicon.ico" 
+										alt="Microsoft" 
+										style={{ width: 16, height: 16, verticalAlign: "middle" }} 
+									/>
+								}
+								onClick={() => {
+									window.location.href = `${formbarUrl}/api/v1/auth/oidc/microsoft?origin=${encodeURIComponent(window.location.href)}`;
+								}}
+							>
+								Sign in with Microsoft
 							</Button>
 						</>
 					)}

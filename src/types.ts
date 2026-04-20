@@ -1,13 +1,26 @@
+export type RoleRef = {
+	id: number;
+	name: string;
+	scopes?: string | string[];
+};
+
+export type RoleBuckets = {
+	global: RoleRef[];
+	class: RoleRef[];
+};
+
+export type ScopeBuckets = {
+	global: string[];
+	class: string[];
+};
+
 export type CurrentUserData = {
 	API: string;
 	activeClass: number | null;
 	break: boolean;
 	classPermissions: number | null;
-	classScopes?: string[];
-	classRoles: Array<{
-		id: number;
-		name: string;
-	}>;
+	roles?: RoleBuckets;
+	scopes?: ScopeBuckets;
 	digipogs: number;
 	displayName: string;
 	email: string;
@@ -16,7 +29,6 @@ export type CurrentUserData = {
 	isGuest: boolean;
 	ownedPolls: any[];
 	permissions: number;
-	globalScopes?: string[];
 	pogMeter: number;
 	pollRes: { buttonRes: string; textRes: string; time: number | null };
 	sharedPolls: any[];
@@ -141,12 +153,10 @@ export type Student = {
 	email: string;
 	displayName: string;
 	permissions: number;
-	scopes?: string[];
+	roles: RoleBuckets;
+	/** Optional explicit scope overrides */
+	scopes?: ScopeBuckets;
 	digipogs: number;
-	classRoles: Array<{
-		id: string;
-		name: string;
-	}>;
 	classPermissions: number;
 };
 
