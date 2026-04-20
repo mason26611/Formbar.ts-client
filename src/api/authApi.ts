@@ -3,6 +3,8 @@ import { http } from "./HTTPApi";
 
 const SECRET_KEY =
 	import.meta.env.VITE_ENCRYPTION_KEY || "default-key-change-in-prod";
+const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
+const GUEST_ACCESS_TOKEN_STORAGE_KEY = "guestAccessToken";
 
 function encryptToken(token: string): string {
 	return CryptoJS.AES.encrypt(token, SECRET_KEY).toString();
@@ -37,16 +39,31 @@ function decryptToken(encrypted: string): string {
 }
 
 export function setRefreshToken(token: string) {
-	localStorage.setItem("refreshToken", encryptToken(token));
+	localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, encryptToken(token));
+	sessionStorage.removeItem(GUEST_ACCESS_TOKEN_STORAGE_KEY);
 }
 
 export function getRefreshToken(): string | null {
-	const encrypted = localStorage.getItem("refreshToken");
+	const encrypted = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+	return encrypted ? decryptToken(encrypted) : null;
+}
+
+export function setGuestAccessToken(token: string) {
+	sessionStorage.setItem(
+		GUEST_ACCESS_TOKEN_STORAGE_KEY,
+		encryptToken(token),
+	);
+	localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+}
+
+export function getGuestAccessToken(): string | null {
+	const encrypted = sessionStorage.getItem(GUEST_ACCESS_TOKEN_STORAGE_KEY);
 	return encrypted ? decryptToken(encrypted) : null;
 }
 
 export function clearAuthTokens() {
-	localStorage.removeItem("refreshToken");
+	localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+	sessionStorage.removeItem(GUEST_ACCESS_TOKEN_STORAGE_KEY);
 }
 
 export function authLogin(email: string, password: string) {
@@ -64,6 +81,10 @@ export function authLogin(email: string, password: string) {
 		},
 		body,
 	);
+}
+
+export function guestLogin(displayName: string) {
+	return http("/auth/guest", "POST", {}, { displayName });
 }
 
 export function refreshAuthToken(refreshToken: string) {

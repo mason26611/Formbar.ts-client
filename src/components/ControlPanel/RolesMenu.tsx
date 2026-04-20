@@ -178,17 +178,13 @@ export default function RolesMenu() {
 		// Update existing roles (with orderIndex)
 		roles.forEach((role, index) => {
 			const original = originalRoles.find((r) => r.id === role.id);
-			if (original && JSON.stringify(original) !== JSON.stringify(role)) {
-				savePromises.push(
-					updateRole(classData.id, role.id, {
-						name: role.name,
-						scopes: role.scopes,
-						color: role.color,
-						orderIndex: index,
-					})
-				);
-			} else if (original && original !== role) {
-				// Even if only order changed, update with new orderIndex
+			if (!original) return;
+
+			const originalIndex = originalRoles.findIndex((r) => r.id === role.id);
+			const contentChanged = JSON.stringify(original) !== JSON.stringify(role);
+			const orderChanged = originalIndex !== index;
+
+			if (contentChanged || orderChanged) {
 				savePromises.push(
 					updateRole(classData.id, role.id, {
 						name: role.name,

@@ -12,6 +12,7 @@ import { useState } from "react";
 import SettingsModal from "./SettingsModal";
 import { leaveClassSession } from "../api/classApi";
 import { currentUserHasScope } from "../utils/scopeUtils";
+import { clearAuthTokens } from "../api/authApi";
 
 export default function FormbarHeader() {
 	const { isDark } = useTheme();
@@ -75,8 +76,8 @@ export default function FormbarHeader() {
 		};
 
 	function logoutHandler() {
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
+		clearAuthTokens();
+		sessionStorage.removeItem("formbarLoginCreds");
 		socket?.disconnect();
         setUserData(null);
 		navigate("/login");

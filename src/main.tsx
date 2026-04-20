@@ -23,7 +23,7 @@ import {
 	socketLogin,
 	accessToken,
 } from "./socket";
-import { clearAuthTokens } from "./api/authApi";
+import { clearAuthTokens, getGuestAccessToken } from "./api/authApi";
 
 import {
 	darkMode,
@@ -314,9 +314,10 @@ const AppContent = () => {
 			const userResponse = await getMe();
 
 			const { data } = userResponse;
+			const isGuestUser = Boolean(data?.isGuest);
 
 			const serverConfig = config || (await fetchConfig());
-			if (!serverConfig?.emailEnabled) {
+			if (!serverConfig?.emailEnabled || isGuestUser) {
 				Log({
 					message: "User data fetched successfully.",
 					data,
@@ -324,6 +325,10 @@ const AppContent = () => {
 				});
 				setUserData(data);
             }
+
+			if (isGuestUser) {
+				return;
+			}
 
 			const userDetailResponse = await getUser(data.id);
             
@@ -450,9 +455,14 @@ const AppContent = () => {
 	}, []);
 
 	useEffect(() => {
-		if (!socket?.connected && localStorage.getItem("refreshToken")) {
-			socketLogin(localStorage.getItem("refreshToken")!);
-		} else if (!localStorage.getItem("refreshToken")) {
+		const hasStoredRefreshToken = Boolean(localStorage.getItem("refreshToken"));
+		const guestAccessToken = getGuestAccessToken();
+
+		if (!socket?.connected && hasStoredRefreshToken) {
+			socketLogin();
+		} else if (!socket?.connected && guestAccessToken) {
+			socketLogin(guestAccessToken, "access");
+		} else if (!hasStoredRefreshToken && !guestAccessToken) {
 			if (!publicRoutes.includes(window.location.pathname)) {
 				navigate("/login");
 			}

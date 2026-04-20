@@ -34,7 +34,7 @@ export function getStudentClassScopeCount(student: Student | null | undefined, c
 
 export function currentUserHasScope(userData: CurrentUserData | null | undefined, scopeKey: ScopeKey): boolean {
 	if (!userData) return false;
-	if (userData.globalScopes?.includes("global.system.admin")) return true; // Admin override for all scopes.
+	if (userData.scopes?.global?.includes("global.system.admin")) return true; // Admin override for all scopes.
 
 	const isGlobalScope = userData.scopes?.global?.includes(scopeKey);
 	const isClassScope = userData.scopes?.class?.includes(scopeKey);

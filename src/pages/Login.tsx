@@ -10,9 +10,8 @@ import {
 } from "antd";
 import FormbarHeader from "../components/FormbarHeader";
 import Log from "../debugLogger";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 const { Title } = Typography;
-import { useEffect } from "react";
 import { socket, socketLogin, accessToken } from "../socket";
 
 import { useMobileDetect, useUserData } from "../main";
@@ -20,7 +19,7 @@ import { formbarUrl } from "../socket";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { useTheme } from "../main";
-import { authLogin, registerUser, setRefreshToken } from "../api/authApi";
+import { authLogin, guestLogin, registerUser, setRefreshToken } from "../api/authApi";
 import { getServerConfig } from "../api/systemApi";
 
 export default function LoginPage() {
@@ -52,11 +51,27 @@ export default function LoginPage() {
 	const [api, contextHolder] = notification.useNotification();
 
 	const showErrorNotification = (message: string) => {
-		api["error"]({
+		api.error({
 			title: "Error",
 			description: message,
 			placement: "bottom",
 		});
+	};
+
+	const getErrorMessage = (
+		err: unknown,
+		fallback = "Something went wrong. Please try again.",
+	) => {
+		if (!(err instanceof Error)) {
+			return fallback;
+		}
+
+		try {
+			const parsed = JSON.parse(err.message);
+			return parsed?.error?.message || parsed?.message || err.message;
+		} catch {
+			return err.message || fallback;
+		}
 	};
 
 	async function handleSubmit(e?: React.FormEvent) {
@@ -65,22 +80,19 @@ export default function LoginPage() {
 		try {
 		// Handle form submission based on mode
 		switch (mode) {
-			case "Login":
+			case "Login": {
 				Log({ message: "Logging in", data: { email, password } });
 
 				// Store credentials in sessionStorage (cleared on browser close)
 				sessionStorage.setItem("formbarLoginCreds", JSON.stringify([email, password]));
 
 				const loginResponse = await authLogin(email, password);
-				if (!loginResponse.ok) {
-					showErrorNotification(
-						loginResponse.error.message || "Login failed",
-					);
-					throw new Error("Login failed");
-				}
-
 				const { data } = loginResponse;
-				let { accessToken: loginAccessToken, refreshToken: loginRefreshToken, legacyToken: loginLegacyToken } = data;
+				const {
+					accessToken: loginAccessToken,
+					refreshToken: loginRefreshToken,
+					legacyToken: loginLegacyToken,
+				} = data;
 				Log({ message: "Login successful", data: loginResponse });
 
 				// If we were sent here by a third-party app redirect back to it.
@@ -101,36 +113,23 @@ export default function LoginPage() {
 				setRefreshToken(loginRefreshToken);
 				socketLogin(loginRefreshToken);
 				break;
-			case "Sign Up":
+			}
+			case "Sign Up": {
 				Log({
 					message: "Signing up",
 					data: { displayName, email, password, confirmPassword },
 				});
 
 				if (displayName.length < 5)
-					return Log({
-						message:
-							"displayName must be at least 5 characters long",
-						level: "error",
-					});
+					throw new Error(
+						"display name must be at least 5 characters long",
+					);
 				if (!emailRegex.test(email))
-					return Log({
-						message: "Invalid email format",
-						level: "error",
-					});
+					throw new Error("Invalid email format");
 				if (password !== confirmPassword)
-					return Log({
-						message: "Passwords do not match",
-						level: "error",
-					});
+					throw new Error("Passwords do not match");
 
 				const signupResponse = await registerUser({ email, password, displayName });
-				if (!signupResponse.ok) {
-					showErrorNotification(
-						signupResponse.error.message || "Signup failed",
-					);
-					throw new Error("Signup failed", signupResponse.error.message);
-				}
 				const { data: signupData } = signupResponse;
 				Log({ message: "Signup successful", data: signupResponse });
 
@@ -142,18 +141,29 @@ export default function LoginPage() {
 				setRefreshToken(signupData.refreshToken);
 				socketLogin(signupData.refreshToken);
 				break;
+			}
 
-			case "Guest":
+			case "Guest": {
 				Log({ message: "Continuing as guest", data: { displayName } });
-				// Add guest logic here
+
+				const guestResponse = await guestLogin(displayName);
+				const { data: guestData } = guestResponse;
+				Log({ message: "Guest login successful", data: guestResponse });
+
+				if (redirectURL) {
+					const target = new URL(redirectURL);
+					target.searchParams.set("token", guestData.accessToken);
+					window.location.href = target.toString();
+					break;
+				}
+
+				socketLogin(guestData.accessToken, "access");
 				break;
+			}
 		}
 		} catch (err) {
 			Log({ message: "Form submission error", data: err, level: "error" });
-			if (!(err instanceof Error && err.message === "Login failed") &&
-				!(err instanceof Error && err.message === "Signup failed")) {
-				showErrorNotification(err instanceof Error ? JSON.parse(err.message).error.message : "Something went wrong. Please try again.");
-			}
+			showErrorNotification(getErrorMessage(err));
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -163,7 +173,6 @@ export default function LoginPage() {
 	useEffect(() => {
 		getServerConfig()
 			.then((payload) => {
-				console.log(payload)
 				setOidcProviders(payload?.data?.oidcProviders || []);
 			}).catch(() => {});
 	}, []);
@@ -179,6 +188,7 @@ export default function LoginPage() {
 			// Wipe tokens from the URL immediately while staying on the same route
 			params.delete("accessToken");
 			params.delete("refreshToken");
+			params.delete("legacyToken");
 
 			const cleanedSearch = params.toString();
 			navigate(
@@ -212,7 +222,7 @@ export default function LoginPage() {
 				navigate("/");
 			}
 		}
-	}, [location.pathname, navigate, redirectURL, userData, socket]);
+	}, [location.pathname, navigate, redirectURL, userData]);
 
 	return (
 		<>
@@ -265,7 +275,7 @@ export default function LoginPage() {
 						options={[
 							"Login",
 							"Sign Up",
-							// 'Guest'
+							'Guest'
 						]}
 						onChange={setMode}
 						value={mode}

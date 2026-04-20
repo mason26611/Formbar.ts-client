@@ -4,8 +4,6 @@ import {
 	Collapse,
 	Card,
 	Flex,
-	Progress,
-	Tooltip,
 	Typography,
 	Button,
 	Input,
@@ -19,9 +17,8 @@ import * as IonIcons from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUserData, useSettings, useMobileDetect } from "../main";
-import { accessToken } from "../socket";
 import CountUp from 'react-countup';
-import { getUser, regenerateUserApiKey, requestUserPinReset, updateUserPin, verifyUserPin } from "../api/userApi";
+import { getMe, getUser, regenerateUserApiKey, requestUserPinReset, updateUserPin, verifyUserPin } from "../api/userApi";
 
 export default function Profile() {
     const { settings } = useSettings();
@@ -54,10 +51,16 @@ export default function Profile() {
 
 	const { id } = useParams<{ id?: string }>();
 	const isOwnProfile = !id || String(id) === String(userData?.id);
+	const isGuestProfile = Boolean(isOwnProfile && userData?.isGuest);
+	const showGuestActions = !isGuestProfile;
+	const showSensitiveSection = isOwnProfile && !isGuestProfile;
 
-	const getErrorMessage = (response: any, fallback: string) => {
-		if (typeof response?.error === "string") return response.error;
-		if (response?.error?.message) return response.error.message;
+	const getErrorMessage = (response: unknown, fallback: string) => {
+		const errorResponse = response as {
+			error?: string | { message?: string };
+		};
+		if (typeof errorResponse?.error === "string") return errorResponse.error;
+		if (errorResponse?.error?.message) return errorResponse.error.message;
 		return fallback;
 	};
 
@@ -164,14 +167,21 @@ export default function Profile() {
 
 		setPinVerifyLoading(true);
 		try {
-            const data = await verifyUserPin(String(userData.id), { pin: enteredPin });
+            await verifyUserPin(String(userData.id), { pin: enteredPin });
 
 			setShowSensitiveInfo(true);
 			setSensitiveActiveKeys(["1"]);
 			setSensModalOpen(false);
 			setEnteredPin("");
 		} catch (err) {
-			const message = err instanceof Error ? JSON.parse(err.message).error?.message : "Failed to verify PIN.";
+			let message = "Failed to verify PIN.";
+			if (err instanceof Error) {
+				try {
+					message = JSON.parse(err.message).error?.message || err.message;
+				} catch {
+					message = err.message || message;
+				}
+			}
 			
 			if (message.toLowerCase().includes("no pin is set")) {
 				setHasPin(false);
@@ -225,43 +235,51 @@ export default function Profile() {
 	useEffect(() => {
 		if (!userData?.id && !id) return;
 
-        getUser(id ? String(id) : String(userData?.id))
-			.then((response) => {
-				const { data } = response;
-				if (response.error) {
-					Log({
-						message: "Error fetching profile data",
-						data: response.error,
-						level: "error",
-					});
-					setError(
-						typeof response.error === "string"
-							? response.error
-							: response.error.message || "Unknown error",
-					);
-					return;
-				}
+        const loadProfile = async () => {
+            const response = isGuestProfile
+				? await getMe()
+				: await getUser(id ? String(id) : String(userData?.id));
 
-				setProfileProps({
-					"Display Name": data.displayName || "N/A",
-					Email: data.email || "N/A",
-					"Digipogs":
-						data.digipogs || data.digipogs == 0
-							? data.digipogs
-							: "N/A",
-					ID: data.id || "N/A",
-
-					"Pog Meter":
-						data.pogMeter && data.pogMeter > 0
-							? data.pogMeter / 5
-							: 0,
+			const { data } = response;
+			if (response.error) {
+				Log({
+					message: "Error fetching profile data",
+					data: response.error,
+					level: "error",
 				});
-				setHasPin(
-					typeof data?.hasPin === "boolean" ? data.hasPin : null,
+				setError(
+					typeof response.error === "string"
+						? response.error
+						: response.error.message || "Unknown error",
 				);
-				setError(null);
-			})
-			.catch((err) => {
+				return;
+			}
+
+			setProfileProps({
+				"Display Name": data.displayName || "N/A",
+				Email: isGuestProfile ? "N/A" : data.email || "N/A",
+				"Digipogs":
+					!isGuestProfile ? data.digipogs || data.digipogs == 0
+						? data.digipogs
+						: "N/A" : "N/A",
+				ID: data.id || "N/A",
+
+				"Pog Meter":
+					data.pogMeter && data.pogMeter > 0
+						? data.pogMeter / 5
+						: 0,
+			});
+			setHasPin(
+				isGuestProfile
+					? false
+					: typeof data?.hasPin === "boolean"
+						? data.hasPin
+						: null,
+			);
+			setError(null);
+		};
+
+        loadProfile().catch((err) => {
 				Log({
 					message: "Error fetching profile data",
 					data: err,
@@ -270,7 +288,7 @@ export default function Profile() {
 				setHasPin(null);
 				setError("Error fetching profile data");
 			});
-	}, [userData, id, accessToken]);
+	}, [userData, id, isGuestProfile]);
 
 	return (
 		<>
@@ -344,7 +362,7 @@ export default function Profile() {
 								}}
 							>
                                 {
-                                    !isMobile && (
+                                    !isMobile && showGuestActions && (
                                         <Button
                                             variant="solid"
                                             color="blue"
@@ -365,7 +383,7 @@ export default function Profile() {
 									<span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{(id && String(id) === String(userData?.id)) || !isMobile ? "Your Profile" : "Profile"}</span>
 								}
                                 {
-                                    !isMobile && (
+                                    !isMobile && showGuestActions && (
                                         <Button
                                             variant="solid"
                                             color="blue"
@@ -381,7 +399,7 @@ export default function Profile() {
 						)}
 
                         {
-                            isMobile && (
+                            isMobile && showGuestActions && (
                                 <Flex gap={10} style={{width:'100%'}} justify="center">
                                     <Button
                                         variant="solid"
@@ -409,6 +427,14 @@ export default function Profile() {
                                 </Flex>
                             )
                         }
+
+						{!error && isGuestProfile && (
+							<Text type="secondary" style={{ textAlign: "center" }}>
+								Guest accounts are temporary. Profile details are
+								limited, and account features like API keys, PINs,
+								transactions, and pools are unavailable.
+							</Text>
+						)}
 
                         <div style={isMobile ? {
                             height: sensitiveActiveKeys.includes("1") ? '0' : '120px',
@@ -441,7 +467,7 @@ export default function Profile() {
                             )}
                         </div>
 
-						{!error && (
+						{!error && showSensitiveSection && (
 							<div
 								style={{ width: "100%" }}
 								onClick={() => {
@@ -474,13 +500,7 @@ export default function Profile() {
 											}
 										/>
 									)}
-									collapsible={
-										!isOwnProfile
-											? "header"
-											: showSensitiveInfo
-												? "header"
-												: "disabled"
-									}
+									collapsible={showSensitiveInfo ? "header" : "disabled"}
 									size="small"
 									items={[
 										{
