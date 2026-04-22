@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 export function deleteRole(classId: number, roleId: number) {
 	return http(`/class/${classId}/roles/${roleId}`, "DELETE");

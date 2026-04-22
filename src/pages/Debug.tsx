@@ -9,11 +9,11 @@ import {
 	Typography,
 } from "antd";
 import { useEffect, useState } from "react";
-import FormbarHeader from "../components/FormbarHeader";
-import { getAppearAnimation, useSettings } from "../main";
-import { accessToken, formbarUrl, refreshToken } from "../socket";
-import { SCOPES, type CurrentUserData } from "../types";
-import { currentUserHasScope } from "../utils/scopeUtils";
+import FormbarHeader from "@components/FormbarHeader";
+import { getAppearAnimation, useSettings } from "@/main";
+import { accessToken, formbarUrl, refreshToken } from "@utils/socket";
+import { type CurrentUserData } from "@/types";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

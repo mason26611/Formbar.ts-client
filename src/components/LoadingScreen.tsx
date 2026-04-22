@@ -3,7 +3,7 @@ const { Title, Text } = Typography;
 import { LoadingOutlined } from "@ant-design/icons";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useMobileDetect } from "../main";
+import { useMobileDetect } from "@/main";
 
 export default function LoadingScreen({
 	socketErrors,

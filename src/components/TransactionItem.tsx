@@ -1,4 +1,4 @@
-import { type Transaction } from "../types";
+import { type Transaction } from "@/types";
 import { Flex, Typography, Statistic } from "antd";
 const { Text } = Typography;
 

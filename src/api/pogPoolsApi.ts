@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 export function deletePool(poolId: number) {
     return http(`/pools/${poolId}`, "DELETE");

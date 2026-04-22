@@ -5,6 +5,7 @@ import {
 	useEffect,
 	useContext,
 } from "react";
+
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -15,30 +16,30 @@ import {
 	useLocation,
 } from "react-router-dom";
 import { Button, ConfigProvider, Modal, Space, Typography } from "antd";
-import LoadingScreen from "./components/LoadingScreen";
+import LoadingScreen from "@components/LoadingScreen";
 
 import {
 	socket,
 	registerSocketEventHandlers,
 	socketLogin,
 	accessToken,
-} from "./socket";
-import { clearAuthTokens, getGuestAccessToken } from "./api/authApi";
+} from "@utils/socket";
+import { clearAuthTokens, getGuestAccessToken } from "@api/authApi";
 
 import {
 	darkMode,
 	lightMode,
 	showMobileIfVertical,
 	themeColors,
-} from "../themes/ThemeConfig";
+} from "@/themes/ThemeConfig";
 
-import "./assets/css/index.css";
+import "@assets/css/index.css";
 
-import pages from "./pages";
-import type { ClassData, CurrentUserData } from "./types";
-import Log from "./debugLogger";
-import { getMe, getUser, requestUserVerificationEmail } from "./api/userApi";
-import { getPublicKey, getServerConfig } from "./api/systemApi";
+import pages from "@/pages";
+import type { ClassData, CurrentUserData } from "@/types";
+import Log from "@utils/debugLogger";
+import { getMe, getUser, requestUserVerificationEmail } from "@api/userApi";
+import { getPublicKey, getServerConfig } from "@api/systemApi";
 
 export const isDev: boolean = !import.meta.env.PROD;
 

@@ -1,19 +1,18 @@
-import { socket } from "../socket";
+import { socket } from "@utils/socket";
 
-import FormbarHeader from "../components/FormbarHeader";
-import FullCircularPoll from "../components/CircularPoll";
+import FormbarHeader from "@components/FormbarHeader";
+import FullCircularPoll from "@components/CircularPoll";
 import { useEffect, useState, useRef } from "react";
-import { useMobileDetect, useUserData } from "../main";
+import { useMobileDetect, useUserData } from "@/main";
 import { Typography, Flex, Input } from "antd";
-import PollButton from "../components/PollButton";
-import Log from "../debugLogger";
-import StudentMenu from "../components/StudentMenu";
+import PollButton from "@components/PollButton";
+import Log from "@utils/debugLogger";
+import StudentMenu from "@components/StudentMenu";
 import { useNavigate } from "react-router-dom";
-import { toEpochMs } from "../GlobalFunctions";
-import { getMe } from "../api/userApi";
-import { submitPollResponse } from "../api/classApi";
-import { currentUserHasScope } from "../utils/scopeUtils";
-import { SCOPES } from "../types";
+import { toEpochMs } from "@utils/GlobalFunctions";
+import { getMe } from "@api/userApi";
+import { submitPollResponse } from "@api/classApi";
+import { currentUserHasScope } from "@utils/scopeUtils";
 const { Title, Text } = Typography;
 
 export default function Student() {

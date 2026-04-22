@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useClassData, useMobileDetect } from "../../main";
+import { useClassData, useMobileDetect } from "@/main";
 import { Card, Flex, Statistic, Tooltip, Typography } from "antd";
 const { Title } = Typography;
 import { IonIcon } from "@ionic/react";
@@ -62,7 +62,7 @@ export default function Statistics() {
 		setHelpTickets(students.filter((s: any) => s.help).length);
 	}, [students, classData]);
 
-    const [statistics, setStatistics] = useState<Array<{
+    const [statistics] = useState<Array<{
         title: string;
         stats: Array<{
             title: string;

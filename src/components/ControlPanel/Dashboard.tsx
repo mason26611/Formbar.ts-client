@@ -11,16 +11,16 @@ import {
 } from "antd";
 const { Title } = Typography;
 
-import StudentObject from "../StudentObject";
+import StudentObject from "@components/StudentObject";
 
-import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDetect } from "../../main";
+import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDetect } from "@/main";
 import { useEffect, useState } from "react";
 import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
 
-import { useTheme } from "../../main";
-import type { Student } from "../../types";
-import { getStudentClassScopeCount } from "../../utils/scopeUtils";
+import { useTheme } from "@/main";
+import type { Student } from "@/types";
+import { currentUserHasScope, getStudentClassScopeCount } from "@utils/scopeUtils";
 
 export default function Dashboard({
 	openModalId,
@@ -61,6 +61,8 @@ export default function Dashboard({
 	const { settings } = useSettings();
 
     const [excludedRespondents, setExcludedRespondents] = useState<string[]>([]);
+
+	const canSeeUsers = currentUserHasScope(userData, "class.students.read");
 
     useEffect(() => {
         if(!classData?.poll) return;
@@ -152,7 +154,7 @@ export default function Dashboard({
         return sorted;
     }
 
-     const filteredStudents = students.filter((student) => {
+     const filteredStudents = canSeeUsers ? students.filter((student) => {
 		// Filters stack: student must match ALL enabled filters
         if(matchAllFilters) {
             if (filterState.answeredPoll && !student.pollRes?.buttonRes) return false;
@@ -178,7 +180,7 @@ export default function Dashboard({
         if (filterState.canVote && !student.isGuest) return true;
 		// Add more filters as needed
 		return false;
-	});
+	}) : [];
 
     const displayedStudents = sortStudents(filteredStudents).filter((student) =>
         student.displayName.toLowerCase().includes(searchQuery.toLowerCase())
@@ -469,13 +471,15 @@ export default function Dashboard({
                     >
                         {
                             // Show message if only one student (the teacher) is in the class
-                            students.length === 1 && (
+                            (!canSeeUsers || students.length === 1) && (
                                 <p style={{ gridColumn: "1 / -1", textAlign: "center", opacity: 0.75 }}>
-                                    No students found.
+                                    {
+										canSeeUsers ? "No students found." : "You do not have permission to view students."
+									}
                                 </p>
                             )
                         }
-                        {displayedStudents
+                        { canSeeUsers && displayedStudents
                             .filter((student) =>
                                 student.displayName
                                     .toLowerCase()

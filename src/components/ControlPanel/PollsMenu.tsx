@@ -1,8 +1,8 @@
 import { Button, Col, Divider, Flex, Pagination, Row, Spin, Typography } from "antd";
 const { Text, Title } = Typography;
-import { socket } from "../../socket";
-import { useClassData, useMobileDetect, useUserData } from "../../main";
-import PollModal from "../PollModal";
+import { socket } from "@utils/socket";
+import { useClassData, useMobileDetect, useUserData } from "@/main";
+import PollModal from "@components/PollModal";
 
 const defaultPolls = [
 	{
@@ -84,12 +84,12 @@ const defaultPolls = [
 	},
 ];
 
-import { useTheme } from "../../main";
+import { useTheme } from "@/main";
 import { useEffect, useState } from "react";
 
 import { notification } from "antd";
-import { getPolls } from "../../api/classApi";
-import { currentUserHasScope } from "../../utils/scopeUtils";
+import { getPolls } from "@api/classApi";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 export default function PollsMenu({
 	openModalId,

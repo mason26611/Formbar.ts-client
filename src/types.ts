@@ -216,6 +216,8 @@ export const SCOPES = {
 			actions: {
 				ADMIN: { key: "class.system.admin", label: "Admin", description: "Overrides all other permissions." },
 				PANEL_ACCESS: { key: "class.system.panel_access", label: "Panel Access", description: "Access to the teacher control panel." },
+				CAN_DELETE_CLASS: { key: "class.system.can_delete_class", label: "Delete Class", description: "Can delete the class" },
+				CAN_RENAME_CLASS: { key: "class.system.can_rename_class", label: "Rename Class", description: "Can rename the class" },
 				// BLOCKED: { key: "class.system.blocked", label: "Blocked", description: "Blocked from system usage" },
 			}
         },
@@ -281,12 +283,6 @@ export const SCOPES = {
 			title: "Auxiliary",
 			actions: {
 				CONTROL: { key: "class.auxiliary.control", label: "Control", description: "Control auxiliary features" },
-			},
-		},
-		GAMES: {
-			title: "Games",
-			actions: {
-				ACCESS: { key: "class.games.access", label: "Access", description: "Access classroom games" },
 			},
 		},
 		TAGS: {

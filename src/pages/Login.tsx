@@ -8,19 +8,19 @@ import {
 	Typography,
 	notification,
 } from "antd";
-import FormbarHeader from "../components/FormbarHeader";
-import Log from "../debugLogger";
+import FormbarHeader from "@components/FormbarHeader";
+import Log from "@utils/debugLogger";
 import { useEffect, useState } from "react";
 const { Title } = Typography;
-import { socket, socketLogin, accessToken } from "../socket";
+import { socket, socketLogin, accessToken } from "@utils/socket";
 
-import { useMobileDetect, useUserData } from "../main";
-import { formbarUrl } from "../socket";
+import { useMobileDetect, useUserData } from "@/main";
+import { formbarUrl } from "@utils/socket";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { useTheme } from "../main";
-import { authLogin, guestLogin, registerUser, setRefreshToken } from "../api/authApi";
-import { getServerConfig } from "../api/systemApi";
+import { useTheme } from "@/main";
+import { authLogin, guestLogin, registerUser, setRefreshToken } from "@api/authApi";
+import { getServerConfig } from "@api/systemApi";
 
 export default function LoginPage() {
 	const { isDark } = useTheme();

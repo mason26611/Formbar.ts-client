@@ -1,4 +1,4 @@
-import type { ClassData, CurrentUserData, ScopeKey, Student } from "../types";
+import type { ClassData, CurrentUserData, ScopeKey, Student } from "@/types";
 
 function unique(items: string[]) {
 	return Array.from(new Set(items));

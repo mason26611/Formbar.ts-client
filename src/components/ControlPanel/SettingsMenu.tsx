@@ -4,7 +4,6 @@ import {
 	Typography,
 	Input,
 	Button,
-	Switch,
 	Space,
 	Divider,
 	Collapse,
@@ -15,15 +14,25 @@ import {
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 const { Title, Text } = Typography;
-import { useClassData, useMobileDetect, useTheme } from "../../main";
+import { useClassData, useMobileDetect, useTheme, useUserData } from "@/main";
 import { useEffect, useState } from "react";
-import Log from "../../debugLogger";
-import { createClassLink, deleteClass, deleteClassLink, getClassLinks, getClassTags } from "../../api/classApi";
+import Log from "@utils/debugLogger";
+import { createClassLink, deleteClass, deleteClassLink, getClassLinks, getClassTags, kickAllStudents, regenerateClassCode, updateSettings } from "@api/classApi";
+import { currentUserHasScope } from "@/utils/scopeUtils";
 
 export default function SettingsMenu() {
-	const frontendUrl = import.meta.env.VITE_FORMBAR_CLIENT_URL || "http://localhost:5174";
+	const frontendUrl = import.meta.env.VITE_FORMBAR_CLIENT_URL || "http://localhost:5173";
+	const { userData } = useUserData();
 	const { classData } = useClassData();
     const isMobile = useMobileDetect();
+
+	// const canManageSettings = currentUserHasScope(userData, 'class.session.settings');
+	const canManageLinks = currentUserHasScope(userData, 'class.links.manage');
+	const canManageTags = currentUserHasScope(userData, 'class.tags.manage');
+	const canDeleteClass = currentUserHasScope(userData, 'class.system.can_delete_class');
+	const canKickStudents = currentUserHasScope(userData, 'class.students.kick');
+	const canRegenerateCode = currentUserHasScope(userData, 'class.session.regenerate_code');
+	const canRenameClass = currentUserHasScope(userData, 'class.system.can_rename_class');
 
 	const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
@@ -50,21 +59,28 @@ export default function SettingsMenu() {
 	useEffect(() => {
 		if (!classData) return;
 
-        setClassTags(classData.tags || []);
+        if(canManageTags) setClassTags(classData.tags || []);
 
-		getClassLinks(classData.id)
-		.then((data) => {
-			if (data.success && data.data.links) {
-				setClassLinks(data.data.links);
-			}
-		})
-		.catch((err) => {
-			Log({ message: "Error fetching class links:", data: err, level: "error" });
-		});
+		if(canManageLinks) {
+			getClassLinks(classData.id)
+			.then((data) => {
+				if (data.success && data.data.links) {
+					setClassLinks(data.data.links);
+				}
+			})
+			.catch((err) => {
+				Log({ message: "Error fetching class links:", data: err, level: "error" });
+			});
+		}
 		
 	}, [classData]);
 
     function tryAddLink() {
+		if (!canManageLinks) {
+			showErrorNotification("You do not have permission to manage links.");
+			return;
+		}
+
         if (!newLinkInput.name || !newLinkInput.url) {
             showErrorNotification("Please fill out both the link name and URL.");
             return;
@@ -95,6 +111,11 @@ export default function SettingsMenu() {
     }
 
     function removeLink(linkToRemove: { name: string; url: string }) {
+		if (!canManageLinks) {
+			showErrorNotification("You do not have permission to manage links.");
+			return;
+		}
+
         deleteClassLink(classData!.id, linkToRemove.name)
         .then((data) => {
             if (data.success) {
@@ -110,6 +131,11 @@ export default function SettingsMenu() {
     }
 
     function tryAddTag() {
+		if (!canManageTags) {
+			showErrorNotification("You do not have permission to manage tags.");
+			return;
+		}
+
         if (!newTagInput) {
             showErrorNotification("Please enter a tag name.");
             return;
@@ -130,6 +156,11 @@ export default function SettingsMenu() {
     }
 
 	function tryRemoveTag(tagToRemove: string) {
+		if (!canManageTags) {
+			showErrorNotification("You do not have permission to manage tags.");
+			return;
+		}
+
 		getClassTags(classData!.id)
 		.then((data) => {
 			if (data.success) {
@@ -146,6 +177,7 @@ export default function SettingsMenu() {
 
 	const {isDark} = useTheme();
 
+	
 
 
 	return (
@@ -167,9 +199,13 @@ export default function SettingsMenu() {
 					<Title level={3} style={{ marginTop: 0, marginBottom: 10 }}>
 						General
 					</Title>
-					<Text type="secondary" style={{marginBottom: 10, fontSize: 16}}>
-						Class Code: <Text code style={{fontSize: 16}}>{classData?.key}</Text>
-					</Text>
+					{
+						classData?.key &&(
+							<Text type="secondary" style={{marginBottom: 10, fontSize: 16}}>
+								Class Code: <Text code style={{fontSize: 16}}>{classData?.key}</Text>
+							</Text>
+						)
+					}
 					<Flex gap={30} align="center">
 						<Flex vertical gap={20}>
 							<Flex
@@ -183,7 +219,15 @@ export default function SettingsMenu() {
 									placeholder="Class Name"
 									defaultValue={classData?.className}
 								/>
-								<Button type="primary" style={{cursor:'not-allowed', opacity: 0.5}}>Change Class Name</Button>
+								{canRenameClass && (
+									<Button type="primary" onClick={() => {
+										if(!canRenameClass || !classData) return;
+
+										updateSettings(classData.id, { name: classData.className })
+									}}>
+										Change Class Name
+									</Button>
+								)}
 							</Flex>
 
                             {isMobile && (
@@ -201,48 +245,75 @@ export default function SettingsMenu() {
 								align="center"
                                 vertical={isMobile}
 							>
-								<Button variant="solid" color="danger" style={{cursor:'not-allowed', opacity: 0.5}}>
-									Kick All Students
-								</Button>
-								<Button variant="solid" color="danger" style={{cursor:'not-allowed', opacity: 0.5}}>
-									Regenerate Code
-								</Button>
-								<Button variant="solid" color="danger" onClick={()=>
-                                    modal.warning({
-                                        title: "Are you sure you want to delete this class?",
-                                        centered: true,
-                                        content: 'This action is irreversible, and you will not be able to recover this class.',
-                                        okCancel: true,
-                                        onOk: () => {
-                                            deleteClass(classData!.id)
-                                            .then(async (response) => {
-                                                if (!response.ok) {
-                                                    const message =
-                                                        (response && (response.detail || response.message)) ||
-                                                        "Failed to delete class.";
-                                                    throw new Error(message);
-                                                }
-                                                Log({ message: "Class deleted:", data: response.data });
-                                                api.success({
-                                                    title: "Class deleted",
-                                                    description: "The class has been deleted successfully.",
-                                                    placement: 'bottom'
-                                                });
-                                            })
-                                            .catch((error) => {
-                                                Log({ message: "Failed to delete class:", data: error, level: "error" });
-                                                api.error({
-                                                    title: "Failed to delete class",
-                                                    description:
-                                                    (error && error.message) || "An unexpected error occurred while deleting the class.",
-                                                    placement: 'bottom'
-                                                });
-                                            });
-                                        }
-                                    })
-                                }>
-									Delete Class
-								</Button>
+								{
+									canKickStudents && (
+										<Button variant="solid" color="danger"
+											onClick={() => {
+												if(!canKickStudents || !classData) return;
+
+												kickAllStudents(classData.id)
+											}}
+										>
+											Kick All Students
+										</Button>
+									)
+								}
+								{
+									canRegenerateCode && (
+										<Button variant="solid" color="danger"
+											onClick={() => {
+												if(!canRegenerateCode || !classData) return;
+
+												regenerateClassCode(classData.id)
+											}}
+										>
+											Regenerate Code
+										</Button>
+									)
+								}
+								
+								{
+									canDeleteClass && (
+										<Button variant="solid" color="danger" onClick={()=> {
+											if(!canDeleteClass || !classData) return;
+
+											modal.warning({
+												title: "Are you sure you want to delete this class?",
+												centered: true,
+												content: 'This action is irreversible, and you will not be able to recover this class.',
+												okCancel: true,
+												onOk: () => {
+													deleteClass(classData!.id)
+													.then(async (response) => {
+														if (!response.ok) {
+															const message =
+																(response && (response.detail || response.message)) ||
+																"Failed to delete class.";
+															throw new Error(message);
+														}
+														Log({ message: "Class deleted:", data: response.data });
+														api.success({
+															title: "Class deleted",
+															description: "The class has been deleted successfully.",
+															placement: 'bottom'
+														});
+													})
+													.catch((error) => {
+														Log({ message: "Failed to delete class:", data: error, level: "error" });
+														api.error({
+															title: "Failed to delete class",
+															description:
+															(error && error.message) || "An unexpected error occurred while deleting the class.",
+															placement: 'bottom'
+														});
+													});
+												}
+											})
+										}}>
+											Delete Class
+										</Button>	
+									)
+								}
 
 							</Flex>
 						</Flex>
@@ -279,133 +350,145 @@ export default function SettingsMenu() {
                         </Modal>
 					</Flex>
 
-					<Divider />
 
-					<Title level={3}>Links</Title>
+					{canManageLinks && (
+						<>
+							<Divider />
 
-					<Flex
-						justify="end"
-						align="center"
-						style={{ width: "100%" }}
-                        vertical={isMobile}
-                        gap={isMobile ? 10 : undefined}
-					>
-						<Input
-							placeholder="Link Name"
-							style={{ width: "200px", marginRight: 10, ...(isMobile && { marginRight: 0, width: '100%' }) }}
-                            value={newLinkInput.name}
-                            onChange={(e) => setNewLinkInput({...newLinkInput, name: e.target.value})}
-						/>
-						<Space.Compact style={{ width: "100%", ...(isMobile && { marginRight: 0, width: '100%' })  }}>
-							<Space.Addon>https://</Space.Addon>
-							<Input 
-								placeholder="example.com" 
-								value={newLinkInput.url}
-								onChange={(e) => setNewLinkInput({...newLinkInput, url: e.target.value})}
-							/>
-						</Space.Compact>
-						<Button
-							type="primary"
-							style={{ marginLeft: 10, width: "100px", ...(isMobile && { marginLeft: 0, width: '100%' })  }}
-                            onClick={() => tryAddLink()}
-						>
-							Add Link
-						</Button>
-					</Flex>
+							<Title level={3}>Links</Title>
 
-					<Collapse
-						style={{ width: "100%", marginTop: 20 }}
-						bordered={false}
-						items={[
-							{
-								key: 1,
-								label: "Added Links",
-								children: (
-									<Flex vertical>
-										{classLinks.length > 0 && classLinks.map((link, index) => (
-											<Flex
-												key={index}
-												justify="space-between"
-												align="center"
-												style={{
-													width: "100%",
-													borderBottom:
-														"1px solid var(--antd-border-color)",
-													paddingBottom: 10,
-													marginBottom: 10,
-												}}
-											>
-												<Input
-													style={{
-														width: "200px",
-														marginRight: 10,
-													}}
-													value={link.name}
-													readOnly
-												/>
-												<Input
-													style={{ width: "100%" }}
-													value={link.url}
-													readOnly
-												/>
-												<Button
-													variant="solid"
-													color="danger"
-													style={{
-														marginLeft: 10,
-														width: "100px",
-													}}
-                                                    onClick={() => removeLink(link)}
-												>
-													Remove
-												</Button>
+							<Flex
+								justify="end"
+								align="center"
+								style={{ width: "100%" }}
+								vertical={isMobile}
+								gap={isMobile ? 10 : undefined}
+							>
+								<Input
+									placeholder="Link Name"
+									style={{ width: "200px", marginRight: 10, ...(isMobile && { marginRight: 0, width: '100%' }) }}
+									value={newLinkInput.name}
+									onChange={(e) => setNewLinkInput({...newLinkInput, name: e.target.value})}
+								/>
+								<Space.Compact style={{ width: "100%", ...(isMobile && { marginRight: 0, width: '100%' })  }}>
+									<Space.Addon>https://</Space.Addon>
+									<Input 
+										placeholder="example.com" 
+										value={newLinkInput.url}
+										onChange={(e) => setNewLinkInput({...newLinkInput, url: e.target.value})}
+									/>
+								</Space.Compact>
+								<Button
+									type="primary"
+									style={{ marginLeft: 10, width: "100px", ...(isMobile && { marginLeft: 0, width: '100%' })  }}
+									onClick={() => tryAddLink()}
+								>
+									Add Link
+								</Button>
+							</Flex>
+
+							<Collapse
+								style={{ width: "100%", marginTop: 20 }}
+								bordered={false}
+								items={[
+									{
+										key: 1,
+										label: "Added Links",
+										children: (
+											<Flex vertical>
+												{classLinks.length > 0 && classLinks.map((link, index) => (
+													<Flex
+														key={index}
+														justify="space-between"
+														align="center"
+														style={{
+															width: "100%",
+															borderBottom:
+																"1px solid var(--antd-border-color)",
+															paddingBottom: 10,
+															marginBottom: 10,
+														}}
+													>
+														<Input
+															style={{
+																width: "200px",
+																marginRight: 10,
+															}}
+															value={link.name}
+															readOnly
+														/>
+														<Input
+															style={{ width: "100%" }}
+															value={link.url}
+															readOnly
+														/>
+														<Button
+															variant="solid"
+															color="danger"
+															style={{
+																marginLeft: 10,
+																width: "100px",
+															}}
+															onClick={() => removeLink(link)}
+														>
+															Remove
+														</Button>
+													</Flex>
+												))}
 											</Flex>
-										))}
-									</Flex>
-								),
-							},
-						]}
-					/>
+										),
+									},
+								]}
+							/>
 
-					<Divider />
+					</>
+					)}
 
-					<Title level={3}>Tags</Title>
+					{
+						canManageTags && (
+							<>
+								<Divider />
 
-					<Flex
-						justify="start"
-						align="center"
-						style={{ width: "100%" }}
-					>
-						<Input
-							placeholder="Tag Name"
-							style={{ width: "200px", marginRight: 10 }}
-                            value={newTagInput}
-                            onChange={(e) => setNewTagInput(e.target.value)}
-						/>
-						<Button
-							type="primary"
-							style={{ marginLeft: 10, width: "100px" }}
-                            onClick={() => tryAddTag()}
-						>
-							Add Tag
-						</Button>
-					</Flex>
-                    <Flex gap={10} align="center" justify="start" wrap>
-                        {
-                            classTags.map((tag: string, index: number) => (
-                                <Button 
-                                    key={index} 
-                                    variant="outlined" 
-                                    type="default" 
-                                    style={{marginTop: 10}}
-									onClick={() => tryRemoveTag(tag)}
-                                >
-                                    {tag}
-                                    <IonIcon icon={IonIcons.trash} />
-                                </Button>
-                            ))
-                        }
-                    </Flex>
+								<Title level={3}>Tags</Title>
+
+								<Flex
+									justify="start"
+									align="center"
+									style={{ width: "100%" }}
+								>
+									<Input
+										placeholder="Tag Name"
+										style={{ width: "200px", marginRight: 10 }}
+										value={newTagInput}
+										onChange={(e) => setNewTagInput(e.target.value)}
+									/>
+									<Button
+										type="primary"
+										style={{ marginLeft: 10, width: "100px" }}
+										onClick={() => tryAddTag()}
+									>
+										Add Tag
+									</Button>
+								</Flex>
+								<Flex gap={10} align="center" justify="start" wrap>
+									{
+										classTags.map((tag: string, index: number) => (
+											<Button 
+												key={index} 
+												variant="outlined" 
+												type="default" 
+												style={{marginTop: 10}}
+												onClick={() => tryRemoveTag(tag)}
+											>
+												{tag}
+												<IonIcon icon={IonIcons.trash} />
+											</Button>
+										))
+									}
+								</Flex>
+							</>
+						)
+					}
 
 				</Flex>
 			</Flex>

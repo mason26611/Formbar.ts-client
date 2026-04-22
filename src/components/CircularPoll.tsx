@@ -1,8 +1,8 @@
 import { Progress } from "antd";
-import type { Poll } from "../types";
-import { useTheme } from "../main";
+import type { Poll } from "@/types";
+import { useTheme } from "@/main";
 import { useState } from "react";
-import { formatTime, textColorForBackground } from "../GlobalFunctions";
+import { formatTime, textColorForBackground } from "@utils/GlobalFunctions";
 
 type CircularPollProperties = {
 	percentage: number;

@@ -1,16 +1,16 @@
 import { Button, Flex, InputNumber, Modal, Select, Tag, Tooltip, notification } from "antd";
 import { Activity, useState, useEffect } from "react";
-import { textColorForBackground } from "../GlobalFunctions";
-import { type Student } from "../types";
+import { textColorForBackground } from "@utils/GlobalFunctions";
+import { type Student } from "@/types";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useClassData, useUserData } from "../main";
-import { socket } from "../socket";
+import { useClassData, useUserData } from "@/main";
+import { socket } from "@utils/socket";
 
-import { awardDigipogs as awardDigipogAPICall }  from "../api/digipogApi";
-import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "../api/classApi";
-import { addRoleToStudent, removeRoleFromStudent } from "../api/rolesApi";
-import { currentUserHasScope } from "../utils/scopeUtils";
+import { awardDigipogs as awardDigipogAPICall }  from "@api/digipogApi";
+import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "@api/classApi";
+import { addRoleToStudent, removeRoleFromStudent } from "@api/rolesApi";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 type AccordionCategory = {
 	name: string;

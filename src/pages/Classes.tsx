@@ -1,16 +1,16 @@
 import { Button, Card, Flex, Input, Modal, Select, Typography } from "antd";
 const { Title, Text } = Typography;
-import FormbarHeader from "../components/FormbarHeader";
-import Log from "../debugLogger";
-import { useUserData, useSettings, getAppearAnimation } from "../main";
+import FormbarHeader from "@components/FormbarHeader";
+import Log from "@utils/debugLogger";
+import { useUserData, useSettings, getAppearAnimation } from "@/main";
 import type { CardStylesType } from "antd/es/card/Card";
-import { useMobileDetect } from "../main";
+import { useMobileDetect } from "@/main";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMe, getUserClasses } from "../api/userApi";
-import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "../api/classApi";
-import { SCOPES, type CurrentUserData } from "../types";
-import { currentUserHasScope } from "../utils/scopeUtils";
+import { getMe, getUserClasses } from "@api/userApi";
+import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "@api/classApi";
+import { type CurrentUserData } from "@/types";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 export default function ClassesPage() {
 	const navigate = useNavigate();
@@ -90,6 +90,7 @@ export default function ClassesPage() {
     }
 
     function deleteClass() {
+		if(!canDeleteClasses) return;
         if (selectedClass === null) {
             Log({ message: "No class selected", level: "error" });
             return;
@@ -139,7 +140,8 @@ export default function ClassesPage() {
                                 level: "info",
                             });
                             setUserData(userData);
-							if (currentUserHasScope(userData, 'class.system.panel_access'))
+							const canAccessPanel = currentUserHasScope(userData, 'class.system.panel_access');
+							if (canAccessPanel)
                                 navigate("/panel");
                             else navigate("/student");
                         })
@@ -162,6 +164,7 @@ export default function ClassesPage() {
             });
     }
 	function createClass() {
+		if(!canCreateClasses) return;
 		if (createClassName.trim() === "") {
 			Log({ message: "Class name cannot be empty", level: "error" });
 			return;
@@ -305,7 +308,7 @@ export default function ClassesPage() {
 									Enter{isMobileView ? "" : " Class"}
 								</Button>
                                 {
-                                    userData && currentUserHasScope(userData, 'global.class.delete') && (
+                                    userData && canDeleteClasses && (
                                         <Button
                                             type="default"
                                             color="danger"
@@ -326,13 +329,13 @@ export default function ClassesPage() {
 						loading={
 							!(
 								userData &&
-								currentUserHasScope(userData, 'global.class.create')
+								canCreateClasses
 							)
 						}
 						hidden={
 							!(
 								userData &&
-								currentUserHasScope(userData, 'global.class.create')
+								canCreateClasses
 							)
 						}
 					>

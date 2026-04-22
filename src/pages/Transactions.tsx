@@ -1,14 +1,14 @@
-import FormbarHeader from "../components/FormbarHeader";
+import FormbarHeader from "@components/FormbarHeader";
 import { Flex, Pagination, Spin, Typography } from "antd";
-import Log from "../debugLogger";
+import Log from "@utils/debugLogger";
 const { Title, Text } = Typography;
 
-import TransactionItem from "../components/TransactionItem";
-import type { Transaction } from "../types";
-import { useMobileDetect, useUserData } from "../main";
+import TransactionItem from "@components/TransactionItem";
+import type { Transaction } from "@/types";
+import { useMobileDetect, useUserData } from "@/main";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getUserTransactions } from "../api/userApi";
+import { getUserTransactions } from "@api/userApi";
 
 const DEFAULT_PAGE_SIZE = 20;
 

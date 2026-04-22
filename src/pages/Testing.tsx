@@ -1,16 +1,16 @@
 import { Button, Flex, Input, Badge, Tooltip } from "antd";
 import { useState } from "react";
-import FormbarHeader from "../components/FormbarHeader";
-import { useSettings, getAppearAnimation } from "../main";
-import Log from "../debugLogger";
+import FormbarHeader from "@components/FormbarHeader";
+import { useSettings, getAppearAnimation } from "@/main";
+import Log from "@utils/debugLogger";
 
 // Import API functions
-import * as userApi from "../api/userApi";
-import * as classApi from "../api/classApi";
-import * as digipogApi from "../api/digipogApi";
-import * as managerApi from "../api/managerApi";
-import * as notificationApi from "../api/notificationApi";
-import { getPublicKey } from "../api/systemApi";
+import * as userApi from "@api/userApi";
+import * as classApi from "@api/classApi";
+import * as digipogApi from "@api/digipogApi";
+import * as managerApi from "@api/managerApi";
+import * as notificationApi from "@api/notificationApi";
+import { getPublicKey } from "@api/systemApi";
 
 const testFuncs = [
     { name: 'Clear Console', func: () => console.clear(), hasArgs: false, category: 'System', method: 'DELETE', testedWorks: true },

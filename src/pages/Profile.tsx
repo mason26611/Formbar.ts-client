@@ -1,5 +1,5 @@
-import FormbarHeader from "../components/FormbarHeader";
-import Log from "../debugLogger";
+import FormbarHeader from "@components/FormbarHeader";
+import Log from "@utils/debugLogger";
 import {
 	Collapse,
 	Card,
@@ -10,15 +10,18 @@ import {
 	message,
 	Modal,
     Space,
+	InputNumber,
 } from "antd";
 const { Title, Text, Link } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useUserData, useSettings, useMobileDetect } from "../main";
+import { useUserData, useSettings, useMobileDetect } from "@/main";
 import CountUp from 'react-countup';
-import { getMe, getUser, regenerateUserApiKey, requestUserPinReset, updateUserPin, verifyUserPin } from "../api/userApi";
+import { getMe, getUser, regenerateUserApiKey, requestUserPinReset, updateUserPin, verifyUserPin } from "@api/userApi";
+import { transferDigipogs } from "@/api/digipogApi";
+import { currentUserHasScope } from "@/utils/scopeUtils";
 
 export default function Profile() {
     const { settings } = useSettings();
@@ -31,6 +34,12 @@ export default function Profile() {
 	);
 	const [sensModalOpen, setSensModalOpen] = useState(false);
 	const [firstPinModalOpen, setFirstPinModalOpen] = useState(false);
+
+	const [transferDigipog, setTransferDigipog] = useState(0);
+	const [transferDigipogPin, setTransferDigipogPin] = useState("");
+	const [transferDigipogReason, setTransferDigipogReason] = useState("");
+	const [transferDigipogModalOpen, setTransferDigipogModalOpen] = useState(false);
+
 	const [enteredPin, setEnteredPin] = useState("");
 	const [firstPin, setFirstPin] = useState("");
 	const [hasPin, setHasPin] = useState<boolean | null>(null);
@@ -54,6 +63,8 @@ export default function Profile() {
 	const isGuestProfile = Boolean(isOwnProfile && userData?.isGuest);
 	const showGuestActions = !isGuestProfile;
 	const showSensitiveSection = isOwnProfile && !isGuestProfile;
+
+	const canTransferDigipogs = isOwnProfile && !isGuestProfile && currentUserHasScope(userData, "global.digipogs.transfer");
 
 	const getErrorMessage = (response: unknown, fallback: string) => {
 		const errorResponse = response as {
@@ -380,7 +391,7 @@ export default function Profile() {
                                     )
                                 }
 								{
-									<span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{(id && String(id) === String(userData?.id)) || !isMobile ? "Your Profile" : "Profile"}</span>
+									<span style={{textAlign:'center', ...(isMobile && {width: '100%'})}}>{isOwnProfile && !isMobile ? "Your Profile" : "Profile"}</span>
 								}
                                 {
                                     !isMobile && showGuestActions && (
@@ -436,19 +447,13 @@ export default function Profile() {
 							</Text>
 						)}
 
-                        <div style={isMobile ? {
+                        <Flex vertical gap={10} style={isMobile ? {
                             height: sensitiveActiveKeys.includes("1") ? '0' : '120px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px',
                             width: '100%',
                             overflow: 'hidden',
                             transition: 'height 0.3s ease',
                         } : {
                             width:'100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px',
                         }}>
                             {!error &&
                                 Object.entries(profileProps).map(([key, value]) =>
@@ -465,7 +470,71 @@ export default function Profile() {
                                         </p>
                                     ),
                             )}
-                        </div>
+							{
+								!isOwnProfile && canTransferDigipogs && (
+									<>
+										<Flex justify="center" align="center">
+											<Button type="primary" variant="solid" color="blue" onClick={()=>setTransferDigipogModalOpen(true)}>
+												Transfer Digipogs
+											</Button>
+										</Flex>
+
+										<Modal
+											title="Transfer Digipogs"
+											okText="Transfer"
+											cancelText="Cancel"
+											open={transferDigipogModalOpen}
+											onCancel={() => {
+												setTransferDigipogModalOpen(false);
+												setTransferDigipog(0);
+												setTransferDigipogPin("");
+												setTransferDigipogReason("");
+											}}
+											onOk={() => {
+												if (!transferDigipog || transferDigipog <= 0 || !canTransferDigipogs) {
+													return;
+												}
+												transferDigipogs({to: String(profileProps.ID), amount: transferDigipog, pin: transferDigipogPin, reason: transferDigipogReason}).then(() => {
+													setTransferDigipogModalOpen(false);
+													setTransferDigipog(0);
+													setTransferDigipogPin("");
+													setTransferDigipogReason("");
+												})
+											}}
+											closeIcon={<IonIcon icon={IonIcons.close} />}
+										>
+											<Flex
+												vertical
+												gap={10}
+												justify="start"
+												align="start"
+											>
+												<Text>Transfers digipogs from your account to {profileProps['Display Name']}</Text>
+												<InputNumber
+													style={{width:'100%'}}
+													placeholder="Amount"
+													value={transferDigipog}
+													onChange={(value) => setTransferDigipog(value || 0)}
+													min={0}
+													
+
+												/>
+												<Input
+													placeholder="Reason"
+													value={transferDigipogReason}
+													onChange={(e) => setTransferDigipogReason(e.target.value)}
+												/>
+												<Input.Password
+													placeholder="PIN"
+													value={transferDigipogPin}
+													onChange={(e) => setTransferDigipogPin(e.target.value)}
+												/>
+											</Flex>
+										</Modal>
+									</>
+								)
+							}
+                        </Flex>
 
 						{!error && showSensitiveSection && (
 							<div

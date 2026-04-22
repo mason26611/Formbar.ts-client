@@ -1,24 +1,22 @@
-import { Button, Flex, Tooltip, Popconfirm, Modal, Badge } from "antd";
+import { Button, Flex, Tooltip, Modal, Badge } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
-import Log from "../debugLogger";
+import Log from "@utils/debugLogger";
 
-import { isDev, useMobileDetect, useTheme, useUserData } from "../main";
-import { themeColors } from "../../themes/ThemeConfig";
+import { isDev, useMobileDetect, useTheme, useUserData } from "@/main";
+import { themeColors } from "@/themes/ThemeConfig";
 
-import { socket } from "../socket";
 import { useState } from "react";
-import SettingsModal from "./SettingsModal";
-import { leaveClassSession } from "../api/classApi";
-import { currentUserHasScope } from "../utils/scopeUtils";
-import { clearAuthTokens } from "../api/authApi";
+import SettingsModal from "@components/SettingsModal";
+import { leaveClassSession } from "@api/classApi";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 export default function FormbarHeader() {
 	const { isDark } = useTheme();
 	const navigate = useNavigate();
 	const isMobileView = useMobileDetect();
-	const { userData, setUserData } = useUserData();
+	const { userData } = useUserData();
 	const canTeacherPanel = currentUserHasScope(userData, "class.system.panel_access");
 	const canStudentPanel = Boolean(userData?.activeClass) && !canTeacherPanel;
 	const canOpenDebug = currentUserHasScope(userData, 'global.system.admin');
@@ -73,15 +71,7 @@ export default function FormbarHeader() {
 			display: "flex",
 			alignItems: "center",
 			justifyContent: "center",
-		};
-
-	function logoutHandler() {
-		clearAuthTokens();
-		sessionStorage.removeItem("formbarLoginCreds");
-		socket?.disconnect();
-        setUserData(null);
-		navigate("/login");
-	}
+		}
 
 	function leaveClass() {
 		if (!userData || !userData.activeClass) {
@@ -331,45 +321,6 @@ export default function FormbarHeader() {
                         <IonIcon icon={IonIcons.settings} size="large" />
                     </Button>
                 </Tooltip>
-
-				{userData && (
-					<Tooltip
-                        mouseEnterDelay={0.5}
-						placement="bottomRight"
-						title="Log Out"
-						arrow={{ pointAtCenter: true }}
-						color="magenta"
-					>
-						<Popconfirm
-							placement="bottomRight"
-							title={"Wait! Are you sure you would like to log out?"}
-							icon={
-								<IonIcon
-									icon={IonIcons.alertCircle}
-									color="red"
-									size="large"
-									style={{ marginRight: "4px", marginTop: "3px" }}
-								/>
-							}
-							cancelText={"No"}
-							okText={"Yes"}
-							okType="danger"
-							onConfirm={() => {
-								logoutHandler();
-							}}
-						>
-							<Button
-								type="primary"
-								variant="solid"
-								color="magenta"
-								size="large"
-								style={styles.headerButton}
-							>
-								<IonIcon icon={IonIcons.logOut} size="large" />
-							</Button>
-						</Popconfirm>
-					</Tooltip>
-				)}
 			</Flex>
 
             <Modal

@@ -1,6 +1,6 @@
 import { Button, Flex, Input, Modal, Switch, Typography, ColorPicker } from "antd";
 const { Text } = Typography;
-import { textColorForBackground } from "../GlobalFunctions";
+import { textColorForBackground } from "@utils/GlobalFunctions";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 

@@ -9,42 +9,42 @@ import {
     Typography,
 } from "antd";
 const { Text } = Typography;
-import FormbarHeader from "../components/FormbarHeader";
+import FormbarHeader from "@components/FormbarHeader";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useClassData, useSettings, useTheme, useUserData } from "../main";
+import { useClassData, useSettings, useTheme, useUserData } from "@/main";
 import { Activity, useEffect, useState, useRef, useMemo } from "react";
 
-import Dashboard from "../components/ControlPanel/Dashboard";
-import PollsMenu from "../components/ControlPanel/PollsMenu";
-import SettingsMenu from "../components/ControlPanel/SettingsMenu";
-import RolesMenu from "../components/ControlPanel/RolesMenu";
-import PollEditorMenu from "../components/ControlPanel/PollEditorMenu";
+import Dashboard from "@components/ControlPanel/Dashboard";
+import PollsMenu from "@components/ControlPanel/PollsMenu";
+import SettingsMenu from "@components/ControlPanel/SettingsMenu";
+import RolesMenu from "@components/ControlPanel/RolesMenu";
+import PollEditorMenu from "@components/ControlPanel/PollEditorMenu";
 
-import { socket } from "../socket";
-import Log from "../debugLogger";
-import ControlPanelPoll from "../components/BarPoll";
-import Statistics from "../components/ControlPanel/StatisticsPage";
-import PollModal from "../components/PollModal";
+import { socket } from "@utils/socket";
+import Log from "@utils/debugLogger";
+import ControlPanelPoll from "@components/BarPoll";
+import Statistics from "@components/ControlPanel/StatisticsPage";
+import PollModal from "@components/PollModal";
 
-import { isMobile } from "../main";
+import { isMobile } from "@/main";
 import { useNavigate } from "react-router-dom";
-import TimerPage from "../components/ControlPanel/TimerPage";
-import { formatTime, toEpochMs } from "../GlobalFunctions";
-import { clearCurrentPoll, endPoll } from "../api/classApi";
-import { clearTimer, pauseTimer, resumeTimer } from "../api/timerApi";
+import TimerPage from "@components/ControlPanel/TimerPage";
+import { formatTime, toEpochMs } from "@utils/GlobalFunctions";
+import { clearCurrentPoll, endPoll } from "@api/classApi";
+import { clearTimer, pauseTimer, resumeTimer } from "@api/timerApi";
 
 import useSound from 'use-sound'
-import alarmSFX from '../assets/sfx/alarmClock.mp3';
-import breakSFX from '../assets/sfx/break.wav';
-import helpSFX from '../assets/sfx/help.wav';
-import joinSFX from '../assets/sfx/join.wav';
-import leaveSFX from '../assets/sfx/leave.wav';
-import removeSFX from '../assets/sfx/remove.wav';
-import tutdSFX from '../assets/sfx/TUTD.wav';
-import { type ClassData, type ScopeKey } from "../types";
-import { currentUserHasScope, userHasAllScopes, userHasAnyScope } from "../utils/scopeUtils";
-import { getMe } from "../api/userApi";
+import alarmSFX from '@assets/sfx/alarmClock.mp3';
+import breakSFX from '@assets/sfx/break.wav';
+import helpSFX from '@assets/sfx/help.wav';
+import joinSFX from '@assets/sfx/join.wav';
+import leaveSFX from '@assets/sfx/leave.wav';
+import removeSFX from '@assets/sfx/remove.wav';
+import tutdSFX from '@assets/sfx/TUTD.wav';
+import { type ClassData, type ScopeKey } from "@/types";
+import { currentUserHasScope, userHasAllScopes, userHasAnyScope } from "@utils/scopeUtils";
+import { getMe } from "@api/userApi";
 
 interface MenuItem {
 	key: string;
@@ -192,6 +192,8 @@ export default function ControlPanel() {
         () => items.filter((item) => canViewMenuItem(userData, item)),
         [userData]
     );
+
+	const canControlTimer = currentUserHasScope(userData, "class.timer.control");
 
 	useEffect(() => {
 		if (!userData) return;
@@ -491,67 +493,72 @@ export default function ControlPanel() {
                                     />
                                     {isMobileDevice ? null : <Text>{formatTime(timerDurationSeconds)} Timer</Text>}
                                 </Flex>
-                                <Flex gap={isMobileDevice ? 5 : 10} style={{marginTop: 10}} align="center" justify="center" vertical={isMobileDevice}>
-                                    <Button variant="solid" color={classData?.timer.active ? "red" : "green"} style={{marginTop: 10, width: '100%'}}
-                                        onClick={() => {
-                                            if (!classData) return;
-                                            if (classData.timer.active) {
-                                                // Pause timer
-                                                pauseTimer(classData.id)
-                                                .then((res) => {
-                                                    if (!res.ok) {
-                                                        throw new Error("Failed to pause timer");
-                                                    }
-                                                    Log({message: "Timer paused:", data: res.data});
-                                                })
-                                                .catch((err) => {
-                                                    Log({message: "Error pausing timer:", data: err, level: 'error'});
-                                                });
-                                            } else {
-                                                // Resume timer
-                                                resumeTimer(classData.id)
-                                                .then((res) => {
-                                                    if (!res.ok) {
-                                                        throw new Error("Failed to resume timer");
-                                                    }
-                                                    Log({message: "Timer resumed:", data: res.data});
-                                                })
-                                                .catch((err) => {
-                                                    Log({message: "Error resuming timer:", data: err, level: 'error'});
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        {
-                                            classData?.timer.active ? (
-                                                isMobileDevice ? <IonIcon icon={IonIcons.pause} /> : "Pause"
-                                            ) : (
-                                                isMobileDevice ? <IonIcon icon={IonIcons.play} /> : "Resume"
-                                            )
-                                        }
-                                    </Button>
-                                    <Button variant="solid" color="red" style={{marginTop: 10, width: '100%'}}
-                                        onClick={() => {
-                                            if (!classData) return;
-                                            // Clear timer
-                                            alarmData.stop();
-                                            clearTimer(classData.id)
-                                            .then((res) => {
-                                                if (!res.ok) {
-                                                    throw new Error("Failed to clear timer");
-                                                }
-                                                Log({message: "Timer cleared:", data: res.data});
-                                            })
-                                            .catch((err) => {
-                                                Log({message: "Error clearing timer:", data: err, level: 'error'});
-                                            });
-                                        }}
-                                    >
-                                        {
-                                            isMobileDevice ? <IonIcon icon={IonIcons.trash} /> : "Clear"
-                                        }
-                                    </Button>
-                                </Flex>
+
+								{
+									canControlTimer && (
+										<Flex gap={isMobileDevice ? 5 : 10} style={{marginTop: 10}} align="center" justify="center" vertical={isMobileDevice}>
+											<Button variant="solid" color={classData?.timer.active ? "red" : "green"} style={{marginTop: 10, width: '100%'}}
+												onClick={() => {
+													if (!classData || !canControlTimer) return;
+													if (classData.timer.active) {
+														// Pause timer
+														pauseTimer(classData.id)
+														.then((res) => {
+															if (!res.ok) {
+																throw new Error("Failed to pause timer");
+															}
+															Log({message: "Timer paused:", data: res.data});
+														})
+														.catch((err) => {
+															Log({message: "Error pausing timer:", data: err, level: 'error'});
+														});
+													} else {
+														// Resume timer
+														resumeTimer(classData.id)
+														.then((res) => {
+															if (!res.ok) {
+																throw new Error("Failed to resume timer");
+															}
+															Log({message: "Timer resumed:", data: res.data});
+														})
+														.catch((err) => {
+															Log({message: "Error resuming timer:", data: err, level: 'error'});
+														});
+													}
+												}}
+											>
+												{
+													classData?.timer.active ? (
+														isMobileDevice ? <IonIcon icon={IonIcons.pause} /> : "Pause"
+													) : (
+														isMobileDevice ? <IonIcon icon={IonIcons.play} /> : "Resume"
+													)
+												}
+											</Button>
+											<Button variant="solid" color="red" style={{marginTop: 10, width: '100%'}}
+												onClick={() => {
+													if (!classData || !canControlTimer) return;
+													// Clear timer
+													alarmData.stop();
+													clearTimer(classData.id)
+													.then((res) => {
+														if (!res.ok) {
+															throw new Error("Failed to clear timer");
+														}
+														Log({message: "Timer cleared:", data: res.data});
+													})
+													.catch((err) => {
+														Log({message: "Error clearing timer:", data: err, level: 'error'});
+													});
+												}}
+											>
+												{
+													isMobileDevice ? <IonIcon icon={IonIcons.trash} /> : "Clear"
+												}
+											</Button>
+										</Flex>
+									)
+								}
                             </Card>
                         ) : null
                     }

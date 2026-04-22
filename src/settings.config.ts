@@ -1,6 +1,7 @@
 import * as IonIcons from "ionicons/icons";
+import type { ScopeKey } from "@/types";
 
-export type SettingType = "boolean" | "number" | "select";
+export type SettingType = "boolean" | "number" | "select" | "action";
 
 export interface SettingConfig {
 	key: string;
@@ -8,11 +9,13 @@ export interface SettingConfig {
     mobileLabel?: string;
 	description?: string;
 	type: SettingType;
-	category: "general" | "appearance" | "accessibility";
+	category: string;
 	options?: { label: string; value: any }[];
 	min?: number;
 	max?: number;
 	step?: number;
+	requiresLogin?: boolean;
+	requiredScopes?: ScopeKey[];
 }
 
 export interface SettingCategory {
@@ -45,6 +48,20 @@ export const settingCategories: SettingCategory[] = [
 		selectedIcon: IonIcons.accessibility,
 		deselectedIcon: IonIcons.accessibilityOutline,
 	},
+	{
+		id: 'divider',
+		label: '',
+		icon: null,
+		selectedIcon: null,
+		deselectedIcon: null,
+	},
+	{
+		id: 'user',
+		label: 'User',
+		icon: IonIcons.personOutline,
+		selectedIcon: IonIcons.person,
+		deselectedIcon: IonIcons.personOutline,
+	}
 ];
 
 export const settingsConfig: SettingConfig[] = [
@@ -75,4 +92,11 @@ export const settingsConfig: SettingConfig[] = [
 		category: "accessibility",
 		description: "Reduces motion and animations throughout the app",
 	},
+	{
+		key: "logout",
+		label: "Log Out",
+		type: "action",
+		category: "user",
+		requiresLogin: true,
+	}
 ];

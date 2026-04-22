@@ -1,6 +1,6 @@
 import { Badge, Button, Flex, Modal, Typography } from "antd";
-import { StudentAccordion } from "./AccordionCollapse";
-import { useClassData } from "../main";
+import { StudentAccordion } from "@components/AccordionCollapse";
+import { useClassData } from "@/main";
 const { Text } = Typography;
 
 export default function StudentObject({

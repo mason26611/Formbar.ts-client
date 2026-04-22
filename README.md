@@ -27,7 +27,7 @@ npm install
 npm run dev
 
 # Development - Network Testing
-npx run dev -- --host
+npm run dev -- --host
 ```
 
 ---

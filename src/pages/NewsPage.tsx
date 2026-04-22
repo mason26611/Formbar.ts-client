@@ -1,9 +1,9 @@
 import { Card, Flex, Typography } from "antd";
 const { Title } = Typography;
-import FormbarHeader from "../components/FormbarHeader";
-import { useMobileDetect, useSettings, getAppearAnimation } from "../main";
+import FormbarHeader from "@components/FormbarHeader";
+import { useMobileDetect, useSettings, getAppearAnimation } from "@/main";
 import { Link } from "react-router";
-import { useUserData } from "../main";
+import { useUserData } from "@/main";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 

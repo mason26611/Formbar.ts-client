@@ -1,4 +1,4 @@
-import { isDev } from "./main";
+import { isDev } from "@/main";
 
 type LogProps = {
 	message: string;

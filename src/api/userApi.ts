@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 // DELETE: Delete a user
 export function deleteUser(id: string) {

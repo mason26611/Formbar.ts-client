@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { getClassLinks } from "../api/classApi";
-import { useClassData, useUserData } from "../main";
-import { currentUserHasScope } from "../utils/scopeUtils";
-import FormbarHeader from "../components/FormbarHeader";
+import { getClassLinks } from "@api/classApi";
+import { useUserData } from "@/main";
+import { currentUserHasScope } from "@utils/scopeUtils";
+import FormbarHeader from "@components/FormbarHeader";
+import { Typography } from "antd";
+const { Title, Link } = Typography;
 
 export default function Links() {
 	const { userData } = useUserData();
@@ -21,26 +23,26 @@ export default function Links() {
 		getClassLinks(userData.activeClass).then((response) => {
 			setClassLinks(response.data.links);
 			console.log(response.data.links);
-			for (const link of response.data.links) {
-				getFaviconForLink(link).then((favicon) => {
-					link.favicon = favicon;
-				});
-			}
+			// for (const link of response.data.links) {
+			// 	getFaviconForLink(link).then((favicon) => {
+			// 		link.favicon = favicon;
+			// 	});
+			// }
 		});
 	}, [userData, canSeeLinks, getClassLinks]);
 
 	return (
 		<>
 			<FormbarHeader />
-			<h1>Links</h1>
+			<Title>Links</Title>
 			{
-				classLinks.length > 0 ? (
+				classLinks.length > 0 && canSeeLinks ? (
 					<ul>
 						{classLinks.map((link, index) => (
 							<li key={index}>
-								<a href={link.url} target="_blank" rel="noopener noreferrer">
+								<Link href={link.url} target="_blank" rel="noopener noreferrer">
 									{link.name}
-								</a>
+								</Link>
 							</li>
 						))}
 					</ul>
@@ -52,20 +54,19 @@ export default function Links() {
 	);
 }
 
-//! THIS DOES NOT WORK YET.
-//! TRY MORE
+// No Worky :(
 
-function getFaviconForLink(link: any): Promise<string> {
-    const iconSize = 32;
-    const domain = new URL(link.url).hostname;
-    // Use cors-anywhere or allorigins as a proxy
-    const apiLink = `https://cors-anywhere.herokuapp.com/https://www.google.com/s2/favicons?domain=${domain}&sz=${iconSize}`
+// function getFaviconForLink(link: any): Promise<string> {
+//     const iconSize = 32;
+//     const domain = new URL(link.url).hostname;
+//     // Use cors-anywhere or allorigins as a proxy
+//     const apiLink = `https://cors-anywhere.herokuapp.com/https://www.google.com/s2/favicons?domain=${domain}&sz=${iconSize}`
 
-    const promise = fetch(apiLink)
-        .then((response) => response.blob())
-        .then((blob) => {
-            return URL.createObjectURL(blob);
-        })
-        .catch(() => "/favicon.ico");
-    return promise;
-}
+//     const promise = fetch(apiLink)
+//         .then((response) => response.blob())
+//         .then((blob) => {
+//             return URL.createObjectURL(blob);
+//         })
+//         .catch(() => "/favicon.ico");
+//     return promise;
+// }

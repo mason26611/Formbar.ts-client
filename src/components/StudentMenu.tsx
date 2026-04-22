@@ -1,16 +1,22 @@
 import { FloatButton, Input, Modal, Radio } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { socket } from "../socket";
+import { socket } from "@utils/socket";
 import { useState } from "react";
+import { useUserData } from "@/main";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 export default function StudentMenu() {
+	const { userData } = useUserData();
 	const [helpModalOpen, setHelpModalOpen] = useState(false);
 	const [breakModalOpen, setBreakModalOpen] = useState(false);
 	const [breakType, setBreakType] = useState<string>("Bathroom");
 
 	const [breakReason, setBreakReason] = useState<string>("");
 	const [helpReason, setHelpReason] = useState<string>("");
+
+	const canRequestHelp = currentUserHasScope(userData, "class.help.request");
+	const canRequestBreak = currentUserHasScope(userData, "class.break.request");
 
 	function sendHelpTicket(reason: string) {
 		socket.emit("help", reason);
@@ -55,58 +61,66 @@ export default function StudentMenu() {
 					},
 				}}
 			>
-				<FloatButton
-					shape="circle"
-					type="primary"
-					tooltip={{
-                        mouseEnterDelay: 0.5,
-						title: "Help Ticket",
-						color: "#ff6860",
-						placement: "left",
-					}}
-					styles={{
-						root: {
-							background: "#ff6860",
-						},
-					}}
-					onClick={() => setHelpModalOpen(true)}
-					icon={
-						<IonIcon
-							icon={IonIcons.handLeftOutline}
-							style={{
-								fontSize: "36px",
-								display: "flex",
-								filter: "invert(1)",
+				{
+					canRequestHelp && (
+						<FloatButton
+							shape="circle"
+							type="primary"
+							tooltip={{
+								mouseEnterDelay: 0.5,
+								title: "Help Ticket",
+								color: "#ff6860",
+								placement: "left",
 							}}
-						/>
-					}
-				/>
-				<FloatButton
-					shape="circle"
-					type="primary"
-					tooltip={{
-                        mouseEnterDelay: 0.5,
-						title: "Request a Break",
-						color: "#ff8f40",
-						placement: "left",
-					}}
-					styles={{
-						root: {
-							background: "#ff8f40",
-						},
-					}}
-					icon={
-						<IonIcon
-							icon={IonIcons.umbrellaOutline}
-							style={{
-								fontSize: "36px",
-								display: "flex",
-								filter: "invert(1)",
+							styles={{
+								root: {
+									background: "#ff6860",
+								},
 							}}
+							onClick={() => setHelpModalOpen(true)}
+							icon={
+								<IonIcon
+									icon={IonIcons.handLeftOutline}
+									style={{
+										fontSize: "36px",
+										display: "flex",
+										filter: "invert(1)",
+									}}
+								/>
+							}
 						/>
-					}
-					onClick={() => setBreakModalOpen(true)}
-				/>
+					)
+				}
+				{
+					canRequestBreak && (
+						<FloatButton
+							shape="circle"
+							type="primary"
+							tooltip={{
+								mouseEnterDelay: 0.5,
+								title: "Request a Break",
+								color: "#ff8f40",
+								placement: "left",
+							}}
+							styles={{
+								root: {
+									background: "#ff8f40",
+								},
+							}}
+							icon={
+								<IonIcon
+									icon={IonIcons.umbrellaOutline}
+									style={{
+										fontSize: "36px",
+										display: "flex",
+										filter: "invert(1)",
+									}}
+								/>
+							}
+							onClick={() => setBreakModalOpen(true)}
+						/>
+					)
+				}
 			</FloatButton.Group>
 
 			<Modal

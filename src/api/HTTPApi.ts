@@ -1,4 +1,4 @@
-import { accessToken } from "../socket";
+import { accessToken } from "@utils/socket";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 const apiVersion = "v1";

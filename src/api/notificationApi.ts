@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 export function getNotifications() {
 	return http("/notifications");

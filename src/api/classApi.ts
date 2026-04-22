@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 // --- Class ---
 
@@ -161,4 +161,16 @@ export function updateClassLink(classId: number, body: {
     url: string,
 }) {
     return http(`/class/${classId}/links`, "PUT", {}, body);
+}
+
+export function kickAllStudents(classId: number) {
+    return http(`/class/${classId}/students/kick-all`, "POST");
+}
+
+export function regenerateClassCode(classId: number) {
+    return http(`/class/${classId}/code/regenerate`, "POST");
+}
+
+export function updateSettings(classId: number, body: any) {
+    return http(`/class/${classId}/settings`, "PATCH", {}, body);
 }

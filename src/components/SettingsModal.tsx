@@ -7,13 +7,19 @@ import {
     Typography,
     Slider,
     Select,
+    Button,
+    Popconfirm,
 } from "antd";
 
 const { Text } = Typography;
 
 import { useState } from "react";
-import { useMobileDetect, useSettings, useTheme } from "../main";
-import { settingCategories, settingsConfig, type SettingConfig } from "../settings.config";
+import { useNavigate } from "react-router-dom";
+import { useMobileDetect, useSettings, useUserData } from "@/main";
+import { settingCategories, settingsConfig, type SettingConfig } from "@/settings.config";
+import { clearAuthTokens } from "@api/authApi";
+import { socket } from "@utils/socket";
+import { userHasAllScopes } from "@utils/scopeUtils";
 
 type MenuItem = Required<MenuProps>['items'][number] & {
     selectedicon?: React.ReactNode;
@@ -25,6 +31,7 @@ interface SettingItemProps {
 	config: SettingConfig;
 	value: any;
 	onChange: (newValue: any) => void;
+	onAction?: (key: string) => void;
 }
 
 
@@ -32,19 +39,72 @@ interface SettingItemProps {
 export default function SettingsModal() {
     const [currentCategoryId, setCurrentCategoryId] = useState<string>("appearance");
     const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-        return settingCategories.map((category, index) => ({
-            key: category.id,
-            icon: <IonIcon icon={index === 0 ? category.selectedIcon : category.deselectedIcon} />,
-            selectedicon: <IonIcon icon={category.selectedIcon} />,
-            deselectedicon: <IonIcon icon={category.deselectedIcon} />,
-            label: category.label,
-        }));
+        return settingCategories.map((category, index) => {
+            // Handle divider
+            if (category.id === 'divider') {
+                return {
+                    key: category.id,
+                    type: 'divider',
+                } as any;
+            }
+            
+            return {
+                key: category.id,
+                icon: <IonIcon icon={index === 0 ? category.selectedIcon : category.deselectedIcon} />,
+                selectedicon: <IonIcon icon={category.selectedIcon} />,
+                deselectedicon: <IonIcon icon={category.deselectedIcon} />,
+                label: category.label,
+            };
+        });
     });
     
     const { settings, updateSettings } = useSettings();
     const isMobile = useMobileDetect();
+    const { userData, setUserData } = useUserData();
+    const navigate = useNavigate();
     
-    function SettingItem({ config, value, onChange }: SettingItemProps) {
+    function isSettingVisible(config: SettingConfig): boolean {
+        // Check login requirement
+        if (config.requiresLogin && !userData) {
+            return false;
+        }
+
+        // Check required scopes
+        if (config.requiredScopes && config.requiredScopes.length > 0) {
+            if (!userData) return false;
+            return userHasAllScopes(userData, config.requiredScopes);
+        }
+
+        return true;
+    }
+
+    function isCategoryVisible(categoryId: string): boolean {
+        // Dividers are always visible
+        if (categoryId === 'divider') return true;
+
+        // Check if the category has at least one visible setting
+        const hasVisibleSettings = settingsConfig.some(
+            (config) => config.category === categoryId && isSettingVisible(config)
+        );
+
+        return hasVisibleSettings;
+    }
+    
+    function handleLogout() {
+        clearAuthTokens();
+        sessionStorage.removeItem("formbarLoginCreds");
+        socket?.disconnect();
+        setUserData(null);
+        navigate("/login");
+    }
+    
+    function handleAction(key: string) {
+        if (key === "logout") {
+            handleLogout();
+        }
+    }
+    
+    function SettingItem({ config, value, onChange, onAction }: SettingItemProps) {
         switch (config.type) {
             case "boolean":
                 return (
@@ -87,13 +147,33 @@ export default function SettingsModal() {
                         />
                     </Flex>
                 );
+            case "action":
+                if (config.key === "logout") {
+                    return (
+                        <Popconfirm
+                            placement="topLeft"
+                            title="Log Out"
+                            description="Are you sure you want to log out?"
+                            onConfirm={() => onAction?.(config.key)}
+                            okText="Yes"
+                            cancelText="No"
+                            okType="danger"
+                        >
+                            <Button type="primary" danger style={{ width: "100%" }}>
+                                {config.label}
+                            </Button>
+                        </Popconfirm>
+                    );
+                }
+                return null;
             default:
                 return null;
         }
     }
 
     function openMenu(key: string) {
-        if (key === currentCategoryId) return;
+        // Skip divider
+        if (key === 'divider' || key === currentCategoryId) return;
         setCurrentCategoryId(key);
 
         const updatedItems = menuItems.map((item) => {
@@ -139,15 +219,20 @@ export default function SettingsModal() {
     }
 
     const currentCategorySettings = settingsConfig.filter(
-        (config) => config.category === currentCategoryId
+        (config) => config.category === currentCategoryId && isSettingVisible(config)
     );
+
+    const visibleMenuItems = menuItems.filter((item) => {
+        if (!item || item.type === "divider") return true;
+        return isCategoryVisible(item.key as string);
+    });
 
     return (
         <Flex style={{ width: "100%", height: "100%" }}>
             <Menu
                 defaultSelectedKeys={["appearance"]}
                 mode="inline"
-                items={menuItems}
+                items={visibleMenuItems}
                 inlineCollapsed={isMobile}
                 theme={"dark"}
                 style={{
@@ -173,6 +258,7 @@ export default function SettingsModal() {
                             config={config}
                             value={getSettingValue(config)}
                             onChange={(newValue) => updateSetting(config, newValue)}
+                            onAction={handleAction}
                         />
                     ))}
                 </Flex>

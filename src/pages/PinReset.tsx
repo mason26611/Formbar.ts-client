@@ -1,8 +1,8 @@
 import { Button, Card, Flex, Input, Typography, message } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import FormbarHeader from "../components/FormbarHeader";
-import { resetPinWithToken } from "../api/userApi";
+import FormbarHeader from "@components/FormbarHeader";
+import { resetPinWithToken } from "@api/userApi";
 
 const { Text, Title } = Typography;
 

@@ -1,5 +1,5 @@
 import CryptoJS from "crypto-js";
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 const SECRET_KEY =
 	import.meta.env.VITE_ENCRYPTION_KEY || "default-key-change-in-prod";

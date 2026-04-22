@@ -1,12 +1,12 @@
-import { isMobile, useClassData, useMobileDetect, useSettings, useUserData } from "../../main";
+import { useClassData, useMobileDetect, useSettings, useUserData } from "@/main";
 import { Button, Card, ColorPicker, Divider, Flex, Input, List, Switch, Typography } from "antd";
 const { Title, Text } = Typography;
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { getClassRoles, updateRole, createRole, deleteRole } from "../../api/rolesApi";
+import { getClassRoles, updateRole, createRole, deleteRole } from "@api/rolesApi";
 import { useEffect, useState } from "react";
-import { darkMode, lightMode } from "../../../themes/ThemeConfig";
-import { SCOPES } from "../../types";
+import { darkMode, lightMode } from "@/themes/ThemeConfig";
+import { SCOPES } from "@/types";
 import {
 	DndContext,
 	closestCenter,
@@ -25,7 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { currentUserHasScope } from "../../utils/scopeUtils";
+import { currentUserHasScope } from "@utils/scopeUtils";
 
 type CategoryKey = keyof typeof SCOPES.CLASS;
 

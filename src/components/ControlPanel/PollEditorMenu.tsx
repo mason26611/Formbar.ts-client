@@ -1,7 +1,7 @@
 import { Button, Card, Flex, Input, Switch, Tooltip, Typography, notification } from "antd";
 const { Title, Text } = Typography;
-import { useClassData, useMobileDetect } from "../../main";
-import PollEditorResponse from "../PollEditorResponse";
+import { useClassData, useMobileDetect } from "@/main";
+import PollEditorResponse from "@components/PollEditorResponse";
 import { useState } from "react";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
@@ -26,8 +26,8 @@ type PollProperties = {
     allowMultipleResponses: boolean;
 };
 
-import { socket } from "../../socket";
-import { createPoll } from "../../api/classApi";
+import { socket } from "@utils/socket";
+import { createPoll } from "@api/classApi";
 
 function randomColor() {
     const letters = '0123456789ABCDEF';
@@ -121,7 +121,7 @@ export default function PollsEditorMenu() {
 
         //? Use fetch WHEN IT ACTUALLY WORKS.
         createPoll(classData.id, pollProperties)
-            .then((data) => {
+            .then(() => {
                 socket?.emit("classUpdate", ""); // Refresh class data to show new poll
             })
             .catch((err) => {

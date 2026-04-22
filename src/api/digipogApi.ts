@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 // POST: Award digipogs
 export function awardDigipogs(body: {

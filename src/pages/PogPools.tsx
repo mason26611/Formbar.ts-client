@@ -1,13 +1,14 @@
 import { Button, Card, Col, Divider, Flex, FloatButton, Input, Modal, Pagination, Popover, Row, Spin, Statistic, Tooltip, Typography, notification } from "antd";
 const { Text, Title } = Typography;
-import FormbarHeader from "../components/FormbarHeader";
-import Log from "../debugLogger";
+import FormbarHeader from "@components/FormbarHeader";
+import Log from "@utils/debugLogger";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { useUserData } from "../main";
+import { useUserData } from "@/main";
 import { useEffect, useState } from "react";
-import { getUserPools } from "../api/userApi";
-import { addPoolMember, createPool, deletePool, payoutPool, removePoolMember } from "../api/pogPoolsApi";
+import { getUserPools } from "@api/userApi";
+import { addPoolMember, createPool, deletePool, payoutPool, removePoolMember } from "@api/pogPoolsApi";
+import { currentUserHasScope } from "@/utils/scopeUtils";
 
 type Pool = {
 	id: number;
@@ -213,6 +214,8 @@ export default function PogPools() {
 			});
 	};
 
+	const canManagePools = currentUserHasScope(userData, "global.pools.manage");
+
 	return (
 		<>
             {contextHolder}
@@ -249,7 +252,7 @@ export default function PogPools() {
 					pools.map((pool) => {
 						const isOwner =
 							Array.isArray(pool.owners) &&
-							pool.owners.some(owner => owner.id === userData?.id);
+							pool.owners.some(owner => owner.id === Number(userData?.id));
 						const ownerLabel =
 							isOwner
                                 ? "You"
@@ -286,7 +289,7 @@ export default function PogPools() {
 								},
 							}}
 							actions={
-								isOwner
+								isOwner && canManagePools
 									? [
 											<Tooltip
                                                 mouseEnterDelay={0.5}
@@ -469,8 +472,9 @@ export default function PogPools() {
 					/>
 				</Flex>
 			)}
-			</div>
+		</div>
 
+		{canManagePools && (
 			<FloatButton
                 shape="circle"
                 type="primary"
@@ -496,8 +500,7 @@ export default function PogPools() {
                     />
                 }
             />
-
-			{/* Create Pool modal */}
+		)}			{/* Create Pool modal */}
 			<Modal
 				title="Create Pool"
 				open={isCreateModalOpen}

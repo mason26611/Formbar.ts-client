@@ -6,8 +6,8 @@ import {
 
 const { Title, Text } = Typography;
 
-import { useMobileDetect, useTheme } from '../main';
-import { themeColors } from '../../themes/ThemeConfig';
+import { useMobileDetect, useTheme } from '@/main';
+import { themeColors } from '@/themes/ThemeConfig';
 
 import { useNavigate } from 'react-router-dom';
 

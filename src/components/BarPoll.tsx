@@ -1,9 +1,9 @@
 import { Flex, Tooltip } from "antd";
-import { useClassData } from "../main";
+import { useClassData } from "@/main";
 import {
 	textColorForBackground,
 	calculateFontSize,
-} from "../GlobalFunctions";
+} from "@utils/GlobalFunctions";
 
 export default function ControlPanelPoll({
 	classData,

@@ -1,19 +1,19 @@
-import LoginPage from "./pages/Login.tsx";
-import ControlPanel from "./pages/ControlPanel.tsx";
-import Profile from "./pages/Profile.tsx";
-import Student from "./pages/Student.tsx";
-import NewsPage from "./pages/NewsPage.tsx";
-import ClassesPage from "./pages/Classes.tsx";
-import PogPools from "./pages/PogPools.tsx";
-import Transactions from "./pages/Transactions.tsx";
-import ManagerPanel from "./pages/ManagerPanel.tsx";
-import NotFound from "./pages/404.tsx";
-import { Testing } from "./pages/Testing.tsx";
-import { Debug } from "./pages/Debug.tsx";
-import PinResetPage from "./pages/PinReset.tsx";
-import EmailVerifyPage from "./pages/EmailVerify.tsx";
-import AuthorizeApp from "./pages/oauth/AuthorizeApp.tsx";
-import Links from "./pages/Links.tsx";
+import LoginPage from "@pages/Login.tsx";
+import ControlPanel from "@pages/ControlPanel.tsx";
+import Profile from "@pages/Profile.tsx";
+import Student from "@pages/Student.tsx";
+import NewsPage from "@pages/NewsPage.tsx";
+import ClassesPage from "@pages/Classes.tsx";
+import PogPools from "@pages/PogPools.tsx";
+import Transactions from "@pages/Transactions.tsx";
+import ManagerPanel from "@pages/ManagerPanel.tsx";
+import NotFound from "@pages/404.tsx";
+import { Testing } from "@pages/Testing.tsx";
+import { Debug } from "@pages/Debug.tsx";
+import PinResetPage from "@pages/PinReset.tsx";
+import EmailVerifyPage from "@pages/EmailVerify.tsx";
+import AuthorizeApp from "@pages/oauth/AuthorizeApp.tsx";
+import Links from "@pages/Links.tsx";
 
 type Page = {
 	pageName: string;

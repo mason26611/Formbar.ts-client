@@ -1,5 +1,5 @@
 import { io, Socket } from "socket.io-client";
-import Log from "./debugLogger";
+import Log from "@utils/debugLogger";
 import {
 	authLogin,
 	refreshAuthToken,
@@ -8,7 +8,7 @@ import {
 	clearAuthTokens,
 	getGuestAccessToken,
 	setGuestAccessToken,
-} from "./api/authApi";
+} from "@api/authApi";
 
 //! ONLY UNTIL LOGIN IS IMPLEMENTED
 export const formbarUrl = import.meta.env.VITE_FORMBAR_API_URL || "http://localhost:420";

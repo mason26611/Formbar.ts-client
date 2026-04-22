@@ -1,8 +1,8 @@
-import { useSettings, useUserData } from "../../main";
+import { useSettings, useUserData } from "@/main";
 import { Flex, Card, Button, Typography, Divider } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
-import { darkMode, lightMode } from "../../../themes/ThemeConfig";
+import { darkMode, lightMode } from "@/themes/ThemeConfig";
 import { Link } from "react-router";
 const { Title, Text } = Typography;
 

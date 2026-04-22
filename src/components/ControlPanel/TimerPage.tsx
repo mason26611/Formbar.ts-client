@@ -1,12 +1,13 @@
 import {
     Flex, Button, Typography, Card, Row, Col, Progress, InputNumber
 } from 'antd';
-import { useClassData, useMobileDetect } from '../../main';
+import { useClassData, useMobileDetect, useUserData } from '@/main';
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { useState } from 'react';
-import Log from '../../debugLogger';
-import { startTimer as startTimerAPI } from '../../api/timerApi';
+import Log from '@utils/debugLogger';
+import { startTimer as startTimerAPI } from '@api/timerApi';
+import { currentUserHasScope } from '@/utils/scopeUtils';
 
 const { Text, Title } = Typography;
 
@@ -29,10 +30,13 @@ const defaultTimers = [
 ]
 
 export default function TimerPage() {
+	const { userData } = useUserData();
     const isMobile = useMobileDetect();
     const {classData} = useClassData();
     const [customMinutes, setCustomMinutes] = useState(1);
     const [customSeconds, setCustomSeconds] = useState(0);
+
+	const canStartTimer = currentUserHasScope(userData, 'class.timer.control');
 
     function getCustomTimerTotalSeconds() {
         const minutes = Math.max(0, Number(customMinutes || 0));
@@ -47,6 +51,11 @@ export default function TimerPage() {
     }
 
     function startTimer(duration: number) {
+		if(!canStartTimer) {
+			Log({ message: "Cannot start timer: insufficient permissions.", level: "warn" });
+			return;
+		}
+
         if (!classData?.id) {
             Log({ message: "Cannot start timer: no active class.", level: "warn" });
             return;

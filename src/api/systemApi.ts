@@ -1,4 +1,4 @@
-import { http } from "./HTTPApi";
+import { http } from "@api/HTTPApi";
 
 // GET: Get the server's public key (for pinging server)
 export function getPublicKey() {
