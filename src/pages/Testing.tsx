@@ -548,7 +548,7 @@ async function approveBreak(inputValue: string) {
     const [classId, userId] = inputValue.split('|').map(s => s.trim());
     if (!classId || !userId) return Log({ message: "approveBreak requires 'classId|userId'", level: "warn" });
     try {
-        const data = await classApi.approveStudentBreak(Number(classId), userId);
+        const data = await classApi.approveStudentBreak(Number(classId), Number(userId));
         Log({ message: 'Approve Break:', data });
     } catch (err) { Log({ message: 'Error approving break:', data: err, level: "error" }); }
 }
@@ -558,7 +558,7 @@ async function denyBreak(inputValue: string) {
     const [classId, userId] = inputValue.split('|').map(s => s.trim());
     if (!classId || !userId) return Log({ message: "denyBreak requires 'classId|userId'", level: "warn" });
     try {
-        const data = await classApi.denyStudentBreak(Number(classId), userId);
+        const data = await classApi.denyStudentBreak(Number(classId), Number(userId));
         Log({ message: 'Deny Break:', data });
     } catch (err) { Log({ message: 'Error denying break:', data: err, level: "error" }); }
 }
@@ -569,7 +569,7 @@ async function deleteHelpRequest(inputValue: string) {
     const [classId, userId] = inputValue.split('|').map(s => s.trim());
     if (!classId || !userId) return Log({ message: "deleteHelpRequest requires 'classId|userId'", level: "warn" });
     try {
-        const data = await classApi.deleteHelpRequest(Number(classId), userId);
+        const data = await classApi.deleteHelpRequest(Number(classId), Number(userId));
         Log({ message: 'Delete Help Request:', data });
     } catch (err) { Log({ message: 'Error deleting help request:', data: err, level: "error" }); }
 }

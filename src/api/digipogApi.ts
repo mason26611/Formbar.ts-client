@@ -2,7 +2,7 @@ import { http } from "@api/HTTPApi";
 
 // POST: Award digipogs
 export function awardDigipogs(body: {
-    studentId: string,
+    studentId: number,
     amount: number,
 }) {
     return http("/digipogs/award", "POST", {}, body);
@@ -10,7 +10,8 @@ export function awardDigipogs(body: {
 
 // POST: Transfer digipogs
 export function transferDigipogs(body: {
-    to: string,
+	from: number,
+    to: number,
     amount: number,
     pin: string,
     reason: string

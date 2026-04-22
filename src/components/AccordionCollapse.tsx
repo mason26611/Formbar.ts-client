@@ -327,7 +327,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 		}
 	}
 
-    function awardDigipogsAPI(studentId: string, amount: number) {
+    function awardDigipogsAPI(studentId: number, amount: number) {
         
         awardDigipogAPICall({
             studentId,

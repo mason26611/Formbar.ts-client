@@ -25,7 +25,7 @@ export type CurrentUserData = {
 	displayName: string;
 	email: string;
 	help: boolean;
-	id: string;
+	id: number;
 	isGuest: boolean;
 	ownedPolls: any[];
 	permissions: number;
@@ -149,7 +149,7 @@ export type Student = {
 	pollRes: any;
 	tags: Array<string>;
     isGuest: boolean;
-	id: string;
+	id: number;
 	email: string;
 	displayName: string;
 	permissions: number;

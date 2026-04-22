@@ -95,18 +95,18 @@ export function requestBreak(classId: number, reason: string) {
     return http(`/class/${classId}/break/request`, "POST", {}, { reason });
 }
 
-export function approveStudentBreak(classId: number, studentId: string) {
+export function approveStudentBreak(classId: number, studentId: number) {
     return http(`/class/${classId}/students/${studentId}/break/approve`, "POST");
 }
 
-export function denyStudentBreak(classId: number, studentId: string) {
+export function denyStudentBreak(classId: number, studentId: number) {
     return http(`/class/${classId}/students/${studentId}/break/deny`, "POST");
 }
 
 
 // -- Class - Help ---
 
-export function deleteHelpRequest(classId: number, userId: string) {
+export function deleteHelpRequest(classId: number, userId: number) {
     return http(`/class/${classId}/students/${userId}/help`, "DELETE");
 }
 

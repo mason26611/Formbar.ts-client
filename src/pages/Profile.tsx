@@ -491,10 +491,10 @@ export default function Profile() {
 												setTransferDigipogReason("");
 											}}
 											onOk={() => {
-												if (!transferDigipog || transferDigipog <= 0 || !canTransferDigipogs) {
+												if (!transferDigipog || transferDigipog <= 0 || !canTransferDigipogs || !userData) {
 													return;
 												}
-												transferDigipogs({to: String(profileProps.ID), amount: transferDigipog, pin: transferDigipogPin, reason: transferDigipogReason}).then(() => {
+												transferDigipogs({from: userData.id, to: Number(profileProps.ID), amount: transferDigipog, pin: transferDigipogPin, reason: transferDigipogReason}).then(() => {
 													setTransferDigipogModalOpen(false);
 													setTransferDigipog(0);
 													setTransferDigipogPin("");
