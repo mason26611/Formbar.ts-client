@@ -1,4 +1,5 @@
 import { http } from "@api/HTTPApi";
+import { buildPaginationQuery, fetchAllPaginated, type PaginationParams } from "@api/pagination";
 
 // DELETE: Delete a user
 export function deleteUser(id: string) {
@@ -21,8 +22,18 @@ export function getUserActiveClass(id: string) {
 }
 
 // GET /user/{id}/classes
-export function getUserClasses(id: string) {
-	return http(`/user/${id}/classes`);
+export function getUserClasses(id: string, { limit, offset }: PaginationParams = {}) {
+	return http(`/user/${id}/classes${buildPaginationQuery({ limit, offset })}`);
+}
+
+export function getAllUserClasses(id: string) {
+	return fetchAllPaginated<any>(
+		({ limit, offset }) => `/user/${id}/classes${buildPaginationQuery({ limit, offset })}`,
+		(data) => {
+			const classes = (data as { classes?: unknown })?.classes;
+			return Array.isArray(classes) ? classes : [];
+		},
+	);
 }
 
 // GET /user/{id}/scopes
@@ -32,7 +43,7 @@ export function getUserScopes(id: string) {
 
 // GET /user/{id}/transactions
 export function getUserTransactions(id: string, limit: number = 20, offset: number = 0) {
-	return http(`/user/${id}/transactions${limit > -1 && offset > -1 ? `?limit=${limit}&offset=${offset}` : ''}`, "GET");
+	return http(`/user/${id}/transactions${buildPaginationQuery({ limit, offset })}`, "GET");
 }
 
 // PATCH /user/{id}/ban
@@ -86,7 +97,7 @@ export function verifyUserPin(id: string, body: { pin: string }) {
 }
 
 export function getUserPools(id: string, limit: number = 20, offset: number = 0) {
-    return http(`/user/${id}/pools${limit > -1 && offset > -1 ? `?limit=${limit}&offset=${offset}` : ''}`, "GET");
+    return http(`/user/${id}/pools${buildPaginationQuery({ limit, offset })}`, "GET");
 }
 
 export function verifyUserEmail(code: string) {

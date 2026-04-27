@@ -26,7 +26,7 @@ import { Activity, useEffect, useState } from "react";
 import { accessToken } from "@utils/socket";
 import { useSettings, getAppearAnimation, useMobileDetect, useUserData } from "@/main";
 import { banUser, deleteUser, unbanUser, verifyUser } from "@api/userApi";
-import { addIpToList, deleteIpFromList, getIpAccessList, getManagerData, toggleIpList, updateIpFromList } from "@api/managerApi";
+import { addIpToList, deleteIpFromList, getAllIpAccessList, getManagerData, toggleIpList, updateIpFromList } from "@api/managerApi";
 import { deleteClass } from "@api/classApi";
 import { SCOPES } from "@/types";
 import { currentUserHasScope } from "@/utils/scopeUtils";
@@ -103,12 +103,15 @@ export default function ManagerPanel() {
 	const updateManagerData = (ipList: "whitelist" | "blacklist" = selectedIpList) => {
         const offset = (currentPage - 1) * pageSize;
 
-		getManagerData(offset, pageSize, sortBy)
+		getManagerData(offset, pageSize, sortBy, debouncedSearchQuery)
 			.then((response) => {
 				const { data } = response;
 				Log({ message: "Manager panel data", data });
 
-				const userItems = Array.isArray(data?.users) ? data.users : [];
+				const userItems = [
+					...(Array.isArray(data?.users) ? data.users : []),
+					...(currentPage === 1 && Array.isArray(data?.pendingUsers) ? data.pendingUsers : []),
+				];
 
                 const unbannedUsers = userItems.filter((user: ManagerPanelUser) => !isBannedUser(user));
                 const bannedUserItems  = userItems.filter((user: ManagerPanelUser) => isBannedUser(user));
@@ -140,7 +143,7 @@ export default function ManagerPanel() {
     }
 
     const updateIpListData = (ipList: "whitelist" | "blacklist") => {
-        getIpAccessList(ipList === "whitelist")
+        getAllIpAccessList(ipList === "whitelist")
             .then((response) => {
                 const { data } = response;
                 Log({ message: `IP ${ipList} data`, data });

@@ -17,7 +17,7 @@ const { Title, Text } = Typography;
 import { useClassData, useMobileDetect, useTheme, useUserData } from "@/main";
 import { useEffect, useState } from "react";
 import Log from "@utils/debugLogger";
-import { createClassLink, deleteClass, deleteClassLink, getClassLinks, getClassTags, kickAllStudents, regenerateClassCode, updateSettings } from "@api/classApi";
+import { createClassLink, deleteClass, deleteClassLink, getAllClassLinks, getClassTags, kickAllStudents, regenerateClassCode, updateSettings } from "@api/classApi";
 import { currentUserHasScope } from "@/utils/scopeUtils";
 
 export default function SettingsMenu() {
@@ -62,11 +62,9 @@ export default function SettingsMenu() {
         if(canManageTags) setClassTags(classData.tags || []);
 
 		if(canManageLinks) {
-			getClassLinks(classData.id)
-			.then((data) => {
-				if (data.success && data.data.links) {
-					setClassLinks(data.data.links);
-				}
+			getAllClassLinks(classData.id)
+			.then((links) => {
+				setClassLinks(links);
 			})
 			.catch((err) => {
 				Log({ message: "Error fetching class links:", data: err, level: "error" });
