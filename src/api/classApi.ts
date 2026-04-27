@@ -1,4 +1,5 @@
 import { http } from "@api/HTTPApi";
+import { buildPaginationQuery, fetchAllPaginated, type PaginationParams } from "@api/pagination";
 
 // --- Class ---
 
@@ -10,16 +11,16 @@ export function checkActiveClass(id: number) {
     return http(`/class/${id}/active`);
 }
 
-export function getBannedClassStudents(classId: number) {
-    return http(`/class/${classId}/banned`);
+export function getBannedClassStudents(classId: number, { limit, offset }: PaginationParams = {}) {
+    return http(`/class/${classId}/banned${buildPaginationQuery({ limit, offset })}`);
 }
 
 export function getClassPermissions(classId: number) {
     return http(`/class/${classId}/permissions`);
 }
 
-export function getClassStudents(classId: number) {
-    return http(`/class/${classId}/students`);
+export function getClassStudents(classId: number, { limit, offset }: PaginationParams = {}) {
+    return http(`/class/${classId}/students${buildPaginationQuery({ limit, offset })}`);
 }
 
 export function createClass(body: {
@@ -47,7 +48,7 @@ export function startClassSession(classId: number) {
 // --- Class - Polls ---
 
 export function getPolls(classId: number, limit: number = 20, offset: number = 0) {
-    return http(`/class/${classId}/polls${limit > -1 && offset > -1 ? `?limit=${limit}&offset=${offset}` : ''}`);
+    return http(`/class/${classId}/polls${buildPaginationQuery({ limit, offset })}`);
 }
 
 export function getCurrentPoll(classId: number) {
@@ -144,8 +145,18 @@ export function deleteClassLink(classId: number, linkName: string) {
     return http(`/class/${classId}/links`, "DELETE", {}, { name: linkName });
 }
 
-export function getClassLinks(classId: number) {
-    return http(`/class/${classId}/links`);
+export function getClassLinks(classId: number, { limit, offset }: PaginationParams = {}) {
+    return http(`/class/${classId}/links${buildPaginationQuery({ limit, offset })}`);
+}
+
+export function getAllClassLinks(classId: number) {
+    return fetchAllPaginated<{ name: string; url: string }>(
+        ({ limit, offset }) => `/class/${classId}/links${buildPaginationQuery({ limit, offset })}`,
+        (data) => {
+            const links = (data as { links?: unknown })?.links;
+            return Array.isArray(links) ? links : [];
+        },
+    );
 }
 
 export function createClassLink(classId: number, body: {

@@ -7,7 +7,7 @@ import type { CardStylesType } from "antd/es/card/Card";
 import { useMobileDetect } from "@/main";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMe, getUserClasses } from "@api/userApi";
+import { getAllUserClasses, getMe } from "@api/userApi";
 import { joinClassSession, createClass as createClassAPI, deleteClass as deleteClassAPI, enrollInClass } from "@api/classApi";
 import { type CurrentUserData } from "@/types";
 import { currentUserHasScope } from "@utils/scopeUtils";
@@ -71,12 +71,11 @@ export default function ClassesPage() {
     function getClasses() {
         if (!userData) return;
 
-        getUserClasses(String(userData.id))
-            .then((response) => {
-                const { data } = response;
-                Log({ message: "Classes data", data });
-                const owned = data.filter((cls: any) => cls.isOwner === true);
-                const joined = data.filter((cls: any) => cls.isOwner === false);
+        getAllUserClasses(String(userData.id))
+            .then((classes) => {
+                Log({ message: "Classes data", data: classes });
+                const owned = classes.filter((cls: any) => cls.isOwner === true);
+                const joined = classes.filter((cls: any) => cls.isOwner === false);
                 setOwnedClasses(owned);
                 setJoinedClasses(joined);
             })

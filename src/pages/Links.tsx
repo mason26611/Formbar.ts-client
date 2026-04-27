@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getClassLinks } from "@api/classApi";
+import { getAllClassLinks } from "@api/classApi";
 import { useUserData } from "@/main";
 import { currentUserHasScope } from "@utils/scopeUtils";
 import FormbarHeader from "@components/FormbarHeader";
@@ -20,16 +20,16 @@ export default function Links() {
 			`Fetching links for class: ${userData.activeClass}`
 		)
 
-		getClassLinks(userData.activeClass).then((response) => {
-			setClassLinks(response.data.links);
-			console.log(response.data.links);
+		getAllClassLinks(userData.activeClass).then((links) => {
+			setClassLinks(links);
+			console.log(links);
 			// for (const link of response.data.links) {
 			// 	getFaviconForLink(link).then((favicon) => {
 			// 		link.favicon = favicon;
 			// 	});
 			// }
 		});
-	}, [userData, canSeeLinks, getClassLinks]);
+	}, [userData, canSeeLinks]);
 
 	return (
 		<>
