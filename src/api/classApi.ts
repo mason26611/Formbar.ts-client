@@ -111,8 +111,8 @@ export function deleteHelpRequest(classId: number, userId: number) {
     return http(`/class/${classId}/students/${userId}/help`, "DELETE");
 }
 
-export function requestHelp(classId: number) {
-    return http(`/class/${classId}/help/request`, "POST");
+export function requestHelp(classId: number, reason: string) {
+    return http(`/class/${classId}/help/request`, "POST", {}, { reason });
 }
 
 // --- Class - Tags ---

@@ -246,7 +246,6 @@ export const SCOPES = {
 				READ: { key: "class.students.read", label: "Read", description: "View student information" },
 				KICK: { key: "class.students.kick", label: "Kick", description: "Remove students from class" },
 				BAN: { key: "class.students.ban", label: "Ban", description: "Ban students from class" },
-				PERM_CHANGE: { key: "class.students.perm_change", label: "Change Permissions", description: "Modify student permissions" },
 			},
 		},
 		SESSION: {
@@ -276,6 +275,7 @@ export const SCOPES = {
 		TIMER: {
 			title: "Timer",
 			actions: {
+				READ: { key: "class.timer.read", label: "Read", description: "View timer status" },
 				CONTROL: { key: "class.timer.control", label: "Control", description: "Control the class timer" },
 			},
 		},

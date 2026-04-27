@@ -5,6 +5,7 @@ import { socket } from "@utils/socket";
 import { useState } from "react";
 import { useUserData } from "@/main";
 import { currentUserHasScope } from "@utils/scopeUtils";
+import { requestBreak, requestHelp } from "@/api/classApi";
 
 export default function StudentMenu() {
 	const { userData } = useUserData();
@@ -17,14 +18,6 @@ export default function StudentMenu() {
 
 	const canRequestHelp = currentUserHasScope(userData, "class.help.request");
 	const canRequestBreak = currentUserHasScope(userData, "class.break.request");
-
-	function sendHelpTicket(reason: string) {
-		socket.emit("help", reason);
-	}
-
-	function requestBreak(reason?: string) {
-		socket.emit("requestBreak", reason);
-	}
 
 	return (
 		<>
@@ -129,7 +122,8 @@ export default function StudentMenu() {
 				onCancel={() => setHelpModalOpen(false)}
 				onOk={() => {
 					setHelpModalOpen(false);
-					sendHelpTicket(helpReason);
+					if(!userData?.activeClass) return;
+					requestHelp(userData?.activeClass, helpReason);
 				}}
 			>
 				<Input.TextArea
@@ -147,7 +141,9 @@ export default function StudentMenu() {
 				onCancel={() => setBreakModalOpen(false)}
 				onOk={() => {
 					setBreakModalOpen(false);
+					if(!userData?.id || !userData?.activeClass) return;
 					requestBreak(
+						userData?.activeClass,
 						breakType === "Other" ? breakReason : breakType,
 					);
 				}}
