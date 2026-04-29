@@ -247,7 +247,7 @@ export default function Student() {
 						align="center"
 						vertical={isMobileView || !classData?.poll.status}
 					>
-						{classData?.poll.responses.length > 0 || classData?.timer.startTime > 0 ? (
+						{classData?.poll.responses.length > 0 || (classData?.timer && classData?.timer.startTime > 0) ? (
 							<Flex
 								justify="center"
 								align="center"

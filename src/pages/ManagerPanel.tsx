@@ -800,7 +800,7 @@ export default function ManagerPanel() {
 						
 					) : (
 						<Flex justify="center" style={{ width: "100%" }}>
-							<Skeleton>
+							<Skeleton active>
 								<Text>You are not authorized to manage users.</Text>
 								<Text type="secondary">How did you get here?</Text>
 							</Skeleton>
