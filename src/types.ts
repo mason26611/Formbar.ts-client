@@ -81,7 +81,7 @@ export type ClassData = {
 		votePoll: number;
 	};
 	roles: Array<{
-		id: string;
+		id: number;
 		color: string;
 		name: string;
 		scopes: string[];
@@ -263,6 +263,7 @@ export const SCOPES = {
 			actions: {
 				REQUEST: { key: "class.break.request", label: "Request", description: "Request a break" },
 				APPROVE: { key: "class.break.approve", label: "Approve", description: "Approve break requests" },
+				END: { key: "class.break.end", label: "End", description: "End other user's break" },
 			},
 		},
 		HELP: {

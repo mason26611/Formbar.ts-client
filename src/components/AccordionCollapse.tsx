@@ -8,7 +8,7 @@ import { useClassData, useUserData } from "@/main";
 import { socket } from "@utils/socket";
 
 import { awardDigipogs as awardDigipogAPICall }  from "@api/digipogApi";
-import { approveStudentBreak, deleteHelpRequest, denyStudentBreak } from "@api/classApi";
+import { approveStudentBreak, deleteHelpRequest, denyStudentBreak, endStudentBreak } from "@api/classApi";
 import { addRoleToStudent, removeRoleFromStudent } from "@api/rolesApi";
 import { currentUserHasScope } from "@utils/scopeUtils";
 
@@ -311,7 +311,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 			studentData.roles = studentData.roles || { global: [], class: [] };
 			studentData.roles.class = nextRoleIds
 				.map((roleId) => {
-					const classRole = classData.roles.find((role) => role.id === roleId);
+					const classRole = classData.roles.find((role) => role.id === Number(roleId));
 					if (!classRole) return null;
 					return {
 						id: Number(classRole.id),
@@ -354,6 +354,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 
 	const canManageHelp = currentUserHasScope(userData, "class.help.approve");
 	const canManageBreak = currentUserHasScope(userData, "class.break.approve");
+	const canEndBreaks = currentUserHasScope(userData, "class.break.end");
 
 	const canAssignRoles = currentUserHasScope(userData, "class.roles.assign");
 	const canAssignTags = currentUserHasScope(userData, "class.tags.manage");
@@ -450,8 +451,8 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 									color="red"
 									style={{ width: "120px" }}
 									onClick={() => {
-										if (!canManageBreak) return;
-										denyStudentBreak(classData?.id!, studentData.id);
+										if (!canEndBreaks) return;
+										endStudentBreak(classData?.id!, studentData.id);
 									}}
 								>
 									End Break
@@ -524,19 +525,21 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 								options={roleOptions}
 								tagRender={(props) => {
 									const role = availableRoles.find(
-										(availableRole) => availableRole.id === String(props.value),
+										(availableRole) => availableRole.id === Number(props.value),
 									);
 									const roleColor = role?.color || "#666666";
 									return (
 										<Tag
 											color={roleColor}
 											style={{ marginInlineEnd: 4, color: roleColor, borderColor: "transparent" }}
+											closable={props.closable}
+											onClose={props.onClose}
 											onMouseDown={(event) => {
 												event.preventDefault();
 												event.stopPropagation();
 											}}
 										>
-											{props.label}
+											{role?.name || props.value}
 										</Tag>
 									);
 								}}

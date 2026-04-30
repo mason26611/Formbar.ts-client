@@ -104,6 +104,10 @@ export function denyStudentBreak(classId: number, studentId: number) {
     return http(`/class/${classId}/students/${studentId}/break/deny`, "POST");
 }
 
+export function endStudentBreak(classId: number, studentId: number) {
+	return http(`/class/${classId}/students/${studentId}/break/end`, "POST");
+}
+
 
 // -- Class - Help ---
 
