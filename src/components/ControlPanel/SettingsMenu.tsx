@@ -17,7 +17,7 @@ const { Title, Text } = Typography;
 import { useClassData, useMobileDetect, useTheme, useUserData } from "@/main";
 import { useEffect, useState } from "react";
 import Log from "@utils/debugLogger";
-import { createClassLink, deleteClass, deleteClassLink, getAllClassLinks, getClassTags, kickAllStudents, regenerateClassCode, updateSettings } from "@api/classApi";
+import { createClassLink, deleteClass, deleteClassLink, getAllClassLinks, kickAllStudents, regenerateClassCode, updateSettings } from "@api/classApi";
 import { currentUserHasScope } from "@/utils/scopeUtils";
 
 export default function SettingsMenu() {
@@ -28,7 +28,6 @@ export default function SettingsMenu() {
 
 	// const canManageSettings = currentUserHasScope(userData, 'class.session.settings');
 	const canManageLinks = currentUserHasScope(userData, 'class.links.manage');
-	const canManageTags = currentUserHasScope(userData, 'class.tags.manage');
 	const canDeleteClass = currentUserHasScope(userData, 'class.system.can_delete_class');
 	const canKickStudents = currentUserHasScope(userData, 'class.students.kick');
 	const canRegenerateCode = currentUserHasScope(userData, 'class.session.regenerate_code');
@@ -38,7 +37,6 @@ export default function SettingsMenu() {
 
     const [newLinkInput, setNewLinkInput] = useState<{ name: string; url: string }>({ name: "", url: "" });
 
-    const [classTags, setClassTags] = useState<string[]>(classData?.tags || []);
     const [newTagInput, setNewTagInput] = useState<string>("");
 
 	const [api, contextHolder] = notification.useNotification();
@@ -58,8 +56,6 @@ export default function SettingsMenu() {
 
 	useEffect(() => {
 		if (!classData) return;
-
-        if(canManageTags) setClassTags(classData.tags || []);
 
 		if(canManageLinks) {
 			getAllClassLinks(classData.id)
@@ -127,51 +123,6 @@ export default function SettingsMenu() {
             showErrorNotification("An error occurred while removing the link.");
         });
     }
-
-    function tryAddTag() {
-		if (!canManageTags) {
-			showErrorNotification("You do not have permission to manage tags.");
-			return;
-		}
-
-        if (!newTagInput) {
-            showErrorNotification("Please enter a tag name.");
-            return;
-        }
-
-        getClassTags(classData!.id)
-        .then((data) => {
-            if (data.success) {
-                setClassTags([...classTags, newTagInput]);
-            } else {
-                showErrorNotification("Failed to add tag.");
-            }
-        })
-        .catch((err) => {
-            Log({ message: "Error adding tag:", data: err, level: "error" });
-            showErrorNotification("An error occurred while adding the tag.");
-        });
-    }
-
-	function tryRemoveTag(tagToRemove: string) {
-		if (!canManageTags) {
-			showErrorNotification("You do not have permission to manage tags.");
-			return;
-		}
-
-		getClassTags(classData!.id)
-		.then((data) => {
-			if (data.success) {
-				setClassTags(classTags.filter(tag => tag !== tagToRemove));
-			} else {
-				showErrorNotification("Failed to remove tag.");
-			}
-		})
-		.catch((err) => {
-			Log({ message: "Error removing tag:", data: err, level: "error" });
-			showErrorNotification("An error occurred while removing the tag.");
-		});
-	}
 
 	const {isDark} = useTheme();
 
@@ -441,52 +392,6 @@ export default function SettingsMenu() {
 
 					</>
 					)}
-
-					{
-						canManageTags && (
-							<>
-								<Divider />
-
-								<Title level={3}>Tags</Title>
-
-								<Flex
-									justify="start"
-									align="center"
-									style={{ width: "100%" }}
-								>
-									<Input
-										placeholder="Tag Name"
-										style={{ width: "200px", marginRight: 10 }}
-										value={newTagInput}
-										onChange={(e) => setNewTagInput(e.target.value)}
-									/>
-									<Button
-										type="primary"
-										style={{ marginLeft: 10, width: "100px" }}
-										onClick={() => tryAddTag()}
-									>
-										Add Tag
-									</Button>
-								</Flex>
-								<Flex gap={10} align="center" justify="start" wrap>
-									{
-										classTags.map((tag: string, index: number) => (
-											<Button 
-												key={index} 
-												variant="outlined" 
-												type="default" 
-												style={{marginTop: 10}}
-												onClick={() => tryRemoveTag(tag)}
-											>
-												{tag}
-												<IonIcon icon={IonIcons.trash} />
-											</Button>
-										))
-									}
-								</Flex>
-							</>
-						)
-					}
 
 				</Flex>
 			</Flex>

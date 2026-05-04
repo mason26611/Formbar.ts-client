@@ -32,7 +32,6 @@ export type CurrentUserData = {
 	pogMeter: number;
 	pollRes: { buttonRes: string; textRes: string; time: number | null };
 	sharedPolls: any[];
-	tags: any[];
 	verified?: number;
 };
 
@@ -87,7 +86,6 @@ export type ClassData = {
 		scopes: string[];
 	}>
 	key: string;
-	tags: string[];
 	settings: {
 		mute: boolean;
 		filter: any;
@@ -147,8 +145,8 @@ export type Student = {
 	help: any;
 	break: boolean;
 	pollRes: any;
-	tags: Array<string>;
     isGuest: boolean;
+	isOffline: boolean;
 	id: number;
 	email: string;
 	displayName: string;
@@ -284,12 +282,6 @@ export const SCOPES = {
 			title: "Auxiliary",
 			actions: {
 				CONTROL: { key: "class.auxiliary.control", label: "Control", description: "Control auxiliary features" },
-			},
-		},
-		TAGS: {
-			title: "Tags",
-			actions: {
-				MANAGE: { key: "class.tags.manage", label: "Manage", description: "Create and manage tags" },
 			},
 		},
 		DIGIPOGS: {

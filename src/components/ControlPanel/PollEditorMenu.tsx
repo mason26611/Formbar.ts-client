@@ -21,7 +21,6 @@ type PollProperties = {
     allowVoteChanges: boolean;
     excludedRespondents: any[];
     indeterminate: any[];
-    tags: string[];
     allowTextResponses: boolean;
     allowMultipleResponses: boolean;
 };
@@ -106,7 +105,6 @@ export default function PollsEditorMenu() {
         allowVoteChanges: true,
         excludedRespondents: [],
         indeterminate: [],
-        tags: [],
         allowTextResponses: false,
         allowMultipleResponses: false,
     });

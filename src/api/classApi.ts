@@ -64,7 +64,6 @@ export function createPoll(classId: number, body: {
     answers: any[],
     blind: boolean,
     weight: number,
-    tags: string[],
     excludedRespondents: any[],
     indeterminate: any[],
     allowTextResponses: boolean,
@@ -117,16 +116,6 @@ export function deleteHelpRequest(classId: number, userId: number) {
 
 export function requestHelp(classId: number, reason: string) {
     return http(`/class/${classId}/help/request`, "POST", {}, { reason });
-}
-
-// --- Class - Tags ---
-
-export function getClassTags(classId: number) {
-    return http(`/class/${classId}/tags`);
-}
-
-export function setClassTags(classId: number, tags: string[]) {
-    return http(`/class/${classId}/tags`, "PUT", {}, { tags });
 }
 
 // --- Class - Enrollment ---

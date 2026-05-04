@@ -247,8 +247,8 @@ export default function ControlPanel() {
 			}
 
             // Get online students before and after update to compare
-			const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.tags.includes("Offline"));
-			const newStudents = Object.values(newClassData.students).filter(student => !student.tags.includes("Offline"));
+			const oldStudents = Object.values(prevClassDataRef.current?.students || {}).filter(student => !student.isOffline);
+			const newStudents = Object.values(newClassData.students).filter(student => !student.isOffline);
             const oldResponses = prevClassDataRef.current?.poll ? Object.values(prevClassDataRef.current?.poll.responses || {}).map((resp: any) => resp.responses) : [];
             const newResponses = newClassData.poll ? Object.values(newClassData.poll.responses || {}).map((resp: any) => resp.responses) : [];
 

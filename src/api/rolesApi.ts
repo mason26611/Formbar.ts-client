@@ -4,7 +4,7 @@ export function deleteRole(classId: number, roleId: number) {
 	return http(`/class/${classId}/roles/${roleId}`, "DELETE");
 }
 	
-export function removeRoleFromStudent(classId: number, roleId: string, studentId: number) {
+export function removeRoleFromStudent(classId: number, roleId: number, studentId: number) {
 	return http(`/class/${classId}/students/${studentId}/roles/${roleId}`, "DELETE");
 }
 
@@ -34,6 +34,6 @@ export function createRole(classId: number, body: {
 	return http(`/class/${classId}/roles`, "POST", {}, body);
 }
 
-export function addRoleToStudent(classId: number, roleId: string, studentId: number) {
+export function addRoleToStudent(classId: number, roleId: number, studentId: number) {
 	return http(`/class/${classId}/students/${studentId}/roles/${roleId}`, "POST");
 }

@@ -255,8 +255,6 @@ const MAIN_MUTATION_ORDER: Array<{ method: HttpMethod; apiPath: string }> = [
 	{ method: "DELETE", apiPath: "/class/{id}/links" },
 	{ method: "POST", apiPath: "/class/{id}/links/remove" },
 	{ method: "POST", apiPath: "/class/{id}/links/change" },
-	{ method: "PUT", apiPath: "/class/tags" },
-	{ method: "POST", apiPath: "/class/tags" },
 	{ method: "POST", apiPath: "/class/{id}/help/request" },
 	{ method: "DELETE", apiPath: "/class/{id}/students/{userId}/help" },
 	{ method: "POST", apiPath: "/class/{id}/break/request" },

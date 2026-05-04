@@ -262,7 +262,7 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const { userData } = useUserData();
 
 	const [awardDigipogs, setAwardDigipogs] = useState<number>(0);
-	const [studentRoleIds, setStudentRoleIds] = useState<string[]>([]);
+	const [studentRoleIds, setStudentRoleIds] = useState<number[]>([]);
 	const [isUpdatingRoles, setIsUpdatingRoles] = useState<boolean>(false);
 
 	const [api, contextHolder] = notification.useNotification();
@@ -285,10 +285,10 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	};
 
 	useEffect(() => {
-		setStudentRoleIds((studentData.roles?.class || []).map((role) => String(role.id)));
+		setStudentRoleIds((studentData.roles?.class || []).map((role) => Number(role.id)));
 	}, [studentData]);
 
-	async function handleStudentRolesChange(nextRoleIds: string[]) {
+	async function handleStudentRolesChange(nextRoleIds: number[]) {
 		if (!classData) return;
 
 		const previousRoleIds = studentRoleIds;
@@ -357,7 +357,6 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 	const canEndBreaks = currentUserHasScope(userData, "class.break.end");
 
 	const canAssignRoles = currentUserHasScope(userData, "class.roles.assign");
-	const canAssignTags = currentUserHasScope(userData, "class.tags.manage");
 	
 	const canAwardDigipogs = currentUserHasScope(userData, "class.digipogs.award");
 
@@ -563,52 +562,6 @@ export function StudentAccordion({ studentData }: { studentData: Student }) {
 						</Flex>
 					),
 					enabled: canAssignRoles,
-				},
-				{
-					name: "Tags",
-					icon: IonIcons.pricetagsOutline,
-					content: (
-						<Flex
-							justify="center"
-							align="center"
-							style={{ width: "100%", height: "100%" }}
-							gap={10}
-							wrap
-						>
-							{classData?.tags && classData?.tags.map(
-								(tag, index) =>
-									tag !== "Offline" && (
-										<Button
-											key={index}
-											variant="solid"
-											color={
-												studentData.tags.includes(tag)
-													? "green"
-													: "red"
-											}
-											style={{ width: "120px" }}
-											onClick={() => {
-												!studentData.tags.includes(tag)
-													? studentData.tags.push(tag)
-													: (studentData.tags =
-															studentData.tags.filter(
-																(t: any) =>
-																	t !== tag,
-															));
-												socket.emit(
-													"saveTags",
-													studentData.id,
-													studentData.tags,
-												);
-											}}
-										>
-											{tag}
-										</Button>
-									),
-							)}
-						</Flex>
-					),
-					enabled: canAssignTags && classData?.tags,
 				},
 				{
 					name: "Miscellaneous",

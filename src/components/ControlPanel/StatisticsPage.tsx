@@ -88,7 +88,7 @@ export default function Statistics() {
                 },
                 {
                     title: "Allowed to Vote",
-                    value: students.filter((s: any) => !s.tags.includes("Offline")).length,
+                    value: students.filter((s: any) => !s.isOffline).length,
                 },
                 {
                     title: "Response Time",

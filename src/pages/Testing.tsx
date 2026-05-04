@@ -62,12 +62,6 @@ const testFuncs = [
     { name: 'Delete Help Request', func: deleteHelpRequest, hasArgs: true, category: 'Class - Help', method: 'DELETE', testedWorks: true },
     { name: 'Request Help', func: requestClassHelp, hasArgs: true, category: 'Class - Help', method: 'POST' },
 
-    // Class - Tags & Enrollment
-    { name: 'Leave Class', func: leaveClass, hasArgs: true, category: 'Class', method: 'DELETE', testedWorks: true },
-    { name: 'Get Class Tags', func: getClassTags, hasArgs: false, category: 'Class - Tags', method: 'GET' },
-    { name: 'Join Class By Code', func: joinClassByCode, hasArgs: true, category: 'Class', method: 'POST' },
-    { name: 'Set Class Tags', func: setClassTags, hasArgs: true, category: 'Class - Tags', method: 'PUT' },
-
     // Class - Links
     { name: 'Remove Class Link', func: removeClassLink, hasArgs: true, category: 'Class - Links', method: 'DELETE' },
     { name: 'Get Class Links', func: getClassLinks, hasArgs: true, category: 'Class - Links', method: 'GET' },
@@ -579,17 +573,9 @@ async function requestClassHelp(inputValue: string) {
     let payload: any;
     try { payload = JSON.parse(inputValue); } catch { payload = { classId: inputValue }; }
     try {
-        const data = await classApi.requestHelp(Number(payload.classId || payload.id || inputValue));
+        const data = await classApi.requestHelp(Number(payload.classId || payload.id || inputValue), 'testing');
         Log({ message: 'Request Class Help:', data });
     } catch (err) { Log({ message: 'Error requesting help:', data: err, level: "error" }); }
-}
-
-// --- Class - Tags & Enrollment ---
-async function getClassTags() {
-    try {
-        const data = await classApi.getClassTags(0); // Adjust as needed
-        Log({ message: 'Get Class Tags:', data });
-    } catch (err) { Log({ message: 'Error getting class tags:', data: err, level: "error" }); }
 }
 
 async function joinClassByCode(inputValue: string) {
@@ -602,16 +588,6 @@ async function joinClassByCode(inputValue: string) {
         const data = await classApi.enrollInClass(code);
         Log({ message: 'Join Class By Code:', data });
     } catch (err) { Log({ message: 'Error joining class by code:', data: err, level: "error" }); }
-}
-
-async function setClassTags(inputValue: string) {
-    if (!inputValue) return Log({ message: "setClassTags requires a body (JSON) or comma-separated tags", level: "warn" });
-    let payload: any;
-    try { payload = JSON.parse(inputValue); } catch { payload = { tags: inputValue.split(',').map(s => s.trim()) }; }
-    try {
-        const data = await classApi.setClassTags(0, payload.tags || []); // Adjust classId as needed
-        Log({ message: 'Set Class Tags:', data });
-    } catch (err) { Log({ message: 'Error setting class tags:', data: err, level: "error" }); }
 }
 
 // --- Class - Links ---
