@@ -1,19 +1,25 @@
-import { useSettings, useUserData } from "@/main";
-import { Flex, Card, Button, Typography, Divider } from "antd";
+import { useMemo, useState, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Alert, Button, Card, Divider, Flex, Typography } from "antd";
 import { IonIcon } from "@ionic/react";
 import * as IonIcons from "ionicons/icons";
 import { darkMode, lightMode } from "@/themes/ThemeConfig";
-import { Link } from "react-router";
+import { authorizeOAuthApp } from "@api/oauthApi";
+import { SCOPES } from "@/types";
+import { useSettings, useUserData } from "@/main";
+
 const { Title, Text } = Typography;
 
 interface OAuthPermission {
+	key: string;
 	label: string;
+	description?: string;
 	granted: boolean;
 }
 
 interface OAuthInfo {
 	icon: any;
-	text: React.ReactNode;
+	text: ReactNode;
 }
 
 interface OAuthAppInfo {
@@ -24,55 +30,156 @@ interface OAuthAppInfo {
 	permissions: OAuthPermission[];
 	info: {
 		redirectUrl: string;
+	};
+}
+
+type OAuthRequest = {
+	clientId: string;
+	clientName: string;
+	clientDescription: string;
+	clientIconUrl: string;
+	redirectUrl: string;
+	responseType: string;
+	scope: string;
+	state: string;
+	permissions: OAuthPermission[];
+	errors: string[];
+};
+
+function getScopeMetadata(scopeKey: string): { label: string; description: string } | null {
+	for (const section of Object.values(SCOPES) as Array<Record<string, any>>) {
+		for (const category of Object.values(section) as Array<any>) {
+			if (!category?.actions) continue;
+
+			for (const action of Object.values(category.actions) as Array<any>) {
+				if (action?.key === scopeKey) {
+					return {
+						label: action.label,
+						description: action.description,
+					};
+				}
+			}
+		}
 	}
+
+	return null;
+}
+
+function prettifyScopeLabel(scopeKey: string) {
+	return scopeKey
+		.replace(/[._-]+/g, " ")
+		.replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
 export default function AuthorizeApp() {
 	const { settings } = useSettings();
 	const { userData } = useUserData();
+	const location = useLocation();
+	const navigate = useNavigate();
+	const [isAuthorizing, setIsAuthorizing] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const theme = settings.appearance.theme === "dark" ? darkMode : lightMode;
 
+	const oauthRequest = useMemo<OAuthRequest>(() => {
+		const params = new URLSearchParams(location.search);
+		const clientId = params.get("client_id")?.trim() || "";
+		const redirectUrl = params.get("redirect_uri")?.trim() || "";
+		const scope = params.get("scope")?.trim() || "";
+		const state = params.get("state")?.trim() || "";
+		const responseType = params.get("response_type")?.trim() || "code";
+		const clientName = params.get("client_name")?.trim() || "External application";
+		const clientDescription = params.get("client_description")?.trim() || "wants to access your account.";
+		const clientIconUrl = params.get("client_icon_url")?.trim() || "";
+
+		const requestedScopes = scope.split(/\s+/).filter(Boolean);
+		const permissions = requestedScopes.map((scopeKey) => {
+			const metadata = getScopeMetadata(scopeKey);
+			return {
+				key: scopeKey,
+				label: metadata?.label || prettifyScopeLabel(scopeKey),
+				description: metadata?.description,
+				granted: true,
+			};
+		});
+
+		const errors = [] as string[];
+		if (!clientId) errors.push("Missing client_id.");
+		if (!redirectUrl) errors.push("Missing redirect_uri.");
+		if (!scope) errors.push("Missing scope.");
+		if (!state) errors.push("Missing state.");
+		if (responseType !== "code") errors.push("Only response_type=code is supported.");
+
+		return {
+			clientId,
+			clientName,
+			clientDescription,
+			clientIconUrl,
+			redirectUrl,
+			responseType,
+			scope,
+			state,
+			permissions,
+			errors,
+		};
+	}, [location.search]);
+
 	const appInfo: OAuthAppInfo = {
-		name: "Jukebar",
-		description: "A simple music player for your web browser.",
-		iconUrl: "http://172.16.3.102:5000/img/favicon.png",
-		permissions: [
-			{
-				label: "Access your name, ID, and profile information",
-				granted: true,
-			},
-			{
-				label: "Manage your digipog balance",
-				granted: true,
-			},
-			{
-				label: "Bake your friends a cake",
-				granted: false,
-			},
-		],
+		name: oauthRequest.clientName,
+		description: oauthRequest.clientDescription,
+		iconUrl: oauthRequest.clientIconUrl,
+		permissions: oauthRequest.permissions,
 		info: {
-			redirectUrl: "http://localhost:8000"
-		}
+			redirectUrl: oauthRequest.redirectUrl,
+		},
 	};
 
 	const infoItems: OAuthInfo[] = [
 		{
 			icon: IonIcons.link,
-			text: (<>Once authorized, you will be redirected outside of Formbar to: <Text code style={{fontSize: 16, whiteSpace: 'nowrap'}}>{appInfo.info.redirectUrl}</Text></>),
+			text: (
+				<>
+					Once authorized, you will be redirected outside of Formbar to:
+					<Text code style={{ fontSize: 16, whiteSpace: "nowrap" }}>
+						{appInfo.info.redirectUrl || "unknown destination"}
+					</Text>
+				</>
+			),
 		},
-		// {
-		// 	icon: IonIcons.documentText,
-		// 	text: "The developer of this app's privacy policy and terms of service apply to this application.",
-		// },
-		// {
-		// 	icon: IonIcons.time,
-		// 	text: "Authorization will expire on Month Day, Year",
-		// },
 		{
 			icon: IonIcons.lockClosed,
 			text: "This application cannot read your sensitive information, such as your API key, password, or digipog pin.",
 		},
 	];
+
+	async function handleAuthorize() {
+		if (oauthRequest.errors.length > 0) {
+			setErrorMessage(oauthRequest.errors[0]);
+			return;
+		}
+
+		setIsAuthorizing(true);
+		setErrorMessage(null);
+
+		try {
+			const redirectUrl = await authorizeOAuthApp({
+				clientId: oauthRequest.clientId,
+				redirectUri: oauthRequest.redirectUrl,
+				scope: oauthRequest.scope,
+				state: oauthRequest.state,
+				responseType: oauthRequest.responseType,
+			});
+
+			window.location.assign(redirectUrl);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Unable to authorize the application.";
+			setErrorMessage(message);
+			if (/not authenticated|unauthorized/i.test(message)) {
+				navigate(`/login?returnURL=${encodeURIComponent(`${location.pathname}${location.search}`)}`);
+			}
+		} finally {
+			setIsAuthorizing(false);
+		}
+	}
 
 	return (
 		<Flex
@@ -100,12 +207,28 @@ export default function AuthorizeApp() {
 				}}
 			>
 				<Flex vertical>
+					{oauthRequest.errors.length > 0 ? (
+						<Alert
+							type="error"
+							showIcon
+							message="Invalid OAuth request"
+							description={oauthRequest.errors.join(" ")}
+							style={{ marginBottom: 20 }}
+						/>
+					) : null}
+					{errorMessage ? (
+						<Alert
+							type="error"
+							showIcon
+							message="Authorization failed"
+							description={errorMessage}
+							style={{ marginBottom: 20 }}
+						/>
+					) : null}
 					<Flex gap={20} align="stretch">
-						{/* Header Section */}
-						<Flex vertical align="center" gap={20}>
+						<Flex vertical align="center" gap={20} style={{ width: "100%" }}>
 							<Flex vertical align="center" gap={12}>
 								<Flex gap={12} justify="center" align="center">
-									{/* App Icons placeholder */}
 									<div
 										style={{
 											width: "60px",
@@ -114,48 +237,59 @@ export default function AuthorizeApp() {
 											backgroundImage: "url(/img/FormbarLogo-Circle.png)",
 											backgroundSize: "100%",
 											opacity: 0.5,
-											flexShrink: 0
+											flexShrink: 0,
 										}}
 									/>
-									<Divider style={{margin: 0, minWidth: 0, width: 20}} dashed/>
+									<Divider style={{ margin: 0, minWidth: 0, width: 20 }} dashed />
 									<div
 										style={{
 											width: "60px",
 											height: "60px",
 											borderRadius: "50%",
-											backgroundImage: `url(${appInfo.iconUrl})`,
-											backgroundSize: "100%",
+											backgroundImage: appInfo.iconUrl
+												? `url(${appInfo.iconUrl})`
+												: "linear-gradient(135deg, rgba(101, 190, 57, 0.95), rgba(25, 118, 210, 0.95))",
+											backgroundSize: "cover",
+											backgroundPosition: "center",
 											opacity: 0.5,
-											flexShrink: 0
+											flexShrink: 0,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											fontSize: 24,
+											fontWeight: 700,
+											color: "white",
 										}}
-									/>
+									>
+										{!appInfo.iconUrl ? appInfo.name.slice(0, 1).toUpperCase() : null}
+									</div>
 								</Flex>
-								<Text style={{ margin: 0 }}>
-									An external application
-								</Text>
+								<Text style={{ margin: 0 }}>An external application</Text>
 								<Title level={4} style={{ margin: 0 }}>
 									{appInfo.name}
 								</Title>
-								<Text type="secondary" style={{fontSize: 16}}>wants to access your account</Text>
+								<Text type="secondary" style={{ fontSize: 16 }}>
+									{appInfo.description}
+								</Text>
 								<Text type="secondary" style={{ fontSize: "12px" }}>
-									Signed in as {userData?.displayName} <Divider vertical /> <Link to="/login">Not you?</Link>
+									Signed in as {userData?.displayName || "your account"} <Divider vertical /> <Link to="/login">Not you?</Link>
 								</Text>
 							</Flex>
 
 							<Divider style={{ margin: 0 }} />
 
-							{/* Info Section */}
 							<Flex vertical gap={8} style={{ width: "100%" }}>
 								{infoItems.map((item, index) => (
 									<Flex key={index} gap={8} align="start">
-										<IonIcon icon={item.icon} 
+										<IonIcon
+											icon={item.icon}
 											style={{
 												opacity: 0.5,
 												fontSize: 20,
 												flexShrink: 0,
 											}}
 										/>
-										<Text type="secondary" style={{fontSize: 16}}>
+										<Text type="secondary" style={{ fontSize: 16 }}>
 											{item.text}
 										</Text>
 									</Flex>
@@ -163,62 +297,58 @@ export default function AuthorizeApp() {
 							</Flex>
 						</Flex>
 
-						<Divider style={{ margin: '20px 0', height: 'unset' }} vertical dashed/>
+						<Divider style={{ margin: "20px 0", height: "unset" }} vertical dashed />
 
-						{/* Permissions Section */}
 						<Flex vertical gap={16} style={{ width: "100%", height: "unset" }}>
 							<Text type="secondary" style={{ margin: 0, fontSize: 16 }}>
 								This will allow the Application to:
 							</Text>
 
 							<Flex vertical gap={8}>
-								{appInfo.permissions.map((permission, index) => (
-									<Flex
-										key={index}
-										gap={12}
-										align="center"
-										justify="stretch"
-										style={{ padding: "8px" }}
-									>
-										{permission.granted ? (
-											<IonIcon icon={IonIcons.checkmarkCircle} 
+								{appInfo.permissions.length > 0 ? (
+									appInfo.permissions.map((permission) => (
+										<Flex
+											key={permission.key}
+											gap={12}
+											align="center"
+											justify="stretch"
+											style={{ padding: "8px" }}
+										>
+											<IonIcon
+												icon={permission.granted ? IonIcons.checkmarkCircle : IonIcons.closeCircle}
 												style={{
-													color: "#65be39ff",
+													color: permission.granted ? "#65be39ff" : "#c93739ff",
 													fontSize: "24px",
 													marginTop: "2px",
 												}}
 											/>
-										) : (
-											<IonIcon icon={IonIcons.closeCircle} 
-												style={{
-													color: "#c93739ff",
-													fontSize: "24px",
-													marginTop: "2px",
-												}}
-											/>
-										)}
-										<Flex vertical gap={0}>
-											<Text style={{ fontSize: 18 }}>{permission.label}</Text>
+											<Flex vertical gap={0}>
+												<Text style={{ fontSize: 18 }}>{permission.label}</Text>
+												{permission.description ? (
+													<Text type="secondary" style={{ fontSize: 14 }}>
+														{permission.description}
+													</Text>
+												) : null}
+											</Flex>
 										</Flex>
-									</Flex>
-								))}
+									))
+								) : (
+									<Text type="secondary">No scopes were requested.</Text>
+								)}
 							</Flex>
 						</Flex>
 					</Flex>
-					{/* Action Buttons */}
+
 					<Flex gap={12} style={{ width: "100%", marginTop: "12px" }}>
-						<Button
-							style={{ flex: 1 }}
-							onClick={() => window.history.back()}
-						>
+						<Button style={{ flex: 1 }} onClick={() => window.history.back()}>
 							Cancel
 						</Button>
 						<Button
 							type="primary"
+							loading={isAuthorizing}
+							disabled={oauthRequest.errors.length > 0}
 							style={{ flex: 1 }}
-							onClick={() => {
-								// Handle authorization
-							}}
+							onClick={handleAuthorize}
 						>
 							Authorize
 						</Button>

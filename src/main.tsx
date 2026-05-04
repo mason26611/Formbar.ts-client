@@ -288,6 +288,14 @@ const AppContent = () => {
 	const publicRoutes = ["/login", "/oauth", "/user/me/pin", "/user/me/password", "/user/verify/email"];
 	const isVerificationRequired =
 		Boolean(config?.emailEnabled) && Number(userData?.verified) === 0;
+	const buildLoginPath = () => {
+		if (location.pathname === "/oauth/authorize") {
+			const returnURL = `${location.pathname}${location.search}`;
+			return `/login?returnURL=${encodeURIComponent(returnURL)}`;
+		}
+
+		return "/login";
+	};
 
 	const fetchConfig = async () => {
 		try {
@@ -465,7 +473,7 @@ const AppContent = () => {
 			socketLogin(guestAccessToken, "access");
 		} else if (!hasStoredRefreshToken && !guestAccessToken) {
 			if (!publicRoutes.includes(window.location.pathname)) {
-				navigate("/login");
+				navigate(buildLoginPath());
 			}
 			setIsConnected(true);
 		}
@@ -532,7 +540,7 @@ const AppContent = () => {
 			clearAuthTokens();
 			sessionStorage.removeItem("formbarLoginCreds");
 			setIsConnected(true); // dismiss the loading screen
-			navigate("/login");
+			navigate(buildLoginPath());
 		}
 		window.addEventListener("formbar:authfailed", onAuthFailed);
 

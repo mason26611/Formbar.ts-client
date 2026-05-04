@@ -37,6 +37,7 @@ export default function LoginPage() {
 	// If a third-party app (e.g. Jukebar) redirected the user here it will pass
 	// ?redirectURL=<callback>.  After login we redirect back with the access token.
 	const redirectURL = new URLSearchParams(location.search).get("redirectURL");
+	const returnURL = new URLSearchParams(location.search).get("returnURL");
 
 	// Login and Sign Up modes only
 	const [email, setEmail] = useState("");
@@ -212,6 +213,11 @@ export default function LoginPage() {
 				const target = new URL(redirectURL);
 				target.searchParams.set("token", accessToken);
 				window.location.href = target.toString();
+				return;
+			}
+
+			if (returnURL && location.pathname === "/login") {
+				navigate(returnURL);
 				return;
 			}
 
