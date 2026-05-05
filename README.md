@@ -27,7 +27,7 @@ npm install
 npm run dev
 
 # Development - Network Testing
-npm run dev -- --host
+npx vite --host
 ```
 
 ---
