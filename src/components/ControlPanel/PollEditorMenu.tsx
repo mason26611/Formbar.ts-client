@@ -1,9 +1,9 @@
-import { Button, Card, Flex, Input, Switch, Tooltip, Typography, notification } from "antd";
+import { Button, Card, Flex, Input, Switch, Tooltip, Typography, notification, InputNumber } from "antd";
 const { Title, Text } = Typography;
 import { useClassData, useMobileDetect } from "@/main";
-import PollEditorResponse from "@components/PollEditorResponse";
 import { useState } from "react";
 import { IonIcon } from "@ionic/react";
+import PollEditorResponse from "@components/PollEditorResponse";
 import * as IonIcons from "ionicons/icons";
 
 type PollAnswer = {
@@ -23,6 +23,8 @@ type PollProperties = {
     indeterminate: any[];
     allowTextResponses: boolean;
     allowMultipleResponses: boolean;
+    autoEndTimer: number | null;
+    autoEndThreshold: number | null;
 };
 
 import { socket } from "@utils/socket";
@@ -107,6 +109,8 @@ export default function PollsEditorMenu() {
         indeterminate: [],
         allowTextResponses: false,
         allowMultipleResponses: false,
+        autoEndTimer: null,
+        autoEndThreshold: null,
     });
 
     function startCustomPoll() {
@@ -165,6 +169,16 @@ export default function PollsEditorMenu() {
                                 <Flex align="center" justify="space-between">
                                     Multiple Answer Poll
                                     <Switch defaultChecked={pollProperties.allowMultipleResponses} onChange={(e) => setPollProperties({...pollProperties, allowMultipleResponses: e})} />
+                                </Flex>
+
+                                <Flex align="center" justify="space-between">
+                                    Auto End Threshold
+                                    <InputNumber min={0} max={100000} defaultValue={0} onChange={(e) => setPollProperties({...pollProperties, autoEndTimer: e})} />
+                                </Flex>
+
+                                <Flex align="center" justify="space-between">
+                                    Auto End Timer
+                                    <InputNumber min={0} max={100000} defaultValue={0} onChange={(e) => setPollProperties({...pollProperties, autoEndTimer: e})} />
                                 </Flex>
                                 </>
                             )
