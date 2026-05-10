@@ -58,6 +58,18 @@ type EditorSeedPoll = {
 	allowMultipleResponses: boolean;
 };
 
+type PollEditorSeedInput = {
+	prompt: string;
+	answers: { answer: string; weight: number; color: string; isCorrect?: boolean }[];
+	allowVoteChanges: boolean;
+	allowTextResponses: boolean;
+	blind: boolean;
+	blindUntilEnded: boolean;
+	autoEndTimer: number | null;
+	autoEndThreshold: number | null;
+	allowMultipleResponses: boolean;
+};
+
 interface MenuItem {
 	key: string;
 	icon: React.ReactNode;
@@ -337,8 +349,14 @@ export default function ControlPanel() {
 		setCurrentMenu(key);
 	}
 
-	function loadPollIntoEditor(seed: EditorSeedPoll) {
-		setPollEditorSeed(seed);
+	function loadPollIntoEditor(seed: PollEditorSeedInput) {
+		setPollEditorSeed({
+			...seed,
+			answers: seed.answers.map((answer) => ({
+				...answer,
+				isCorrect: answer.isCorrect ?? false,
+			})),
+		});
 		setCurrentMenu("7");
 	}
 
