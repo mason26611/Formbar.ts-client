@@ -4,14 +4,14 @@ import FormbarHeader from "@components/FormbarHeader";
 import FullCircularPoll from "@components/CircularPoll";
 import { useEffect, useState, useRef } from "react";
 import { useMobileDetect, useUserData } from "@/main";
-import { Typography, Flex, Input } from "antd";
+import { Typography, Flex, Input, Button } from "antd";
 import PollButton from "@components/PollButton";
 import Log from "@utils/debugLogger";
 import StudentMenu from "@components/StudentMenu";
 import { useNavigate } from "react-router-dom";
 import { toEpochMs } from "@utils/GlobalFunctions";
 import { getMe } from "@api/userApi";
-import { submitPollResponse } from "@api/classApi";
+import { endBreak, submitPollResponse } from "@api/classApi";
 import { currentUserHasScope } from "@utils/scopeUtils";
 const { Title, Text } = Typography;
 
@@ -216,6 +216,9 @@ export default function Student() {
 			? timerEndMs - timerStartMs
 			: 0;
 
+	const canReadPoll = currentUserHasScope(userData, 'class.poll.read');
+	const canVote = currentUserHasScope(userData, 'class.poll.vote');
+
 	return (
 		<>
 			<FormbarHeader />
@@ -230,10 +233,10 @@ export default function Student() {
 					textAlign: "center",
 				}}
 			>
-				{currentUserHasScope(userData, 'class.poll.read') ? classData?.poll.prompt : null}
+				{canReadPoll && userData?.break !== true ? classData?.poll.prompt : null}
 			</Title>
 
-			{userData?.break !== true && currentUserHasScope(userData, 'class.poll.read') ? (
+			{userData?.break !== true && canReadPoll ? (
 				<>
 					<Flex
 						style={
@@ -281,7 +284,7 @@ export default function Student() {
 							</Flex>
 						) : null}
 
-						{classData?.poll.status && currentUserHasScope(userData, 'class.poll.vote') ? (
+						{classData?.poll.status && canVote && !classData.poll.excludedRespondents.includes(Number(userData?.id)) ? (
 							<Flex
 								justify="center"
 								align="center"
@@ -364,14 +367,22 @@ export default function Student() {
 								) : null}
                                 </Flex>
 							</Flex>
+						) : classData.poll.excludedRespondents.includes(Number(userData?.id)) ? (
+							<Title style={{textAlign:'center'}} level={4}>
+								You have been excluded from voting in this poll.
+							</Title>
 						) : !classData?.poll.prompt && !classData?.timer?.startTime ? (
-							<Title style={{textAlign:'center'}}>There is no current poll.</Title>
+							<Title style={{textAlign:'center'}} level={4}>
+								There is no current poll.
+							</Title>
 						) : (
                             null
 						)}
 
 						{!classData?.isActive ? (
-							<Title style={{textAlign:'center'}}>Class is not active.</Title>
+							<Title style={{textAlign:'center'}} level={4}>
+								Class is not active.
+							</Title>
 						) : null}
 					</Flex>
 
@@ -396,10 +407,23 @@ export default function Student() {
 					</Title>
 					{
 						userData?.break === true && (
+							<>
 							<Text>
 								Please wait until your break is over to participate in
 								polls.
 							</Text>
+							<Button
+								onClick={() => {
+									endBreak(classData.id)
+								}}
+								color="blue"
+								type="primary"
+								variant="solid"
+								style={{ padding: 8, marginTop: 20 }}
+							>
+								End Break
+							</Button>
+							</>
 						)
 					}
 				</Flex>

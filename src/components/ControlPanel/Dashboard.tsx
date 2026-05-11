@@ -4,7 +4,6 @@ import {
 	Tooltip,
 	Typography,
 	Input,
-	Modal,
 	Popover,
 	Select,
     Switch,
@@ -17,10 +16,9 @@ import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDe
 import { useEffect, useState } from "react";
 import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
-
-import { useTheme } from "@/main";
 import type { Student } from "@/types";
 import { currentUserHasScope, getStudentClassScopeCount } from "@utils/scopeUtils";
+import { socket } from "@utils/socket";
 
 export default function Dashboard({
 	openModalId,
@@ -29,11 +27,8 @@ export default function Dashboard({
 	openModalId: number | null;
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
 }) {
-	const { isDark } = useTheme();
     const isMobile = useMobileDetect();
 
-	const [allResponseModalOpen, setAllResponseModalOpen] =
-		useState<boolean>(false);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 
 	const [sortType, setSortType] = useState<
@@ -60,7 +55,7 @@ export default function Dashboard({
 	const { userData } = useUserData();
 	const { settings } = useSettings();
 
-    const [excludedRespondents, setExcludedRespondents] = useState<string[]>([]);
+    const [excludedRespondents, setExcludedRespondents] = useState<number[]>([]);
 
 	const canSeeUsers = currentUserHasScope(userData, "class.students.read");
 
@@ -186,16 +181,18 @@ export default function Dashboard({
         student.displayName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    function handleExcludeRespondent(studentId: string, exclude: boolean) {
-        let newExcluded = [...excludedRespondents];
-        if(exclude) {
-            newExcluded.push(studentId);
-        } else {
-            newExcluded = newExcluded.filter(id => id !== studentId);
-        }
-        setExcludedRespondents(newExcluded);
+    function handleExcludeRespondent(studentId: number, exclude: boolean) {
+        const normalizedStudentId = Number(studentId);
 
-        // socket.emit('updateExcludedRespondents', excludedRespondents);
+        setExcludedRespondents((currentExcluded) => {
+            const nextExcluded = exclude
+                ? Array.from(new Set([...currentExcluded, normalizedStudentId]))
+                : currentExcluded.filter((id) => id !== normalizedStudentId);
+
+            socket?.emit("updateExcludedRespondents", nextExcluded);
+
+            return nextExcluded;
+        });
     }
 
 
@@ -406,6 +403,8 @@ export default function Dashboard({
                                         style={getAppearAnimation(settings.accessibility.disableAnimations, index)}
                                         key={student.id}
                                         student={student}
+                                            isVoteExcluded={excludedRespondents.includes(Number(student.id)) && !student.isOffline}
+                                            onToggleVote={handleExcludeRespondent}
                                         openModalId={openModalId}
                                         setOpenModalId={setOpenModalId}
                                     />
