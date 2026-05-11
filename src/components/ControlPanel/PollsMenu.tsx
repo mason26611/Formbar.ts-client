@@ -122,6 +122,7 @@ import { useEffect, useState } from "react";
 import { notification } from "antd";
 import { getPolls } from "@api/classApi";
 import { currentUserHasScope } from "@utils/scopeUtils";
+import { millisecondsToSeconds, secondsToMilliseconds } from "@utils/GlobalFunctions";
 
 export default function PollsMenu({
 	openModalId,
@@ -132,7 +133,7 @@ export default function PollsMenu({
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
 	onLoadPollIntoEditor: (poll: {
 		prompt: string;
-		answers: { answer: string; weight: number; color: string; isCorrect?: boolean }[];
+		answers: { answer: string; weight: number; color: string; isCorrect: boolean }[];
 		allowVoteChanges: boolean;
 		allowTextResponses: boolean;
 		blind: boolean;
@@ -203,7 +204,7 @@ export default function PollsMenu({
 			allowTextResponses: poll.allowTextResponses,
 			blind: poll.blind,
 			blindUntilEnded: poll.blindUntilEnded,
-			autoEndTimer: poll.autoEndTimer,
+			autoEndTimer: secondsToMilliseconds(poll.autoEndTimer),
 			autoEndThreshold: poll.autoEndThreshold,
 			allowMultipleResponses: poll.allowMultipleResponses,
 		});
@@ -211,12 +212,12 @@ export default function PollsMenu({
 
 	function startPoll(id: number) {
 
-        const poll = { ...defaultPolls.filter((e) => e.id == id)[0] };
+        const poll: any = { ...defaultPolls.filter((e) => e.id == id)[0] };
         poll.allowVoteChanges = allowVoteChanges;
         poll.allowTextResponses = allowTextResponses;
         poll.blind = blind;
 		poll.blindUntilEnded = blindUntilEnded;
-		poll.autoEndTimer = autoEndTimer;
+		poll.autoEndTimer = secondsToMilliseconds(autoEndTimer);
 		poll.autoEndThreshold = autoEndThreshold;
         poll.allowMultipleResponses = allowMultipleResponses;
         poll.prompt = pollPrompt;
@@ -280,7 +281,7 @@ export default function PollsMenu({
                                         setAllowTextResponses(poll.allowTextResponses);
                                         setBlind(poll.blind);
 										setBlindUntilEnded(Boolean((poll as any).blindUntilEnded ?? false));
-										setAutoEndTimer((poll as any).autoEndTimer ?? null);
+										setAutoEndTimer(millisecondsToSeconds((poll as any).autoEndTimer ?? null));
 										setAutoEndThreshold((poll as any).autoEndThreshold ?? null);
                                         setAllowMultipleResponses(poll.allowMultipleResponses);
                                         setPollPrompt(poll.prompt);
@@ -400,6 +401,9 @@ export default function PollsMenu({
 														allowVoteChanges: allowVoteChanges,
 														allowTextResponses: allowTextResponses,
 														blind: blind,
+														blindUntilEnded: blindUntilEnded,
+														autoEndTimer: secondsToMilliseconds(autoEndTimer),
+														autoEndThreshold: autoEndThreshold,
 														allowMultipleResponses: allowMultipleResponses
 													};
 													socket?.emit("startPoll", editedPoll);
