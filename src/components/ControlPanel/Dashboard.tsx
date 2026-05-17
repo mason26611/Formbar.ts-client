@@ -4,7 +4,6 @@ import {
 	Tooltip,
 	Typography,
 	Input,
-	Modal,
 	Popover,
 	Select,
     Switch,
@@ -17,10 +16,9 @@ import { useClassData, useUserData, useSettings, getAppearAnimation, useMobileDe
 import { useEffect, useState } from "react";
 import * as IonIcons from "ionicons/icons";
 import { IonIcon } from "@ionic/react";
-
-import { useTheme } from "@/main";
 import type { Student } from "@/types";
-import { currentUserHasScope, getStudentClassScopeCount } from "@utils/scopeUtils";
+import { currentUserHasScope, getStudentScopeCount } from "@utils/scopeUtils";
+import { socket } from "@utils/socket";
 
 export default function Dashboard({
 	openModalId,
@@ -29,11 +27,8 @@ export default function Dashboard({
 	openModalId: number | null;
 	setOpenModalId: React.Dispatch<React.SetStateAction<number | null>>;
 }) {
-	const { isDark } = useTheme();
     const isMobile = useMobileDetect();
 
-	const [allResponseModalOpen, setAllResponseModalOpen] =
-		useState<boolean>(false);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 
 	const [sortType, setSortType] = useState<
@@ -60,7 +55,7 @@ export default function Dashboard({
 	const { userData } = useUserData();
 	const { settings } = useSettings();
 
-    const [excludedRespondents, setExcludedRespondents] = useState<string[]>([]);
+    const [excludedRespondents, setExcludedRespondents] = useState<number[]>([]);
 
 	const canSeeUsers = currentUserHasScope(userData, "class.students.read");
 
@@ -88,16 +83,24 @@ export default function Dashboard({
 
     function sortStudents(students: Student[]) {
 		const sorted = [...students];
+        const compareOfflineLast = (a: Student, b: Student) => {
+            if (a.isOffline === b.isOffline) return 0;
+            return a.isOffline ? 1 : -1;
+        };
+
 		switch (sortType) {
 			case "Name":
 				sortDirection === "▲"
-					? sorted.sort((a, b) => a.displayName.localeCompare(b.displayName))
-					: sorted.sort((a, b) => b.displayName.localeCompare(a.displayName));
+                    ? sorted.sort((a, b) => compareOfflineLast(a, b) || a.displayName.localeCompare(b.displayName))
+                    : sorted.sort((a, b) => compareOfflineLast(a, b) || b.displayName.localeCompare(a.displayName));
 				break;
 			case "Permissions":
 				sorted.sort((a, b) => {
-                    const aScopeCount = getStudentClassScopeCount(a, classData);
-                    const bScopeCount = getStudentClassScopeCount(b, classData);
+                    const offlinePriority = compareOfflineLast(a, b);
+                    if (offlinePriority !== 0) return offlinePriority;
+
+                const aScopeCount = getStudentScopeCount(a, classData);
+                const bScopeCount = getStudentScopeCount(b, classData);
 
                     if (aScopeCount === bScopeCount) {
 						return a.displayName.localeCompare(b.displayName);
@@ -108,6 +111,9 @@ export default function Dashboard({
 				break;
             case "Response Order":
                 sorted.sort((a, b) => {
+                    const offlinePriority = compareOfflineLast(a, b);
+                    if (offlinePriority !== 0) return offlinePriority;
+
                     const aIndex = classData?.poll.responses.findIndex((r: any) => r.answer === a.pollRes?.buttonRes) || 0;
                     const bIndex = classData?.poll.responses.findIndex((r: any) => r.answer === b.pollRes?.buttonRes) || 0;
                     if (sortDirection === "▲") return aIndex - bIndex;
@@ -116,6 +122,9 @@ export default function Dashboard({
                 break;
             case "Response Time":
 				sorted.sort((a, b) => {
+                    const offlinePriority = compareOfflineLast(a, b);
+                    if (offlinePriority !== 0) return offlinePriority;
+
 					const aTimeRaw = a.pollRes?.time;
 					const bTimeRaw = b.pollRes?.time;
 					// If aTimeRaw is empty string, force to bottom
@@ -139,6 +148,9 @@ export default function Dashboard({
                 break;
             case "Response Text":
                 sorted.sort((a, b) => {
+					const offlinePriority = compareOfflineLast(a, b);
+					if (offlinePriority !== 0) return offlinePriority;
+
                     const aText = a.pollRes?.textRes || "";
                     const bText = b.pollRes?.textRes || "";
                 
@@ -147,8 +159,8 @@ export default function Dashboard({
                 });
                 break;
             case "Help Time":
-                if(sortDirection === "▲") sorted.sort((a, b) => (a.help || 0) - (b.help || 0));
-                else sorted.sort((a, b) => (b.help || 0) - (a.help || 0));
+                if(sortDirection === "▲") sorted.sort((a, b) => compareOfflineLast(a, b) || (a.help.time || 0) - (b.help.time || 0));
+                else sorted.sort((a, b) => compareOfflineLast(a, b) || (b.help.time || 0) - (a.help.time || 0));
                 break;
         }
         return sorted;
@@ -160,7 +172,7 @@ export default function Dashboard({
             if (filterState.answeredPoll && !student.pollRes?.buttonRes) return false;
             if (filterState.needsHelp && !student.help) return false;
             if (filterState.onBreak && !student.break) return false;
-            if (filterState.canVote && student.isGuest) return false;
+            if (filterState.canVote && classData?.poll.excludedRespondents?.includes(student.id)) return false;
             // Add more filters as needed
             return true;
         }
@@ -177,7 +189,7 @@ export default function Dashboard({
         if (filterState.answeredPoll && student.pollRes?.buttonRes) return true;
         if (filterState.needsHelp && student.help) return true;
         if (filterState.onBreak && student.break) return true;
-        if (filterState.canVote && !student.isGuest) return true;
+        if (filterState.canVote && !classData?.poll.excludedRespondents?.includes(student.id)) return true;
 		// Add more filters as needed
 		return false;
 	}) : [];
@@ -186,16 +198,18 @@ export default function Dashboard({
         student.displayName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    function handleExcludeRespondent(studentId: string, exclude: boolean) {
-        let newExcluded = [...excludedRespondents];
-        if(exclude) {
-            newExcluded.push(studentId);
-        } else {
-            newExcluded = newExcluded.filter(id => id !== studentId);
-        }
-        setExcludedRespondents(newExcluded);
+    function handleExcludeRespondent(studentId: number, exclude: boolean) {
+        const normalizedStudentId = Number(studentId);
 
-        // socket.emit('updateExcludedRespondents', excludedRespondents);
+        setExcludedRespondents((currentExcluded) => {
+            const nextExcluded = exclude
+                ? Array.from(new Set([...currentExcluded, normalizedStudentId]))
+                : currentExcluded.filter((id) => id !== normalizedStudentId);
+
+            socket?.emit("updateExcludedRespondents", nextExcluded);
+
+            return nextExcluded;
+        });
     }
 
 
@@ -406,6 +420,8 @@ export default function Dashboard({
                                         style={getAppearAnimation(settings.accessibility.disableAnimations, index)}
                                         key={student.id}
                                         student={student}
+                                            isVoteExcluded={excludedRespondents.includes(Number(student.id)) && !student.isOffline}
+                                            onToggleVote={handleExcludeRespondent}
                                         openModalId={openModalId}
                                         setOpenModalId={setOpenModalId}
                                     />
