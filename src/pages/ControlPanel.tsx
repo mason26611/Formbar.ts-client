@@ -337,6 +337,7 @@ export default function ControlPanel() {
 
 	function startClass() {
 		socket?.emit("startClass");
+		socket?.emit("classUpdate", "");
 	}
 
 	function endClass() {
