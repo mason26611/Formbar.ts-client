@@ -1,3 +1,4 @@
+import type { SavedPollTemplateBody } from "@/types";
 import { http } from "@api/HTTPApi";
 import { buildPaginationQuery, fetchAllPaginated, type PaginationParams } from "@api/pagination";
 
@@ -87,6 +88,13 @@ export function submitPollResponse(classId: number, body: {
     return http(`/class/${classId}/polls/response`, "POST", {}, body);
 }
 
+export function getClassPollTemplates(classId: number) {
+    return http(`/class/${classId}/polls/templates`);
+}
+
+export function savePollTemplateToClass(classId: number, body: SavedPollTemplateBody) {
+    return http(`/class/${classId}/polls/templates`, "POST", {}, body);
+}
 
 // --- Class - Breaks ---
 
